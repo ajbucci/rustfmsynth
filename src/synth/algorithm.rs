@@ -291,6 +291,38 @@ impl Algorithm {
             start_sample_index,
         );
     }
+    pub fn print_structure(&self) {
+        println!("Algorithm Structure:");
+        for (i, node) in self.unrolled_nodes.iter().enumerate() {
+            print!("  Node {} → Operator {}", i, node.original_op_index);
+            if !node.input_node_indices.is_empty() {
+                print!(" | Inputs: ");
+                for &input in &node.input_node_indices {
+                    print!("Node {} ", input);
+                }
+            }
+            println!();
+        }
+
+        print!("Carriers: ");
+        for &c in &self.carriers {
+            print!("Operator {} ", c);
+        }
+        println!();
+
+        if !self.repeat_rules.is_empty() {
+            println!("Repeat Rules:");
+            for rule in &self.repeat_rules {
+                let from_op = self.unrolled_nodes[rule.from_node].original_op_index;
+                let to_op = self.unrolled_nodes[rule.to_node].original_op_index;
+                println!(
+                    "  Repeat (Operator {} → Operator {}) × {}",
+                    from_op, to_op, rule.count
+                );
+            }
+        }
+        println!();
+    }
 
     pub fn print_evaluation_chains(&self) {
         println!("Evaluation Chains:");
@@ -299,39 +331,29 @@ impl Algorithm {
 
             for (i, node) in self.unrolled_nodes.iter().enumerate() {
                 if node.original_op_index == carrier_op {
-                    let mut current_chain = Vec::new();
-                    self.collect_chains(i, &mut current_chain, &mut Vec::new());
+                    let mut chain = Vec::new();
+                    self.collect_chain(i, &mut chain);
                 }
             }
         }
     }
 
-    fn collect_chains(
-        &self,
-        node_idx: usize,
-        current_chain: &mut Vec<usize>,
-        visited: &mut Vec<usize>,
-    ) {
-        if visited.contains(&node_idx) {
-            return; // prevent infinite recursion
-        }
-        visited.push(node_idx);
-
+    fn collect_chain(&self, node_idx: usize, current_chain: &mut Vec<usize>) {
         current_chain.push(self.unrolled_nodes[node_idx].original_op_index);
 
         let inputs = &self.unrolled_nodes[node_idx].input_node_indices;
         if inputs.is_empty() {
-            // Leaf → print chain
+            // Leaf reached → print chain
             let chain_str = current_chain
                 .iter()
-                .rev()
                 .map(|op| format!("Operator {}", op))
                 .collect::<Vec<_>>()
                 .join(" ← ");
             println!("  {}", chain_str);
         } else {
             for &input_idx in inputs {
-                self.collect_chains(input_idx, &mut current_chain.clone(), &mut visited.clone());
+                let mut next_chain = current_chain.clone();
+                self.collect_chain(input_idx, &mut next_chain);
             }
         }
     }

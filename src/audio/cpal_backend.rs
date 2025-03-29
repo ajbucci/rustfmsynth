@@ -52,7 +52,7 @@ impl CpalBackend {
 
                 for device in devices {
                     let name = device.name().unwrap_or_default();
-                    println!("Device: {}", name);
+                    // println!("Device: {}", name);
                     if name.to_lowercase().starts_with("default:") || name.to_lowercase().contains("pipewire") {
                         device_names.push(name.clone());
                     }

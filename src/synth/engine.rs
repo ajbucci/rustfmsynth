@@ -253,12 +253,13 @@ impl Default for SynthEngine {
         operators[1].set_waveform(Waveform::Sawtooth);
 
         // Initialize with a default algorithm (e.g., a simple 2-operator stack)
-        let default_algorithm = Algorithm::stack_3_feedback(operators.len()).unwrap();
+        let default_algorithm = Algorithm::default_stack_2(operators.len()).unwrap();
         // Or use a simple single carrier:
         // let default_algorithm = Algorithm::default_simple(config.operators_per_voice);
         // Or use a single carrier with feedback:
         // let default_algorithm = Algorithm::default_feedback_1(operators.len()).unwrap();
         default_algorithm.print_evaluation_chains();
+        default_algorithm.print_structure();
         // Initialize voices using the parameterless constructor
         let voices = (0..config.max_voices).map(|_| Voice::new()).collect();
 
