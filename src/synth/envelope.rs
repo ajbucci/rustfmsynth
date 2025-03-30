@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub struct EnvelopeGenerator {
     pub attack: f32,
     pub decay: f32,
@@ -21,6 +22,12 @@ enum EnvelopeState {
 impl EnvelopeGenerator {
     pub fn new() -> Self {
         Self::default()
+    }
+    pub fn set_params(&mut self, attack: f32, decay: f32, sustain: f32, release: f32) {
+        self.attack = attack;
+        self.decay = decay;
+        self.sustain = sustain;
+        self.release = release;
     }
     pub fn evaluate(&self, time_since_on: f32, time_since_off: Option<f32>) -> f32 {
         if let Some(release_time) = time_since_off {

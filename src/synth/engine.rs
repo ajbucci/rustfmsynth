@@ -5,6 +5,7 @@ use super::operator::Operator;
 use super::operator::OperatorEvent;
 use super::voice::Voice;
 use super::waveform::Waveform;
+use super::envelope::EnvelopeGenerator;
 use std::sync::mpsc::{Receiver, Sender};
 
 /// The main synthesizer engine that manages voices and audio processing
@@ -249,11 +250,26 @@ impl Default for SynthEngine {
             .map(|_| Operator::new())
             .collect();
 
-        operators[0].set_waveform(Waveform::Triangle);
-        operators[1].set_waveform(Waveform::Sawtooth);
+        // Carrier A
+        operators[0].set_waveform(Waveform::Sine);
+        operators[0].set_envelope(0.01, 0.3, 0.6, 0.3);
+        operators[0].set_gain(0.5);
+        operators[0].frequency_ratio = 1.0;
 
+        // Carrier B (detuned)
+        operators[1].set_waveform(Waveform::Sine);
+        operators[1].set_envelope(0.01, 0.3, 0.6, 0.3);
+        operators[1].set_gain(0.5);
+        operators[1].frequency_ratio = 1.01;
+
+        // Modulator
+        operators[2].set_waveform(Waveform::Sine);
+        operators[2].set_envelope(0.001, 0.1, 0.0, 0.05);
+        operators[2].set_gain(1.0);
+        operators[2].frequency_ratio = 2.0;
+        operators[2].modulation_index = 3.5;
         // Initialize with a default algorithm (e.g., a simple 2-operator stack)
-        let default_algorithm = Algorithm::default_stack_2(operators.len()).unwrap();
+        let default_algorithm = Algorithm::default_fanout(operators.len()).unwrap();
         // Or use a simple single carrier:
         // let default_algorithm = Algorithm::default_simple(config.operators_per_voice);
         // Or use a single carrier with feedback:

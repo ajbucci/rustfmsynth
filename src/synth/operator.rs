@@ -80,6 +80,10 @@ impl Operator {
         println!("Setting amplitude: {}", amp);
         self.gain = amp;
     }
+    pub fn set_envelope(&mut self, attack: f32, decay: f32, sustain: f32, release: f32) {
+        println!("Operator envelope set to: {}, {}, {}, {}", attack, decay, sustain, release);
+        self.envelope.set_params(attack, decay, sustain, release);
+    }
 
     pub fn cycle_waveform(&mut self, direction: CycleDirection) {
         match direction {
@@ -99,6 +103,11 @@ impl Operator {
     pub fn set_waveform(&mut self, waveform: Waveform) {
         println!("Operator waveform set to: {:?}", waveform);
         self.waveform_generator.set_waveform(waveform);
+    }
+
+    pub fn set_gain(&mut self, gain: f32) {
+        println!("Operator gain set to: {}", gain);
+        self.gain = gain;
     }
 }
 

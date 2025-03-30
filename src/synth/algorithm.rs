@@ -73,7 +73,15 @@ impl Algorithm {
         matrix[0][1] = Some(1);
         Self::new(matrix, vec![0])
     }
-
+    pub fn default_fanout(num_operators: usize) -> Result<Self, String> {
+        if num_operators < 3 {
+            return Self::default_simple(num_operators);
+        }
+        let mut matrix = vec![vec![None; num_operators]; num_operators];
+        matrix[0][2] = Some(1);
+        matrix[1][2] = Some(1);
+        Self::new(matrix, vec![0, 1])
+    }
     pub fn stack_3_feedback(num_operators: usize) -> Result<Self, String> {
         if num_operators < 3 {
             return Self::default_simple(num_operators);
