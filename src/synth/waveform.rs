@@ -18,6 +18,18 @@ impl WaveformGenerator {
     pub fn new(waveform: Waveform) -> Self {
         Self { waveform }
     }
+    pub fn evaluate(&self, phase: f32) -> f32 {
+        match self.waveform {
+            Waveform::Sine => phase.sin(),
+            Waveform::Square => if phase.sin() >= 0.0 { 1.0 } else { -1.0 },
+            Waveform::Sawtooth => {
+                let cycles = phase / (2.0 * std::f32::consts::PI);
+                2.0 * (cycles - (cycles + 0.5).floor())
+            }
+            Waveform::Triangle => (2.0 / std::f32::consts::PI) * (phase.sin()).asin(),
+            Waveform::Noise => rand::thread_rng().gen_range(-1.0..1.0),
+        }
+    }
     pub fn generate(
         &self,
         frequency: f32,

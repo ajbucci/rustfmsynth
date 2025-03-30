@@ -20,18 +20,30 @@ enum EnvelopeState {
 
 impl EnvelopeGenerator {
     pub fn new() -> Self {
-        Self {
-            attack: 0.01,
-            decay: 0.1,
-            sustain: 0.7,
-            release: 0.2,
-            value: 0.0,
-            state: EnvelopeState::Idle,
-            release_start_value: 0.0,
-            min_threshold: 0.001,
+        Self::default()
+    }
+    pub fn evaluate(&self, time_since_on: f32, time_since_off: Option<f32>) -> f32 {
+        if let Some(release_time) = time_since_off {
+            // In release phase
+            if release_time >= self.release {
+                0.0
+            } else {
+                let progress = release_time / self.release;
+                self.sustain * (1.0 - progress)
+            }
+        } else {
+            // Attack, Decay, Sustain
+            if time_since_on < self.attack {
+                time_since_on / self.attack
+            } else if time_since_on < self.attack + self.decay {
+                let decay_elapsed = time_since_on - self.attack;
+                let decay_progress = decay_elapsed / self.decay;
+                1.0 - decay_progress * (1.0 - self.sustain)
+            } else {
+                self.sustain
+            }
         }
     }
-
     pub fn trigger(&mut self) {
         // println!(
         //     "Envelope trigger: state={:?}, value={}",
@@ -74,7 +86,6 @@ impl EnvelopeGenerator {
         // );
 
         for sample in output.iter_mut() {
-            let old_state = self.state;
 
             if self.state != EnvelopeState::Idle {
                 self.value = match self.state {
@@ -122,5 +133,19 @@ impl EnvelopeGenerator {
             // }
         }
         // println!("Envelope state={:?}, value={}", self.state, self.value);
+    }
+}
+impl Default for EnvelopeGenerator {
+    fn default() -> Self {
+        Self {
+            attack: 0.01,
+            decay: 0.1,
+            sustain: 0.7,
+            release: 0.2,
+            value: 0.0,
+            state: EnvelopeState::Idle,
+            release_start_value: 0.0,
+            min_threshold: 0.001,
+        }
     }
 }

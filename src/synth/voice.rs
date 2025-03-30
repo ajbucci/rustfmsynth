@@ -11,6 +11,7 @@ pub struct Voice {
     pub note_source: Option<NoteSource>, // Where the note came from (keyboard, sequencer)
     envelope: EnvelopeGenerator,         // Main amplitude envelope for the voice
     samples_elapsed_since_trigger: u64,  // Counter for phase calculation
+    note_off_sample_index: Option<u64>,  // Sample index when the note was released
 }
 
 impl Voice {
@@ -32,6 +33,7 @@ impl Voice {
         self.note_source = note_source;
         self.note_frequency = note_frequency;
         self.samples_elapsed_since_trigger = 0;
+        self.note_off_sample_index = None;
         self.envelope.trigger();
 
         println!(
@@ -50,6 +52,9 @@ impl Voice {
         if self.active || !self.envelope.is_finished() {
             println!("Voice releasing envelope for note {}", self.note_number);
             self.envelope.release();
+            
+            // Store the current sample index as the note-off sample index
+            self.note_off_sample_index = Some(self.samples_elapsed_since_trigger);
 
             // Mark the voice as inactive (no longer accepting triggers),
             // but it will continue processing until the envelope finishes its release phase.
@@ -84,6 +89,7 @@ impl Voice {
 
         // Store the sample index corresponding to the START of this buffer.
         let start_sample_index = self.samples_elapsed_since_trigger;
+        let samples_since_note_off = self.note_off_sample_index.map(|off| start_sample_index.saturating_sub(off));
 
         // --- Generate Raw Audio using Algorithm and Operators ---
         // Create a temporary buffer for the raw operator output before enveloping.
@@ -94,6 +100,7 @@ impl Voice {
             &mut raw_output, // Generate into the temporary buffer
             sample_rate,
             start_sample_index,
+            samples_since_note_off,
         );
 
         // --- Apply Main Voice Envelope ---
@@ -140,6 +147,7 @@ impl Default for Voice {
             note_source: None,
             envelope: EnvelopeGenerator::new(),
             samples_elapsed_since_trigger: 0,
+            note_off_sample_index: None,
         }
     }
 }

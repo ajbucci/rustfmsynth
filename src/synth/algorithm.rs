@@ -114,6 +114,7 @@ impl Algorithm {
         output: &mut [f32],
         sample_rate: f32,
         start_sample_index: u64,
+        samples_since_note_off: Option<u64>,
     ) {
         let buffer_size = output.len();
         if buffer_size == 0 || operators.is_empty() || self.matrix.len() != operators.len() {
@@ -138,6 +139,7 @@ impl Algorithm {
                         base_frequency,
                         sample_rate,
                         start_sample_index,
+                        samples_since_note_off,
                     );
                     let carrier_output = &scratch_buffers[i];
                     for (out_sample, &carrier_sample) in
@@ -261,6 +263,7 @@ impl Algorithm {
         base_frequency: f32,
         sample_rate: f32,
         start_sample_index: u64,
+        samples_since_note_off: Option<u64>,
     ) {
         let node = &self.unrolled_nodes[node_idx];
         let buffer_size = scratch_buffers[node_idx].len();
@@ -274,6 +277,7 @@ impl Algorithm {
                 base_frequency,
                 sample_rate,
                 start_sample_index,
+                samples_since_note_off,
             );
             let input_output = &scratch_buffers[input_idx];
             let mod_idx = operators[self.unrolled_nodes[input_idx].original_op_index].modulation_index;
@@ -289,6 +293,7 @@ impl Algorithm {
             &modulation_input,
             sample_rate,
             start_sample_index,
+            samples_since_note_off,
         );
     }
     pub fn print_structure(&self) {

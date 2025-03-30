@@ -1,4 +1,5 @@
-use super::filter::{apply_filter, FilterType};
+use super::filter::FilterType;
+use super::envelope::EnvelopeGenerator;
 use super::waveform::{Waveform, WaveformGenerator};
 use std::f32::consts::PI;
 
@@ -23,7 +24,7 @@ pub struct Operator {
     // well as the time since that state begain, to the Algorithm, which will pass it on to the
     // operator
     //
-    // pub envelope: EnvelopeGenerator, // Operator-specific envelope (optional)
+    pub envelope: EnvelopeGenerator, // Operator-specific envelope (optional)
     pub modulation_index: f32,
     pub gain: f32,          // Output gain of this operator
     pub filter: FilterType, // Filter applied to this operator's output
@@ -40,7 +41,8 @@ impl Operator {
         output: &mut [f32],
         modulation: &[f32], // Input modulation signal
         sample_rate: f32,
-        start_sample_index: u64, // Sample index at the start of this buffer for phase calculation
+        samples_since_note_on: u64, 
+        samples_since_note_off: Option<u64>,
     ) {
         // Determine the actual frequency for this operator
         let actual_frequency = match self.fixed_frequency {
@@ -50,16 +52,19 @@ impl Operator {
 
         // Calculate the phase offset based on the starting sample index
         let phase_increment = 2.0 * PI * actual_frequency / sample_rate;
-        let phase_offset = (start_sample_index as f32 * phase_increment) % (2.0 * PI);
 
         // Generate the waveform using the WaveformGenerator
-        self.waveform_generator.generate(
-            actual_frequency,
-            sample_rate,
-            phase_offset,
-            output,
-            modulation,
-        );
+        for (i, sample) in output.iter_mut().enumerate() {
+            let sample_index = samples_since_note_on + i as u64;
+            // NOTE: can wrap phase if it grows large: let wrapped_phase = phase % (2.0 * PI);
+            let phase = phase_increment * (sample_index as f32) + modulation[i];
+            let wave = self.waveform_generator.evaluate(phase);
+            
+            let time_since_on = sample_index as f32 / sample_rate;
+            let time_since_off = samples_since_note_off.map(|off| (off + i as u64) as f32 / sample_rate);
+            let env = self.envelope.evaluate(time_since_on, time_since_off);
+            *sample = wave * env * self.gain;
+        }
 
         // Apply operator-specific envelope if it exists and is active
         // self.envelope.apply(output, sample_rate);
@@ -106,7 +111,7 @@ impl Default for Operator {
             frequency_ratio: 1.0,
             fixed_frequency: None, // Default to using ratio
             modulation_index: 1.0,
-            // envelope: EnvelopeGenerator::new(),
+            envelope: EnvelopeGenerator::new(),
             gain: 1.0,
             filter: FilterType::LowPass(20000.0), // Default: wide open low-pass
         }
