@@ -93,24 +93,25 @@ impl Default for KeyboardHandler {
         // Define keyboard to note mapping
         let key_to_note: HashMap<Keycode, u8> = [
             // Bottom row - natural notes (A, B, C, D, E, F, G, A, B, C)
-            (Keycode::A, 69),         // A4
-            (Keycode::S, 71),         // B4
-            (Keycode::D, 72),         // C5
-            (Keycode::F, 74),         // D5
-            (Keycode::G, 76),         // E5
-            (Keycode::H, 77),         // F5
-            (Keycode::J, 79),         // G5
-            (Keycode::K, 81),         // A5
-            (Keycode::L, 83),         // B5
-            (Keycode::Semicolon, 84), // C6
-            // Top row - sharp/flat notes (A#, C#, D#, F#, G#, A#)
-            (Keycode::W, 70),           // A#4/Bb4
-            (Keycode::R, 73),           // C#5/Db5
-            (Keycode::T, 75),           // D#5/Eb5
-            (Keycode::U, 78),           // F#5/Gb5
-            (Keycode::I, 80),           // G#5/Ab5
-            (Keycode::O, 82),           // A#5/Bb5
-            (Keycode::LeftBracket, 85), // C#6/Db6
+            (Keycode::A, 57),         // A3
+            (Keycode::S, 59),         // B3
+            (Keycode::D, 60),         // C4
+            (Keycode::F, 62),         // D4
+            (Keycode::G, 64),         // E4
+            (Keycode::H, 65),         // F4
+            (Keycode::J, 67),         // G4
+            (Keycode::K, 69),         // A4
+            (Keycode::L, 71),         // B4
+            (Keycode::Semicolon, 72), // C5
+
+            // Top row - sharp/flat notes
+            (Keycode::W, 58),           // A#3/Bb3
+            (Keycode::R, 61),           // C#4/Db4
+            (Keycode::T, 63),           // D#4/Eb4
+            (Keycode::U, 66),           // F#4/Gb4
+            (Keycode::I, 68),           // G#4/Ab4
+            (Keycode::O, 70),           // A#4/Bb4
+            (Keycode::LeftBracket, 73), // C#5/Db5
         ]
         .iter()
         .cloned()

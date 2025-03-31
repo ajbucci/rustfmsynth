@@ -5,7 +5,6 @@ use super::operator::Operator;
 use super::operator::OperatorEvent;
 use super::voice::Voice;
 use super::waveform::Waveform;
-use super::envelope::EnvelopeGenerator;
 use std::sync::mpsc::{Receiver, Sender};
 
 /// The main synthesizer engine that manages voices and audio processing
@@ -252,31 +251,35 @@ impl Default for SynthEngine {
 
         // Carrier A
         operators[0].set_waveform(Waveform::Sine);
-        operators[0].set_envelope(0.01, 0.3, 0.6, 0.3);
+        operators[0].set_envelope(0.01, 1.0, 0.7, 0.5);
         operators[0].set_gain(0.5);
         operators[0].frequency_ratio = 1.0;
 
-        // Carrier B (detuned)
+        // Carrier B (slightly detuned)
         operators[1].set_waveform(Waveform::Sine);
-        operators[1].set_envelope(0.01, 0.3, 0.6, 0.3);
+        operators[1].set_envelope(0.01, 1.0, 0.7, 0.5);
         operators[1].set_gain(0.5);
         operators[1].frequency_ratio = 1.01;
 
-        // Modulator
+        // Modulator A
         operators[2].set_waveform(Waveform::Sine);
-        operators[2].set_envelope(0.001, 0.1, 0.0, 0.05);
+        operators[2].set_envelope(0.005, 0.3, 0.0, 0.2);
         operators[2].set_gain(1.0);
         operators[2].frequency_ratio = 2.0;
-        operators[2].modulation_index = 3.5;
+        operators[2].modulation_index = 3.0;
+
+        // Modulator B
+        operators[3].set_waveform(Waveform::Sine);
+        operators[3].set_envelope(0.005, 0.3, 0.0, 0.2);
+        operators[3].set_gain(1.0);
+        operators[3].frequency_ratio = 2.02;
+        operators[3].modulation_index = 3.0;
+        
         // Initialize with a default algorithm (e.g., a simple 2-operator stack)
-        let default_algorithm = Algorithm::default_fanout(operators.len()).unwrap();
-        // Or use a simple single carrier:
-        // let default_algorithm = Algorithm::default_simple(config.operators_per_voice);
-        // Or use a single carrier with feedback:
-        // let default_algorithm = Algorithm::default_feedback_1(operators.len()).unwrap();
+        let default_algorithm = Algorithm::default_fanout_feedback(operators.len()).unwrap();
         default_algorithm.print_evaluation_chains();
         default_algorithm.print_structure();
-        // Initialize voices using the parameterless constructor
+        // Initialize voices
         let voices = (0..config.max_voices).map(|_| Voice::new()).collect();
 
         Self {

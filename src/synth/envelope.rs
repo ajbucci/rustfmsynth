@@ -131,15 +131,7 @@ impl EnvelopeGenerator {
 
             *sample *= self.value;
 
-            // if old_state != self.state {
-            //     println!(
-            //         // "State transition: {:?} -> {:?}, value={}",
-            //         old_state,
-            //         self.state, self.value
-            //     );
-            // }
         }
-        // println!("Envelope state={:?}, value={}", self.state, self.value);
     }
 }
 impl Default for EnvelopeGenerator {

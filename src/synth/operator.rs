@@ -20,10 +20,6 @@ pub struct Operator {
     pub frequency: f32,
     pub frequency_ratio: f32, // Ratio relative to the voice's base frequency
     pub fixed_frequency: Option<f32>, // Optional fixed frequency in Hz
-    // TODO: for operator specific envelopes the voice needs to pass the current envelope state, as
-    // well as the time since that state begain, to the Algorithm, which will pass it on to the
-    // operator
-    //
     pub envelope: EnvelopeGenerator, // Operator-specific envelope (optional)
     pub modulation_index: f32,
     pub gain: f32,          // Output gain of this operator
@@ -64,16 +60,8 @@ impl Operator {
             let time_since_off = samples_since_note_off.map(|off| (off + i as u64) as f32 / sample_rate);
             let env = self.envelope.evaluate(time_since_on, time_since_off);
             *sample = wave * env * self.gain;
+            // TODO: apply filter
         }
-
-        // Apply operator-specific envelope if it exists and is active
-        // self.envelope.apply(output, sample_rate);
-
-        // Apply gain
-        apply_gain(output, self.gain);
-
-        // Apply filter
-        //apply_filter(output, self.filter, sample_rate); // Pass filter by value if it's Copy
     }
 
     pub fn set_amplitude(&mut self, amp: f32) {
@@ -126,12 +114,3 @@ impl Default for Operator {
         }
     }
 }
-
-// Helper function to apply gain to a buffer
-fn apply_gain(output: &mut [f32], gain: f32) {
-    for sample in output.iter_mut() {
-        *sample *= gain;
-    }
-}
-
-// Removed generate_with_modulation function as its logic is now in Operator::process

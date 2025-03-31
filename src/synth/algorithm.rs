@@ -73,6 +73,26 @@ impl Algorithm {
         matrix[0][1] = Some(1);
         Self::new(matrix, vec![0])
     }
+    pub fn default_fanout_feedback(num_operators: usize) -> Result<Self, String> {
+        if num_operators < 4 {
+            return Self::default_simple(num_operators);
+        }
+        let mut matrix = vec![vec![None; num_operators]; num_operators];
+        matrix[0][3] = Some(1); // Mod → A
+        matrix[1][3] = Some(1); // Mod → B
+        matrix[1][2] = Some(1); // Extra mod → B
+        matrix[3][3] = Some(2); // Feedback into mod
+        Self::new(matrix, vec![0, 1])
+    }
+    pub fn default_dual_stack(num_operators: usize) -> Result<Self, String> {
+        if num_operators < 4 {
+            return Self::default_simple(num_operators);
+        }
+        let mut matrix = vec![vec![None; num_operators]; num_operators];
+        matrix[0][2] = Some(1); // Modulator A -> Carrier A
+        matrix[1][3] = Some(1); // Modulator B -> Carrier B 
+        Self::new(matrix, vec![0, 1])
+    }
     pub fn default_fanout(num_operators: usize) -> Result<Self, String> {
         if num_operators < 3 {
             return Self::default_simple(num_operators);
@@ -111,6 +131,7 @@ impl Algorithm {
             return Self::default_simple(num_operators);
         }
         let mut matrix = vec![vec![None; num_operators]; num_operators];
+        // TODO: check if this is correct. When I added Repeat Rules did I remove the matrix > 1 -> feedback?
         matrix[0][0] = Some(2);
         Self::new(matrix, vec![0])
     }
