@@ -274,9 +274,11 @@ impl Default for SynthEngine {
         operators[3].set_gain(1.0);
         operators[3].frequency_ratio = 2.02;
         operators[3].modulation_index = 3.0;
-        
+
         // Initialize with a default algorithm (e.g., a simple 2-operator stack)
-        let default_algorithm = Algorithm::default_fanout_feedback(operators.len()).unwrap();
+        // let default_algorithm = Algorithm::default_fanout_feedback(operators.len()).unwrap();
+        let default_algorithm = Algorithm::default_feedback_1(operators.len()).unwrap();
+        // let default_algorithm = Algorithm::default_simple(operators.len()).unwrap();
         default_algorithm.print_evaluation_chains();
         default_algorithm.print_structure();
         // Initialize voices

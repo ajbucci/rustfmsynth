@@ -1,4 +1,4 @@
-use super::operator::Operator;
+use super::{envelope::EnvelopeGenerator, operator::Operator};
 use std::collections::HashMap;
 
 // --- Internal Node ---
@@ -10,23 +10,40 @@ struct UnrolledNode {
 }
 
 #[derive(Debug, Clone)]
-pub struct RepeatRule {
+pub struct FeedbackLoop {
     from_node: usize, // Node index (end)
     to_node: usize,   // Node index (start)
     count: usize,     // How many times to repeat
 }
 
+#[derive(Debug, Clone)]
+pub struct ConnectionParams {
+    pub modulation_envelope: Option<EnvelopeGenerator>,
+    pub scale: f32,
+}
+impl Default for ConnectionParams {
+    fn default() -> Self {
+        Self {
+            modulation_envelope: Some(EnvelopeGenerator::default()),
+            scale: 1.0,
+        }
+    }
+}
+
 // --- Algorithm ---
 
 pub struct Algorithm {
-    matrix: Vec<Vec<Option<usize>>>,
+    matrix: Vec<Vec<Option<ConnectionParams>>>,
     carriers: Vec<usize>,
-    repeat_rules: Vec<RepeatRule>,
+    repeat_rules: Vec<FeedbackLoop>,
     unrolled_nodes: Vec<UnrolledNode>,
 }
 
 impl Algorithm {
-    pub fn new(matrix: Vec<Vec<Option<usize>>>, carriers: Vec<usize>) -> Result<Self, String> {
+    pub fn new(
+        matrix: Vec<Vec<Option<ConnectionParams>>>,
+        carriers: Vec<usize>,
+    ) -> Result<Self, String> {
         let num_ops = matrix.len();
         if num_ops > 0 && !matrix.iter().all(|row| row.len() == num_ops) {
             return Err("Adjacency matrix must be square.".to_string());
@@ -52,7 +69,7 @@ impl Algorithm {
     }
 
     pub fn add_repeat_rule(&mut self, from_node: usize, to_node: usize, count: usize) {
-        self.repeat_rules.push(RepeatRule {
+        self.repeat_rules.push(FeedbackLoop {
             from_node,
             to_node,
             count,
@@ -61,8 +78,9 @@ impl Algorithm {
     }
 
     fn rebuild_unrolled_graph(&mut self) {
-        let (unrolled_nodes) = Self::build_unrolled_graph(&self.matrix, &self.carriers, &self.repeat_rules);
-        self.unrolled_nodes = unrolled_nodes;
+        let (unrolled_nodes) =
+            Self::build_unrolled_graph(&self.matrix, &self.carriers, &self.repeat_rules);
+        self.unrolled_nodes = unrolled_nodes.unwrap();
     }
 
     pub fn default_stack_2(num_operators: usize) -> Result<Self, String> {
@@ -70,7 +88,7 @@ impl Algorithm {
             return Self::default_simple(num_operators);
         }
         let mut matrix = vec![vec![None; num_operators]; num_operators];
-        matrix[0][1] = Some(1);
+        matrix[0][1] = Some(ConnectionParams::default());
         Self::new(matrix, vec![0])
     }
     pub fn default_fanout_feedback(num_operators: usize) -> Result<Self, String> {
@@ -78,19 +96,20 @@ impl Algorithm {
             return Self::default_simple(num_operators);
         }
         let mut matrix = vec![vec![None; num_operators]; num_operators];
-        matrix[0][3] = Some(1); // Mod → A
-        matrix[1][3] = Some(1); // Mod → B
-        matrix[1][2] = Some(1); // Extra mod → B
-        matrix[3][3] = Some(2); // Feedback into mod
-        Self::new(matrix, vec![0, 1])
+        matrix[0][3] = Some(ConnectionParams::default()); // Mod → A
+        matrix[1][3] = Some(ConnectionParams::default()); // Mod → B
+        matrix[1][2] = Some(ConnectionParams::default()); // Extra mod → B
+        let mut algo = Self::new(matrix, vec![0, 1])?;
+        algo.add_repeat_rule(3, 3, 1);
+        Ok(algo)
     }
     pub fn default_dual_stack(num_operators: usize) -> Result<Self, String> {
         if num_operators < 4 {
             return Self::default_simple(num_operators);
         }
         let mut matrix = vec![vec![None; num_operators]; num_operators];
-        matrix[0][2] = Some(1); // Modulator A -> Carrier A
-        matrix[1][3] = Some(1); // Modulator B -> Carrier B 
+        matrix[0][2] = Some(ConnectionParams::default()); // Modulator A -> Carrier A
+        matrix[1][3] = Some(ConnectionParams::default()); // Modulator B -> Carrier B
         Self::new(matrix, vec![0, 1])
     }
     pub fn default_fanout(num_operators: usize) -> Result<Self, String> {
@@ -98,8 +117,8 @@ impl Algorithm {
             return Self::default_simple(num_operators);
         }
         let mut matrix = vec![vec![None; num_operators]; num_operators];
-        matrix[0][2] = Some(1);
-        matrix[1][2] = Some(1);
+        matrix[0][2] = Some(ConnectionParams::default());
+        matrix[1][2] = Some(ConnectionParams::default());
         Self::new(matrix, vec![0, 1])
     }
     pub fn stack_3_feedback(num_operators: usize) -> Result<Self, String> {
@@ -107,8 +126,8 @@ impl Algorithm {
             return Self::default_simple(num_operators);
         }
         let mut matrix = vec![vec![None; num_operators]; num_operators];
-        matrix[1][0] = Some(1); // A → B
-        matrix[2][1] = Some(1); // B → C
+        matrix[1][0] = Some(ConnectionParams::default()); // A → B
+        matrix[2][1] = Some(ConnectionParams::default()); // B → C
 
         let carriers = vec![2]; // Output is C
         let mut algo = Self::new(matrix, carriers)?;
@@ -132,8 +151,9 @@ impl Algorithm {
         }
         let mut matrix = vec![vec![None; num_operators]; num_operators];
         // TODO: check if this is correct. When I added Repeat Rules did I remove the matrix > 1 -> feedback?
-        matrix[0][0] = Some(2);
-        Self::new(matrix, vec![0])
+        let mut alg = Self::new(matrix, vec![0])?;
+        alg.add_repeat_rule(0, 0, 1);
+        Ok(alg)
     }
 
     pub fn process(
@@ -182,39 +202,36 @@ impl Algorithm {
     }
 
     fn build_unrolled_graph(
-        matrix: &[Vec<Option<usize>>],
+        matrix: &[Vec<Option<ConnectionParams>>],
         carriers: &[usize],
-        repeat_rules: &[RepeatRule],
-    ) -> (Vec<UnrolledNode>) {
+        feedback_loops: &[FeedbackLoop],
+    ) -> Result<Vec<UnrolledNode>, String> {
         let mut nodes = Vec::new();
         let mut created_nodes = HashMap::new();
 
-        let max_level = matrix
-            .iter()
-            .flatten()
-            .filter_map(|&n| n)
-            .map(|n| n.saturating_sub(1))
-            .max()
-            .unwrap_or(0);
-
-        let mut carrier_indices = Vec::with_capacity(carriers.len());
+        // --- Step 1: Build base graph (DAG) from matrix ---
         for &op_idx in carriers {
-            let carrier_node_idx =
-                Self::get_or_create_node(matrix, op_idx, max_level, &mut nodes, &mut created_nodes);
-            carrier_indices.push(carrier_node_idx);
+            Self::get_or_create_node(
+                matrix,
+                op_idx,
+                &mut nodes,
+                &mut created_nodes,
+                &mut Vec::new(), // visited stack
+            )?;
         }
 
-        // Apply repeat rules
-        for rule in repeat_rules {
-            for _ in 0..rule.count {
+        // --- Step 2: Apply FeedbackLoops (repeat structural chains) ---
+        for loop_rule in feedback_loops {
+            for _ in 0..loop_rule.count {
                 let mut mapping = HashMap::new();
-                let start = rule.to_node;
-                let end = rule.from_node;
+                let start = loop_rule.to_node;
+                let end = loop_rule.from_node;
                 let mut stack = vec![start];
 
+                // --- 2a: Copy chain from to_node back to from_node ---
                 while let Some(current) = stack.pop() {
                     if mapping.contains_key(&current) {
-                        continue;
+                        continue; // Already duplicated
                     }
                     let current_idx = nodes.len();
                     mapping.insert(current, current_idx);
@@ -223,65 +240,76 @@ impl Algorithm {
                     for &input in inputs {
                         stack.push(input);
                     }
+
                     nodes.push(UnrolledNode {
                         original_op_index: nodes[current].original_op_index,
                         input_node_indices: Vec::new(), // filled next
                     });
                 }
 
+                // --- 2b: Link duplicated chain inputs ---
                 for (&old_idx, &new_idx) in &mapping {
                     let inputs = &nodes[old_idx].input_node_indices;
                     let new_inputs: Vec<usize> = inputs.iter().map(|i| mapping[i]).collect();
                     nodes[new_idx].input_node_indices = new_inputs;
                 }
 
-                // Link end node to repeated chain start
+                // --- 2c: Connect end node to start of duplicated chain ---
                 nodes[end].input_node_indices.push(mapping[&start]);
             }
         }
 
-        (nodes)
+        Ok(nodes)
     }
 
     fn get_or_create_node(
-        matrix: &[Vec<Option<usize>>],
+        matrix: &[Vec<Option<ConnectionParams>>],
         target_op_idx: usize,
-        target_level: usize,
         nodes: &mut Vec<UnrolledNode>,
-        created_nodes: &mut HashMap<(usize, usize), usize>,
-    ) -> usize {
-        let key = (target_op_idx, target_level);
-        if let Some(&idx) = created_nodes.get(&key) {
-            return idx;
+        created_nodes: &mut HashMap<usize, usize>,
+        visited: &mut Vec<usize>,
+    ) -> Result<usize, String> {
+        // --- Prevent structural cycles (should never happen in matrix) ---
+        if visited.contains(&target_op_idx) {
+            return Err(format!(
+                "Cycle detected in modulation graph at Operator {}.",
+                target_op_idx
+            ));
         }
 
+        // --- If node was already created, return its index ---
+        if let Some(&idx) = created_nodes.get(&target_op_idx) {
+            return Ok(idx);
+        }
+
+        // --- Mark current node as visited ---
+        visited.push(target_op_idx);
+
+        // --- Create new node ---
         let current_idx = nodes.len();
         nodes.push(UnrolledNode {
             original_op_index: target_op_idx,
             input_node_indices: Vec::new(),
         });
-        created_nodes.insert(key, current_idx);
+        created_nodes.insert(target_op_idx, current_idx);
 
+        // --- Recursively create all input nodes ---
         let mut input_indices = Vec::new();
         for source_idx in 0..matrix.len() {
-            if let Some(n) = matrix[target_op_idx][source_idx] {
-                if n == 0 {
-                    continue;
-                }
-                let source_level = if n == 1 {
-                    0
-                } else if target_level > 0 {
-                    target_level - 1
-                } else {
-                    continue;
-                };
+            if matrix[target_op_idx][source_idx].is_some() {
                 let input_idx =
-                    Self::get_or_create_node(matrix, source_idx, source_level, nodes, created_nodes);
+                    Self::get_or_create_node(matrix, source_idx, nodes, created_nodes, visited)?;
                 input_indices.push(input_idx);
             }
         }
+
+        // --- Assign inputs to current node ---
         nodes[current_idx].input_node_indices = input_indices;
-        current_idx
+
+        // --- Pop visited stack when done ---
+        visited.pop();
+
+        Ok(current_idx)
     }
 
     fn evaluate_node(
@@ -309,7 +337,8 @@ impl Algorithm {
                 samples_since_note_off,
             );
             let input_output = &scratch_buffers[input_idx];
-            let mod_idx = operators[self.unrolled_nodes[input_idx].original_op_index].modulation_index;
+            let mod_idx =
+                operators[self.unrolled_nodes[input_idx].original_op_index].modulation_index;
             for i in 0..buffer_size {
                 modulation_input[i] += input_output[i] * mod_idx;
             }
@@ -392,3 +421,4 @@ impl Algorithm {
         }
     }
 }
+

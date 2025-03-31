@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EnvelopeGenerator {
     pub attack: f32,
     pub decay: f32,
@@ -93,7 +93,6 @@ impl EnvelopeGenerator {
         // );
 
         for sample in output.iter_mut() {
-
             if self.state != EnvelopeState::Idle {
                 self.value = match self.state {
                     EnvelopeState::Attack => {
@@ -130,7 +129,6 @@ impl EnvelopeGenerator {
             }
 
             *sample *= self.value;
-
         }
     }
 }
