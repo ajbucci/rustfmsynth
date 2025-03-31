@@ -24,7 +24,8 @@ pub struct ConnectionParams {
 impl Default for ConnectionParams {
     fn default() -> Self {
         Self {
-            modulation_envelope: Some(EnvelopeGenerator::default()),
+            // TODO: test that this is actually working
+            modulation_envelope: None,
             scale: 1.0,
         }
     }
@@ -75,6 +76,19 @@ impl Algorithm {
             count,
         });
         self.rebuild_unrolled_graph();
+    }
+    pub fn set_connection(
+        &mut self,
+        from_operator: usize,
+        to_operator: usize,
+        params: ConnectionParams,
+    ) -> Result<(), String> {
+        if from_operator >= self.matrix.len() || to_operator >= self.matrix.len() {
+            return Err("Operator index out of bounds.".to_string());
+        }
+        self.matrix[to_operator][from_operator] = Some(params);
+        self.rebuild_unrolled_graph();
+        Ok(())
     }
 
     fn rebuild_unrolled_graph(&mut self) {
@@ -337,10 +351,26 @@ impl Algorithm {
                 samples_since_note_off,
             );
             let input_output = &scratch_buffers[input_idx];
-            let mod_idx =
-                operators[self.unrolled_nodes[input_idx].original_op_index].modulation_index;
-            for i in 0..buffer_size {
-                modulation_input[i] += input_output[i] * mod_idx;
+
+            let source_op = self.unrolled_nodes[input_idx].original_op_index;
+            let target_op = node.original_op_index;
+            if let Some(Some(conn)) = self
+                .matrix
+                .get(target_op)
+                .and_then(|row| row.get(source_op))
+            {
+                let scale = conn.scale;
+                for i in 0..buffer_size {
+                    let time_on = (start_sample_index + i as u64) as f32 / sample_rate;
+                    let time_off =
+                        samples_since_note_off.map(|n| (n + i as u64) as f32 / sample_rate);
+                    let env_value = conn
+                        .modulation_envelope
+                        .as_ref()
+                        .map(|e| e.evaluate(time_on, time_off))
+                        .unwrap_or(1.0);
+                    modulation_input[i] += input_output[i] * scale * env_value;
+                }
             }
         }
 

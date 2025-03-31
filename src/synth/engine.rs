@@ -277,8 +277,9 @@ impl Default for SynthEngine {
 
         // Initialize with a default algorithm (e.g., a simple 2-operator stack)
         // let default_algorithm = Algorithm::default_fanout_feedback(operators.len()).unwrap();
-        let default_algorithm = Algorithm::default_feedback_1(operators.len()).unwrap();
+        // let default_algorithm = Algorithm::default_feedback_1(operators.len()).unwrap();
         // let default_algorithm = Algorithm::default_simple(operators.len()).unwrap();
+        let default_algorithm = Algorithm::default_stack_2(operators.len()).unwrap();
         default_algorithm.print_evaluation_chains();
         default_algorithm.print_structure();
         // Initialize voices
