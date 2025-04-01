@@ -47,8 +47,8 @@ impl Default for EnvelopeGenerator {
         Self {
             attack: 0.01,
             decay: 0.1,
-            sustain: 0.7,
-            release: 0.2,
+            sustain: 0.8,
+            release: 0.3,
         }
     }
 }

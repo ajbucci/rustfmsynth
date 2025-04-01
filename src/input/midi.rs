@@ -68,12 +68,12 @@ impl MidiHandler {
             let note_off = (status & 0xF0 == 0x80) || (status & 0xF0 == 0x90 && data2 == 0);
 
             if note_on {
-                println!("MIDI Note ON: {} Vel {}", data1, data2);
+                // println!("MIDI Note ON: {} Vel {}", data1, data2);
                 if let Ok(event) = NoteEvent::new(data1, data2, true, NoteSource::Midi) {
                     let _ = engine.get_note_sender().send(event);
                 }
             } else if note_off {
-                println!("MIDI Note OFF: {}", data1);
+                // println!("MIDI Note OFF: {}", data1);
                 if let Ok(event) = NoteEvent::new(data1, 0, false, NoteSource::Midi) {
                     let _ = engine.get_note_sender().send(event);
                 }

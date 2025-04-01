@@ -1,7 +1,8 @@
 use super::algorithm::Algorithm;
 use super::envelope::EnvelopeGenerator;
-use super::note::NoteSource;
+use super::note::{NoteEvent, NoteSource};
 use super::operator::Operator;
+use super::voice_config::VoiceConfig;
 
 /// Represents a single polyphonic voice in the synthesizer.
 pub struct Voice {
@@ -9,10 +10,13 @@ pub struct Voice {
     pub releasing: bool, // If the voice is playing a note, has it been released yet?
     pub note_number: u8, // MIDI note number (0-127)
     pub note_frequency: f32, // Frequency derived from note_number
+    pub note_velocity: u8, // MIDI velocity (0-127)
     pub note_source: Option<NoteSource>, // Where the note came from (keyboard, sequencer)
+    velocity_scale: f32, // Relative velocity of the note (0.0-1.0)
     envelope: EnvelopeGenerator, // Main amplitude envelope for the voice
     samples_elapsed_since_trigger: u64, // Counter for phase calculation
     note_off_sample_index: Option<u64>, // Sample index when the note was released
+    config: VoiceConfig, // Configuration for the voice
 }
 
 impl Voice {
@@ -26,23 +30,26 @@ impl Voice {
         self.releasing = false;
         self.note_number = 0;
         self.note_frequency = 0.0;
+        self.note_velocity = 0;
+        self.velocity_scale = 0.0;
         self.note_source = None;
         self.samples_elapsed_since_trigger = 0;
         self.note_off_sample_index = None;
     }
     /// Activates the voice for a given note.
     /// Resets the sample counter and triggers the envelope.
-    pub fn activate(
-        &mut self,
-        note_number: u8,
-        note_source: Option<NoteSource>,
-        note_frequency: f32,
-    ) {
+    pub fn activate(&mut self, note_event: &NoteEvent, config: &VoiceConfig) {
         self.reset();
         self.active = true;
-        self.note_number = note_number;
-        self.note_source = note_source;
-        self.note_frequency = note_frequency;
+        self.note_number = note_event.note_number;
+        self.note_source = Some(note_event.source);
+        self.note_frequency = note_event.frequency;
+        self.note_velocity = note_event.velocity;
+        self.velocity_scale = config.velocity_to_scale(self.note_velocity);
+        self.config = config.clone();
+
+        self.envelope
+            .set_params(config.attack, config.decay, config.sustain, config.release);
 
         println!(
             "Voice activated note {}, sample counter reset",
@@ -112,7 +119,8 @@ impl Voice {
                 (start_sample_index + i as u64 - off_sample) as f32 / sample_rate
             });
 
-            let env_value = self.envelope.evaluate(time_since_on, time_since_off);
+            let env_value =
+                self.velocity_scale * self.envelope.evaluate(time_since_on, time_since_off);
             output[i] += raw_output[i] * env_value;
         }
 
@@ -147,9 +155,12 @@ impl Default for Voice {
             note_number: 0,
             note_frequency: 0.0, // Will be set on activation
             note_source: None,
+            note_velocity: 0,
+            velocity_scale: 0.0,
             envelope: EnvelopeGenerator::new(),
             samples_elapsed_since_trigger: 0,
             note_off_sample_index: None,
+            config: VoiceConfig::default(),
         }
     }
 }

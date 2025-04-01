@@ -4,6 +4,7 @@ use super::note::NoteEvent;
 use super::operator::Operator;
 use super::operator::OperatorEvent;
 use super::voice::Voice;
+use super::voice_config::VoiceConfig;
 use super::waveform::Waveform;
 use std::sync::mpsc::{Receiver, Sender};
 
@@ -18,8 +19,9 @@ pub struct SynthEngine {
     master_volume: f32,
     current_gain: f32, // Track the current gain for smooth transitions
     buffer_size: usize,
-    algorithm: Algorithm,     // The algorithm defining operator connections
-    operators: Vec<Operator>, // The set of operators shared by all voices
+    algorithm: Algorithm,          // The algorithm defining operator connections
+    operators: Vec<Operator>,      // The set of operators shared by all voices
+    pub voice_config: VoiceConfig, // Configuration for the voices
 }
 
 impl SynthEngine {
@@ -54,6 +56,9 @@ impl SynthEngine {
         self.master_volume = volume.clamp(0.0, 1.0);
     }
 
+    pub fn set_voice_config(&mut self, config: VoiceConfig) {
+        self.voice_config = config;
+    }
     /// Process operator events
     fn process_operator_events(&mut self) {
         while let Ok(event) = self.operator_receiver.try_recv() {
@@ -100,6 +105,7 @@ impl SynthEngine {
 
     /// Process any pending note events from the queue
     fn process_note_events(&mut self) {
+        let voice_config = self.voice_config.clone();
         while let Ok(event) = self.note_receiver.try_recv() {
             if event.is_on {
                 // Find a free voice or steal one
@@ -110,7 +116,7 @@ impl SynthEngine {
                 };
 
                 // Activate the voice with the note details
-                voice.activate(event.note_number, Some(event.source), event.frequency);
+                voice.activate(&event, &voice_config);
             } else {
                 // Find all voices playing this note from the same source and release them
                 for voice in self.voices.iter_mut() {
@@ -297,7 +303,8 @@ impl Default for SynthEngine {
             current_gain: 0.65,
             buffer_size: 1024, // Default, can be updated by set_buffer_size
             algorithm: default_algorithm,
-            operators, // Store the operators
+            operators,                            // Store the operators
+            voice_config: VoiceConfig::default(), // Default voice config
         }
     }
 }

@@ -6,5 +6,5 @@ pub mod filter;
 pub mod note;
 pub mod operator;
 pub mod voice;
+pub mod voice_config;
 pub mod waveform;
-
