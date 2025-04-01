@@ -16,6 +16,60 @@ impl CpalBackend {
             synth_engine,
         }
     }
+
+    fn select_output_device(
+        &self,
+        host: &cpal::Host,
+    ) -> Result<cpal::Device, Box<dyn std::error::Error>> {
+        if cfg!(target_os = "linux") {
+            self.select_linux_output_device(host)
+        } else {
+            host.default_output_device()
+                .ok_or_else(|| "No output device available".into())
+        }
+    }
+
+    fn select_linux_output_device(
+        &self,
+        host: &cpal::Host,
+    ) -> Result<cpal::Device, Box<dyn std::error::Error>> {
+        let mut device_names = Vec::new();
+
+        for device in host.devices()? {
+            let name = device.name().unwrap_or_default();
+            if name.to_lowercase().starts_with("default:")
+                || name.to_lowercase().contains("pipewire")
+            {
+                device_names.push(name);
+            }
+        }
+
+        if device_names.is_empty() {
+            return host
+                .default_output_device()
+                .ok_or_else(|| "No output device available".into());
+        }
+
+        println!("Available output devices:");
+        for (i, name) in device_names.iter().enumerate() {
+            println!("{}. {}", i + 1, name);
+        }
+
+        println!("Select device (default 1): ");
+        let mut choice = String::new();
+        std::io::stdin().read_line(&mut choice)?;
+        let choice = choice
+            .trim()
+            .parse::<usize>()
+            .unwrap_or(1)
+            .saturating_sub(1);
+
+        let selected_name = device_names.get(choice).ok_or("Invalid device selection")?;
+
+        host.devices()?
+            .find(|d| d.name().map(|n| n == *selected_name).unwrap_or(false))
+            .ok_or_else(|| "Selected output device not found".into())
+    }
     fn determine_buffer_size(
         &self,
         device: &cpal::Device,
@@ -47,58 +101,7 @@ impl CpalBackend {
 
     fn build_stream(&mut self) -> Result<Stream, Box<dyn std::error::Error>> {
         let host = cpal::default_host();
-
-        // Get the appropriate output device based on the target OS
-        let device = if cfg!(target_os = "linux") {
-            println!("Linux detected, searching for devices");
-            if let Ok(devices) = host.devices() {
-                let mut device_names = Vec::new();
-
-                for device in devices {
-                    let name = device.name().unwrap_or_default();
-                    // println!("Device: {}", name);
-                    if name.to_lowercase().starts_with("default:")
-                        || name.to_lowercase().contains("pipewire")
-                    {
-                        device_names.push(name.clone());
-                    }
-                }
-
-                println!("Select output device:");
-                for (i, name) in device_names.iter().enumerate() {
-                    println!("{}. {}", i + 1, name);
-                }
-
-                let mut choice = String::new();
-                std::io::stdin()
-                    .read_line(&mut choice)
-                    .expect("Failed to read input");
-                let choice = choice.trim().parse::<usize>().unwrap_or(0);
-
-                // Find the device by name
-                let selected_name = if choice > 0 && choice <= device_names.len() {
-                    Some(device_names[choice - 1].clone())
-                } else {
-                    None
-                };
-
-                if let Some(name) = selected_name {
-                    host.devices()?
-                        .find(|d| d.name().map(|n| n == name).unwrap_or(false))
-                        .ok_or("No output device available")?
-                } else {
-                    host.default_output_device()
-                        .ok_or("No output device available")?
-                }
-            } else {
-                host.default_output_device()
-                    .ok_or("No output device available")?
-            }
-        } else {
-            // For non-Linux platforms, use the default output device
-            host.default_output_device()
-                .ok_or("No output device available")?
-        };
+        let device = self.select_output_device(&host)?;
         println!("Selected device: {}", device.name().unwrap_or_default());
         let supported_config = device.default_output_config()?;
         let mut stream_config: cpal::StreamConfig = supported_config.clone().into();
