@@ -39,7 +39,7 @@ impl SynthEngine {
 
     /// Find an available voice (one that is completely finished)
     fn find_free_voice(&mut self) -> Option<&mut Voice> {
-        self.voices.iter_mut().find(|voice| voice.is_finished())
+        self.voices.iter_mut().find(|voice| !voice.active)
     }
 
     // TODO: Implement a better voice stealing strategy (e.g., oldest note, quietest voice)
@@ -116,7 +116,7 @@ impl SynthEngine {
                 for voice in self.voices.iter_mut() {
                     // Check if the voice is active OR still releasing (envelope not finished)
                     // and matches the note number and source.
-                    if (!voice.is_finished() || voice.active) // Check if it's making sound or just triggered
+                    if (!voice.releasing || voice.active) // Check if it's making sound or just triggered
                         && voice.note_number == event.note_number
                         && voice.note_source == Some(event.source)
                     {
@@ -131,11 +131,11 @@ impl SynthEngine {
     fn process_voices(&mut self, buffer_size: usize, sample_rate: f32) -> (f32, Vec<Vec<f32>>) {
         let mut total_energy = 0.0;
         // Pre-allocate buffers for voices that will be processed
-        let active_voice_count = self.voices.iter().filter(|v| !v.is_finished()).count();
+        let active_voice_count = self.voices.iter().filter(|v| v.active).count();
         let mut voice_buffers = Vec::with_capacity(active_voice_count);
 
         // Process only voices that are not fully finished (active or releasing)
-        for voice in self.voices.iter_mut().filter(|v| !v.is_finished()) {
+        for voice in self.voices.iter_mut().filter(|v| v.active) {
             let mut voice_buffer = vec![0.0; buffer_size];
 
             // Process the voice using the engine's algorithm and operators
@@ -260,6 +260,7 @@ impl Default for SynthEngine {
         operators[1].set_envelope(0.01, 1.0, 0.7, 0.5);
         operators[1].set_gain(0.5);
         operators[1].frequency_ratio = 1.01;
+        operators[1].modulation_index = 2.0;
 
         // Modulator A
         operators[2].set_waveform(Waveform::Sine);
@@ -276,10 +277,10 @@ impl Default for SynthEngine {
         operators[3].modulation_index = 3.0;
 
         // Initialize with a default algorithm (e.g., a simple 2-operator stack)
-        // let default_algorithm = Algorithm::default_fanout_feedback(operators.len()).unwrap();
+        let default_algorithm = Algorithm::default_fanout_feedback(operators.len()).unwrap();
         // let default_algorithm = Algorithm::default_feedback_1(operators.len()).unwrap();
         // let default_algorithm = Algorithm::default_simple(operators.len()).unwrap();
-        let default_algorithm = Algorithm::default_stack_2(operators.len()).unwrap();
+        // let default_algorithm = Algorithm::default_stack_2(operators.len()).unwrap();
         default_algorithm.print_evaluation_chains();
         default_algorithm.print_structure();
         // Initialize voices

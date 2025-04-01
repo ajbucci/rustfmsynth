@@ -6,12 +6,13 @@ use super::operator::Operator;
 /// Represents a single polyphonic voice in the synthesizer.
 pub struct Voice {
     pub active: bool,                    // Is the voice currently playing a note?
-    pub note_number: u8,                 // MIDI note number (0-127)
-    pub note_frequency: f32,             // Frequency derived from note_number
+    pub releasing: bool, // If the voice is playing a note, has it been released yet?
+    pub note_number: u8, // MIDI note number (0-127)
+    pub note_frequency: f32, // Frequency derived from note_number
     pub note_source: Option<NoteSource>, // Where the note came from (keyboard, sequencer)
-    envelope: EnvelopeGenerator,         // Main amplitude envelope for the voice
-    samples_elapsed_since_trigger: u64,  // Counter for phase calculation
-    note_off_sample_index: Option<u64>,  // Sample index when the note was released
+    envelope: EnvelopeGenerator, // Main amplitude envelope for the voice
+    samples_elapsed_since_trigger: u64, // Counter for phase calculation
+    note_off_sample_index: Option<u64>, // Sample index when the note was released
 }
 
 impl Voice {
@@ -19,7 +20,16 @@ impl Voice {
     pub fn new() -> Self {
         Self::default()
     }
-
+    /// Fully resets the voice to an inactive state.
+    pub fn reset(&mut self) {
+        self.active = false;
+        self.releasing = false;
+        self.note_number = 0;
+        self.note_frequency = 0.0;
+        self.note_source = None;
+        self.samples_elapsed_since_trigger = 0;
+        self.note_off_sample_index = None;
+    }
     /// Activates the voice for a given note.
     /// Resets the sample counter and triggers the envelope.
     pub fn activate(
@@ -28,37 +38,24 @@ impl Voice {
         note_source: Option<NoteSource>,
         note_frequency: f32,
     ) {
+        self.reset();
         self.active = true;
         self.note_number = note_number;
         self.note_source = note_source;
         self.note_frequency = note_frequency;
-        self.samples_elapsed_since_trigger = 0;
-        self.note_off_sample_index = None;
-        self.envelope.trigger();
 
         println!(
             "Voice activated note {}, sample counter reset",
             self.note_number
         );
-        // Trigger the main envelope
-        // TODO: pass envelope events to the operator when processing to trigger operator envelopes
-        self.envelope.trigger();
     }
 
     /// Initiates the release phase of the voice's main envelope.
     pub fn release(&mut self) {
-        // Check if the voice is actually active OR the envelope is still running before releasing.
-        // Avoids re-releasing if multiple note-offs are received or if already released.
-        if self.active || !self.envelope.is_finished() {
-            println!("Voice releasing envelope for note {}", self.note_number);
-            self.envelope.release();
-            
-            // Store the current sample index as the note-off sample index
+        if !self.releasing {
+            self.releasing = true;
             self.note_off_sample_index = Some(self.samples_elapsed_since_trigger);
-
-            // Mark the voice as inactive (no longer accepting triggers),
-            // but it will continue processing until the envelope finishes its release phase.
-            self.active = false;
+            println!("Voice released note {}", self.note_number);
         }
     }
 
@@ -75,10 +72,8 @@ impl Voice {
         sample_rate: f32,
     ) {
         // If the voice is fully finished (inactive AND envelope done), skip processing.
-        if self.is_finished() {
-            // Ensure output is silent if this voice is the only contributor?
-            // Or assume the main engine clears the buffer.
-            // output.fill(0.0); // Optional: Clear if needed
+        if self.is_finished(sample_rate) {
+            self.reset();
             return;
         }
 
@@ -89,7 +84,9 @@ impl Voice {
 
         // Store the sample index corresponding to the START of this buffer.
         let start_sample_index = self.samples_elapsed_since_trigger;
-        let samples_since_note_off = self.note_off_sample_index.map(|off| start_sample_index.saturating_sub(off));
+        let samples_since_note_off = self
+            .note_off_sample_index
+            .map(|off| start_sample_index.saturating_sub(off));
 
         // --- Generate Raw Audio using Algorithm and Operators ---
         // Create a temporary buffer for the raw operator output before enveloping.
@@ -105,43 +102,48 @@ impl Voice {
 
         // --- Apply Main Voice Envelope ---
         // Apply the overall envelope to the raw generated sound.
-        self.envelope.apply(&mut raw_output, sample_rate); // Apply modifies raw_output in place
-
         // --- Add to Final Output ---
         // Add the enveloped sound of this voice to the main output buffer.
         // Assumes the main output buffer might contain other voices.
         for i in 0..buffer_len {
-            output[i] += raw_output[i]; // Additive mixing
+            // Additive mixing
+            let time_since_on = (start_sample_index + i as u64) as f32 / sample_rate;
+            let time_since_off = self.note_off_sample_index.map(|off_sample| {
+                (start_sample_index + i as u64 - off_sample) as f32 / sample_rate
+            });
+
+            let env_value = self.envelope.evaluate(time_since_on, time_since_off);
+            output[i] += raw_output[i] * env_value;
         }
 
         // --- Update State & Increment Counter ---
 
-        // Check if the envelope has finished its release phase *after* processing.
-        if !self.active && self.envelope.is_finished() {
-            // The voice was releasing and the envelope just finished.
-            // It's now truly inactive. No state change needed here, is_finished() handles it.
-            println!(
-                "Envelope finished release for note {}, voice fully inactive",
-                self.note_number
-            );
-        }
-
         // Increment the sample counter *after* processing this buffer.
-        // Only increment if the voice was considered active OR was releasing during this buffer.
         self.samples_elapsed_since_trigger += buffer_len as u64;
+        // Check if envelope has finished
+        if self.releasing && self.is_finished(sample_rate) {
+            println!("Voice fully inactive (note {} released)", self.note_number);
+            self.reset();
+        }
     }
 
     /// Checks if the voice is completely finished (inactive and envelope has finished).
-    pub fn is_finished(&self) -> bool {
-        // A voice is finished if it's not marked active (i.e., released)
-        // AND its envelope has reached the idle state (value is effectively zero).
-        !self.active && self.envelope.is_finished()
+    pub fn is_finished(&self, sample_rate: f32) -> bool {
+        if let Some(note_off_sample_index) = self.note_off_sample_index {
+            let time_since_on = self.samples_elapsed_since_trigger as f32 / sample_rate;
+            let time_since_off =
+                (self.samples_elapsed_since_trigger - note_off_sample_index) as f32 / sample_rate;
+            self.envelope.evaluate(time_since_on, Some(time_since_off)) == 0.0
+        } else {
+            false
+        }
     }
 }
 impl Default for Voice {
     fn default() -> Self {
         Self {
             active: false,
+            releasing: false,
             note_number: 0,
             note_frequency: 0.0, // Will be set on activation
             note_source: None,

@@ -1,5 +1,5 @@
-use super::filter::FilterType;
 use super::envelope::EnvelopeGenerator;
+use super::filter::FilterType;
 use super::waveform::{Waveform, WaveformGenerator};
 use std::f32::consts::PI;
 
@@ -37,7 +37,7 @@ impl Operator {
         output: &mut [f32],
         modulation: &[f32], // Input modulation signal
         sample_rate: f32,
-        samples_since_note_on: u64, 
+        samples_since_note_on: u64,
         samples_since_note_off: Option<u64>,
     ) {
         // Determine the actual frequency for this operator
@@ -55,11 +55,12 @@ impl Operator {
             // NOTE: can wrap phase if it grows large: let wrapped_phase = phase % (2.0 * PI);
             let phase = phase_increment * (sample_index as f32) + modulation[i];
             let wave = self.waveform_generator.evaluate(phase);
-            
+
             let time_since_on = sample_index as f32 / sample_rate;
-            let time_since_off = samples_since_note_off.map(|off| (off + i as u64) as f32 / sample_rate);
+            let time_since_off =
+                samples_since_note_off.map(|off| (off + i as u64) as f32 / sample_rate);
             let env = self.envelope.evaluate(time_since_on, time_since_off);
-            *sample = wave * env * self.gain;
+            *sample = wave * env * self.gain * self.modulation_index;
             // TODO: apply filter
         }
     }
@@ -69,7 +70,10 @@ impl Operator {
         self.gain = amp;
     }
     pub fn set_envelope(&mut self, attack: f32, decay: f32, sustain: f32, release: f32) {
-        println!("Operator envelope set to: {}, {}, {}, {}", attack, decay, sustain, release);
+        println!(
+            "Operator envelope set to: {}, {}, {}, {}",
+            attack, decay, sustain, release
+        );
         self.envelope.set_params(attack, decay, sustain, release);
     }
 

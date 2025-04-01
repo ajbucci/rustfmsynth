@@ -34,10 +34,10 @@ impl Default for ConnectionParams {
 // --- Algorithm ---
 
 pub struct Algorithm {
-    matrix: Vec<Vec<Option<ConnectionParams>>>,
-    carriers: Vec<usize>,
-    repeat_rules: Vec<FeedbackLoop>,
-    unrolled_nodes: Vec<UnrolledNode>,
+    matrix: Vec<Vec<Option<ConnectionParams>>>, // Adjacency matrix
+    carriers: Vec<usize>,                       // Carrier operator indices
+    repeat_rules: Vec<FeedbackLoop>,            // Repeat rules for feedback loops
+    unrolled_nodes: Vec<UnrolledNode>,          // Unrolled graph structure
 }
 
 impl Algorithm {
@@ -92,7 +92,7 @@ impl Algorithm {
     }
 
     fn rebuild_unrolled_graph(&mut self) {
-        let (unrolled_nodes) =
+        let unrolled_nodes =
             Self::build_unrolled_graph(&self.matrix, &self.carriers, &self.repeat_rules);
         self.unrolled_nodes = unrolled_nodes.unwrap();
     }
@@ -451,4 +451,3 @@ impl Algorithm {
         }
     }
 }
-
