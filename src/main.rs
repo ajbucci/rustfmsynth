@@ -15,8 +15,8 @@ fn main() {
     // Set up keyboard input
     let mut keyboard_handler = KeyboardHandler::new();
 
-    // Set up midi input
-    let mut midi_handler = MidiHandler::new().unwrap();
+    // Set up midi input (will be disabled if initialization fails)
+    let mut midi_handler = MidiHandler::new();
 
     // Main loop for keyboard handling
     loop {

@@ -6,15 +6,28 @@ use std::io::{stdin, stdout, Write};
 use std::sync::mpsc::{self, Receiver};
 
 pub struct MidiHandler {
-    connection: MidiInputConnection<()>,
-    receiver: Receiver<(u8, u8, u8)>, // (status, data1, data2)
+    connection: Option<MidiInputConnection<()>>,
+    receiver: Option<Receiver<(u8, u8, u8)>>, // (status, data1, data2)
 }
 
 impl MidiHandler {
-    pub fn new() -> Result<Self, Box<dyn Error>> {
+    pub fn new() -> Self {
+        match Self::try_new() {
+            Ok(handler) => handler,
+            Err(e) => {
+                println!("Failed to initialize MIDI: {}. MIDI functionality will be disabled.", e);
+                Self {
+                    connection: None,
+                    receiver: None,
+                }
+            }
+        }
+    }
+
+    fn try_new() -> Result<Self, Box<dyn Error>> {
         let midi_in = MidiInput::new("RustFMSynth Input")?;
         let port = Self::select_input_port(&midi_in)?;
-        let port_name = midi_in.port_name(&port)?; // <-- get port name BEFORE connect
+        let port_name = midi_in.port_name(&port)?;
 
         let (sender, receiver) = mpsc::channel();
 
@@ -32,8 +45,8 @@ impl MidiHandler {
         println!("Opened MIDI port: {}", port_name);
 
         Ok(Self {
-            connection,
-            receiver,
+            connection: Some(connection),
+            receiver: Some(receiver),
         })
     }
 
@@ -63,19 +76,19 @@ impl MidiHandler {
     }
 
     pub fn update(&mut self, engine: &mut SynthEngine) {
-        while let Ok((status, data1, data2)) = self.receiver.try_recv() {
-            let note_on = status & 0xF0 == 0x90 && data2 > 0;
-            let note_off = (status & 0xF0 == 0x80) || (status & 0xF0 == 0x90 && data2 == 0);
+        if let Some(receiver) = &self.receiver {
+            while let Ok((status, data1, data2)) = receiver.try_recv() {
+                let note_on = status & 0xF0 == 0x90 && data2 > 0;
+                let note_off = (status & 0xF0 == 0x80) || (status & 0xF0 == 0x90 && data2 == 0);
 
-            if note_on {
-                // println!("MIDI Note ON: {} Vel {}", data1, data2);
-                if let Ok(event) = NoteEvent::new(data1, data2, true, NoteSource::Midi) {
-                    let _ = engine.get_note_sender().send(event);
-                }
-            } else if note_off {
-                // println!("MIDI Note OFF: {}", data1);
-                if let Ok(event) = NoteEvent::new(data1, 0, false, NoteSource::Midi) {
-                    let _ = engine.get_note_sender().send(event);
+                if note_on {
+                    if let Ok(event) = NoteEvent::new(data1, data2, true, NoteSource::Midi) {
+                        let _ = engine.get_note_sender().send(event);
+                    }
+                } else if note_off {
+                    if let Ok(event) = NoteEvent::new(data1, 0, false, NoteSource::Midi) {
+                        let _ = engine.get_note_sender().send(event);
+                    }
                 }
             }
         }
