@@ -1,7 +1,8 @@
-use std::sync::{Arc, Mutex};
 use rustfmsynth::audio::{AudioBackend, CpalBackend};
-use rustfmsynth::synth::engine::SynthEngine;
 use rustfmsynth::input::KeyboardHandler;
+use rustfmsynth::input::MidiHandler;
+use rustfmsynth::synth::engine::SynthEngine;
+use std::sync::{Arc, Mutex};
 
 fn main() {
     // Create a shared synth engine
@@ -14,14 +15,18 @@ fn main() {
     // Set up keyboard input
     let mut keyboard_handler = KeyboardHandler::new();
 
+    // Set up midi input
+    let mut midi_handler = MidiHandler::new().unwrap();
+
     // Main loop for keyboard handling
     loop {
         // Lock the synth engine once per frame
         let mut engine = synth_engine.lock().unwrap();
-        
+
         // Update keyboard state and send note events
-        keyboard_handler.update(&mut *engine);
-        
+        keyboard_handler.update(&mut engine);
+        midi_handler.update(&mut engine);
+
         // Release the lock
         drop(engine);
 

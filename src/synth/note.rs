@@ -11,32 +11,43 @@ pub struct NoteEvent {
 }
 
 impl NoteEvent {
-    pub fn new(note_number: u8, velocity: u8, is_on: bool, source: NoteSource) -> Result<Self, NoteError> {
+    pub fn new(
+        note_number: u8,
+        velocity: u8,
+        is_on: bool,
+        source: NoteSource,
+    ) -> Result<Self, NoteError> {
         // Validate note number
         if note_number >= 128 {
             return Err(NoteError::InvalidNoteNumber(note_number));
         }
-        
+
         // Validate velocity
         if velocity >= 128 {
             return Err(NoteError::InvalidVelocity(velocity));
         }
-        
+
         // Get frequency from lookup table
         let frequency = midi_frequencies()[note_number as usize];
-        
-        Ok(Self { note_number, velocity, is_on, frequency, source })
+
+        Ok(Self {
+            note_number,
+            velocity,
+            is_on,
+            frequency,
+            source,
+        })
     }
-    
+
     pub fn validate(&self) -> Result<(), NoteError> {
         if self.note_number >= 128 {
             return Err(NoteError::InvalidNoteNumber(self.note_number));
         }
-        
+
         if self.velocity >= 128 {
             return Err(NoteError::InvalidVelocity(self.velocity));
         }
-        
+
         Ok(())
     }
 }
@@ -44,7 +55,7 @@ impl NoteEvent {
 /// Global frequency table for MIDI notes
 fn midi_frequencies() -> &'static [f32; 128] {
     static FREQUENCIES: OnceLock<[f32; 128]> = OnceLock::new();
-    
+
     FREQUENCIES.get_or_init(|| {
         let mut frequencies = [0.0; 128];
         for note in 0..128 {
@@ -63,8 +74,12 @@ pub enum NoteError {
 impl fmt::Display for NoteError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            NoteError::InvalidNoteNumber(n) => write!(f, "Invalid MIDI note number: {}. Must be 0-127.", n),
-            NoteError::InvalidVelocity(v) => write!(f, "Invalid MIDI velocity: {}. Must be 0-127.", v),
+            NoteError::InvalidNoteNumber(n) => {
+                write!(f, "Invalid MIDI note number: {}. Must be 0-127.", n)
+            }
+            NoteError::InvalidVelocity(v) => {
+                write!(f, "Invalid MIDI velocity: {}. Must be 0-127.", v)
+            }
         }
     }
 }
@@ -75,5 +90,6 @@ impl std::error::Error for NoteError {}
 pub enum NoteSource {
     Sequencer,
     Keyboard,
+    Midi,
     // Add other sources as needed
 }
