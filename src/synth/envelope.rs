@@ -4,7 +4,6 @@ pub struct EnvelopeGenerator {
     pub decay: f32,
     pub sustain: f32,
     pub release: f32,
-    pub value: f32,
 }
 
 impl EnvelopeGenerator {
@@ -18,16 +17,19 @@ impl EnvelopeGenerator {
         self.release = release;
     }
     pub fn evaluate(&self, time_since_on: f32, time_since_off: Option<f32>) -> f32 {
-        if let Some(release_time) = time_since_off {
-            // In release phase
-            if release_time >= self.release {
+        if let Some(time_since_off) = time_since_off {
+            if time_since_off >= self.release {
                 0.0
+            } else if time_since_on - time_since_off < self.attack + self.decay {
+                // Need this to smooth out the discontinuity if we release before sustain
+                let progress = time_since_off / self.release;
+                self.evaluate(time_since_on, None) * (1.0 - progress)
             } else {
-                let progress = release_time / self.release;
+                let progress = time_since_off / self.release;
                 self.sustain * (1.0 - progress)
             }
         } else {
-            // Attack, Decay, Sustain
+            // Attack/Decay/Sustain phase
             if time_since_on < self.attack {
                 time_since_on / self.attack
             } else if time_since_on < self.attack + self.decay {
@@ -47,7 +49,6 @@ impl Default for EnvelopeGenerator {
             decay: 0.1,
             sustain: 0.7,
             release: 0.2,
-            value: 0.0,
         }
     }
 }
