@@ -6,37 +6,46 @@ use super::operator::OperatorEvent;
 use super::voice::Voice;
 use super::voice_config::VoiceConfig;
 use super::waveform::Waveform;
-use std::sync::mpsc::{Receiver, Sender};
 
 /// The main synthesizer engine that manages voices and audio processing
-pub struct SynthEngine {
-    pub voices: Vec<Voice>,
+pub struct Synth {
+    voices: Vec<Voice>,
     pub config: SynthConfig,
-    note_receiver: Receiver<NoteEvent>,
-    note_sender: Sender<NoteEvent>,
-    operator_receiver: Receiver<OperatorEvent>,
-    operator_sender: Sender<OperatorEvent>,
+    pub voice_config: VoiceConfig, // Configuration for the voices
+    algorithm: Algorithm,          // The algorithm defining operator connections
+    operators: Vec<Operator>,      // The set of operators shared by all voices
     master_volume: f32,
     current_gain: f32, // Track the current gain for smooth transitions
     buffer_size: usize,
-    algorithm: Algorithm,          // The algorithm defining operator connections
-    operators: Vec<Operator>,      // The set of operators shared by all voices
-    pub voice_config: VoiceConfig, // Configuration for the voices
 }
 
-impl SynthEngine {
+impl Synth {
     pub fn new() -> Self {
         Self::default()
     }
+    pub fn note_on(&mut self, event: &NoteEvent) {
+        let voice_config = self.voice_config.clone();
+        // Find a free voice or steal one
+        let voice = if let Some(v) = self.find_free_voice() {
+            v
+        } else {
+            self.steal_voice()
+        };
 
-    /// Get a sender for note events that can be used by input handlers
-    pub fn get_note_sender(&self) -> Sender<NoteEvent> {
-        self.note_sender.clone()
+        // Activate the voice with the note details
+        voice.activate(event, &voice_config);
     }
-
-    /// Get a sender for operator events that can be used by input handlers
-    pub fn get_operator_sender(&self) -> Sender<OperatorEvent> {
-        self.operator_sender.clone()
+    pub fn note_off(&mut self, event: &NoteEvent) {
+        for voice in self.voices.iter_mut() {
+            // Check if the voice is active OR still releasing (envelope not finished)
+            // and matches the note number and source.
+            if (!voice.releasing || voice.active) // Check if it's making sound or just triggered
+                        && voice.note_number == event.note_number
+                        && voice.note_source == Some(event.source)
+            {
+                voice.release(); // Initiate the release phase
+            }
+        }
     }
 
     /// Find an available voice (one that is completely finished)
@@ -60,33 +69,25 @@ impl SynthEngine {
         self.voice_config = config;
     }
     /// Process operator events
-    fn process_operator_events(&mut self) {
-        while let Ok(event) = self.operator_receiver.try_recv() {
-            match event {
-                OperatorEvent::CycleWaveform { direction } => {
-                    println!("Processing CycleWaveform event: {:?}", direction);
-                    // Cycle the waveform for *all* operators managed by the engine
-                    for (i, operator) in self.operators.iter_mut().enumerate() {
-                        operator.cycle_waveform(direction);
-                        // Log the waveform of the first operator as an example
-                        println!(
-                            "Operator {:?} waveform changed to: {:?}",
-                            i, operator.waveform_generator
-                        );
-                    }
-                } // Add other OperatorEvent cases here
-            }
+    pub fn process_operator_events(&mut self, event: &OperatorEvent) {
+        match event {
+            OperatorEvent::CycleWaveform { direction } => {
+                println!("Processing CycleWaveform event: {:?}", direction);
+                // Cycle the waveform for *all* operators managed by the engine
+                for (i, operator) in self.operators.iter_mut().enumerate() {
+                    operator.cycle_waveform(*direction);
+                    // Log the waveform of the first operator as an example
+                    println!(
+                        "Operator {:?} waveform changed to: {:?}",
+                        i, operator.waveform_generator
+                    );
+                }
+            } // Add other OperatorEvent cases here
         }
     }
 
     /// Process audio for the current buffer
     pub fn process(&mut self, output: &mut [f32], sample_rate: f32) {
-        // Handle any pending note events
-        self.process_note_events();
-
-        // Handle any pending operator events
-        self.process_operator_events();
-
         // Clear output buffer
         output.fill(0.0); // Clear the main output buffer first
 
@@ -101,36 +102,6 @@ impl SynthEngine {
 
         // Apply soft knee limiter for safety
         self.apply_limiter(output);
-    }
-
-    /// Process any pending note events from the queue
-    fn process_note_events(&mut self) {
-        let voice_config = self.voice_config.clone();
-        while let Ok(event) = self.note_receiver.try_recv() {
-            if event.is_on {
-                // Find a free voice or steal one
-                let voice = if let Some(v) = self.find_free_voice() {
-                    v
-                } else {
-                    self.steal_voice()
-                };
-
-                // Activate the voice with the note details
-                voice.activate(&event, &voice_config);
-            } else {
-                // Find all voices playing this note from the same source and release them
-                for voice in self.voices.iter_mut() {
-                    // Check if the voice is active OR still releasing (envelope not finished)
-                    // and matches the note number and source.
-                    if (!voice.releasing || voice.active) // Check if it's making sound or just triggered
-                        && voice.note_number == event.note_number
-                        && voice.note_source == Some(event.source)
-                    {
-                        voice.release(); // Initiate the release phase
-                    }
-                }
-            }
-        }
     }
 
     /// Process all voices that are not finished, return their total energy and individual buffers.
@@ -244,11 +215,9 @@ impl SynthEngine {
         self.buffer_size = buffer_size;
     }
 }
-impl Default for SynthEngine {
+impl Default for Synth {
     fn default() -> Self {
         let config = SynthConfig::default();
-        let (note_tx, note_rx) = std::sync::mpsc::channel();
-        let (op_tx, op_rx) = std::sync::mpsc::channel();
 
         // Initialize operators
         let mut operators: Vec<Operator> = (0..config.operators_per_voice)
@@ -295,16 +264,12 @@ impl Default for SynthEngine {
         Self {
             voices,
             config,
-            note_receiver: note_rx,
-            note_sender: note_tx,
-            operator_receiver: op_rx,
-            operator_sender: op_tx,
+            voice_config: VoiceConfig::default(), // Default voice config
+            algorithm: default_algorithm,
+            operators, // Store the operators
             master_volume: 0.65,
             current_gain: 0.65,
             buffer_size: 1024, // Default, can be updated by set_buffer_size
-            algorithm: default_algorithm,
-            operators,                            // Store the operators
-            voice_config: VoiceConfig::default(), // Default voice config
         }
     }
 }

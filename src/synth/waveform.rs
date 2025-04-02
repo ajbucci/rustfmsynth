@@ -1,4 +1,4 @@
-use rand::Rng;
+use crate::synth::prelude::{random_range, PI};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Waveform {
@@ -21,13 +21,19 @@ impl WaveformGenerator {
     pub fn evaluate(&self, phase: f32) -> f32 {
         match self.waveform {
             Waveform::Sine => phase.sin(),
-            Waveform::Square => if phase.sin() >= 0.0 { 1.0 } else { -1.0 },
+            Waveform::Square => {
+                if phase.sin() >= 0.0 {
+                    1.0
+                } else {
+                    -1.0
+                }
+            }
             Waveform::Sawtooth => {
-                let cycles = phase / (2.0 * std::f32::consts::PI);
+                let cycles = phase / (2.0 * PI);
                 2.0 * (cycles - (cycles + 0.5).floor())
             }
-            Waveform::Triangle => (2.0 / std::f32::consts::PI) * (phase.sin()).asin(),
-            Waveform::Noise => rand::thread_rng().gen_range(-1.0..1.0),
+            Waveform::Triangle => (2.0 / PI) * (phase.sin()).asin(),
+            Waveform::Noise => random_range(-1.0, 1.0),
         }
     }
     pub fn generate(
@@ -45,14 +51,14 @@ impl WaveformGenerator {
             Waveform::Sine => |phase: f32| phase.sin(),
             Waveform::Square => |phase: f32| if phase.sin() >= 0.0 { 1.0 } else { -1.0 },
             Waveform::Sawtooth => |phase: f32| {
-                let cycles = phase / (2.0 * std::f32::consts::PI);
+                let cycles = phase / (2.0 * PI);
                 2.0 * (cycles - (cycles + 0.5).floor())
             },
-            Waveform::Triangle => |phase: f32| (2.0 / std::f32::consts::PI) * (phase.sin()).asin(),
-            Waveform::Noise => |_phase: f32| rand::thread_rng().gen_range(-1.0..1.0),
+            Waveform::Triangle => |phase: f32| (2.0 / PI) * (phase.sin()).asin(),
+            Waveform::Noise => |_phase: f32| random_range(-1.0, 1.0),
         };
 
-        let phase_increment = 2.0 * std::f32::consts::PI * frequency / sample_rate;
+        let phase_increment = 2.0 * PI * frequency / sample_rate;
 
         for (i, sample) in output.iter_mut().enumerate() {
             let current_phase = phase_offset + phase_increment * (i as f32);

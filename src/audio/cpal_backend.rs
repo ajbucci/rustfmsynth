@@ -1,19 +1,19 @@
 use crate::audio::AudioBackend;
-use crate::synth::engine::SynthEngine;
+use crate::runtime::NativeSynth;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{SampleFormat, Stream};
 use std::sync::{Arc, Mutex};
 
 pub struct CpalBackend {
     stream: Option<Stream>,
-    synth_engine: Arc<Mutex<SynthEngine>>,
+    synth: Arc<Mutex<NativeSynth>>,
 }
 
 impl CpalBackend {
-    pub fn new_with_engine(synth_engine: Arc<Mutex<SynthEngine>>) -> Self {
+    pub fn new(synth: Arc<Mutex<NativeSynth>>) -> Self {
         Self {
             stream: None,
-            synth_engine,
+            synth,
         }
     }
 
@@ -70,11 +70,12 @@ impl CpalBackend {
             .find(|d| d.name().map(|n| n == *selected_name).unwrap_or(false))
             .ok_or_else(|| "Selected output device not found".into())
     }
+
     fn determine_buffer_size(
         &self,
         device: &cpal::Device,
         config: &cpal::StreamConfig,
-        sample_format: cpal::SampleFormat,
+        sample_format: SampleFormat,
     ) -> Result<usize, Box<dyn std::error::Error>> {
         let channels = config.channels as usize;
         let (buffer_size_sender, buffer_size_receiver) = std::sync::mpsc::channel();
@@ -86,7 +87,7 @@ impl CpalBackend {
                     let buffer_size = data.len() / channels;
                     buffer_size_sender.send(buffer_size).unwrap();
                 },
-                |err| eprintln!("an error occurred on stream: {}", err),
+                |err| eprintln!("Stream error: {}", err),
                 None,
             )?,
             _ => return Err("Unsupported sample format".into()),
@@ -103,6 +104,7 @@ impl CpalBackend {
         let host = cpal::default_host();
         let device = self.select_output_device(&host)?;
         println!("Selected device: {}", device.name().unwrap_or_default());
+
         let supported_config = device.default_output_config()?;
         let mut stream_config: cpal::StreamConfig = supported_config.clone().into();
         stream_config.buffer_size = cpal::BufferSize::Fixed(256);
@@ -111,21 +113,21 @@ impl CpalBackend {
             self.determine_buffer_size(&device, &stream_config, supported_config.sample_format())?;
 
         {
-            let mut synth_engine = self.synth_engine.lock().unwrap();
-            synth_engine.set_buffer_size(buffer_size);
+            let mut synth = self.synth.lock().unwrap();
+            synth.set_buffer_size(buffer_size);
         }
 
         let sample_rate = stream_config.sample_rate.0;
         let channels = stream_config.channels as usize;
-        let synth_engine = self.synth_engine.clone();
+        let synth = self.synth.clone();
 
         let stream = match supported_config.sample_format() {
             SampleFormat::F32 => device.build_output_stream(
                 &stream_config,
                 move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
-                    let mut synth_engine = synth_engine.lock().unwrap();
+                    let mut synth = synth.lock().unwrap();
                     let mut buffer = vec![0.0; data.len() / channels];
-                    synth_engine.process(&mut buffer, sample_rate as f32);
+                    synth.process(&mut buffer, sample_rate as f32);
 
                     for (i, frame) in data.chunks_mut(channels).enumerate() {
                         for sample in frame.iter_mut() {
@@ -144,28 +146,16 @@ impl CpalBackend {
 }
 
 impl AudioBackend for CpalBackend {
-    fn new() -> Self {
-        Self {
-            stream: None,
-            synth_engine: Arc::new(Mutex::new(SynthEngine::new())),
-        }
-    }
-
     fn start(&mut self) {
         if let Ok(stream) = self.build_stream() {
-            stream.play().expect("Failed to play stream");
+            stream.play().expect("Failed to start stream");
             self.stream = Some(stream);
         }
     }
 
     fn stop(&mut self) {
         if let Some(stream) = &self.stream {
-            stream.pause().expect("Failed to pause stream");
+            stream.pause().expect("Failed to stop stream");
         }
-    }
-
-    fn process_audio(&mut self, output: &mut [f32]) {
-        let mut synth_engine = self.synth_engine.lock().unwrap();
-        synth_engine.process(output, 44100.0);
     }
 }

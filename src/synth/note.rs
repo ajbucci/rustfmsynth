@@ -1,5 +1,4 @@
-use std::fmt;
-use std::sync::OnceLock;
+use crate::synth::prelude::{fmt, OnceLock};
 
 #[derive(Debug, Clone, Copy)]
 pub struct NoteEvent {

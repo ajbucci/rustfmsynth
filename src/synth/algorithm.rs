@@ -1,5 +1,5 @@
 use super::{envelope::EnvelopeGenerator, operator::Operator};
-use std::collections::HashMap;
+use crate::synth::prelude::HashMap;
 
 // --- Internal Node ---
 
