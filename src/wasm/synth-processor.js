@@ -15,7 +15,8 @@ class SynthProcessor extends AudioWorkletProcessor {
         try {
           console.log("SynthProcessor: Received Wasm binary, initializing...");
           // Initialize Wasm *inside* the worklet using the received ArrayBuffer
-          await init(data.wasmBinary);
+          // Wrap the buffer in a plain object to satisfy the init function's check
+          await init({ module_or_path: data.wasmBinary });
           console.log("SynthProcessor: Wasm initialized successfully.");
 
           // Now create the synth instance
@@ -42,6 +43,15 @@ class SynthProcessor extends AudioWorkletProcessor {
           synth.note_off(data.note);
         } else {
            console.warn("SynthProcessor: Received note_off but synth not ready.");
+        }
+      } else if (data.type === "cycle_waveform") {
+        if (synth) {
+          // Ensure direction_code is either 0 or 1, matching Rust expectation
+          const event_code = data.direction_code === 0 ? 0 : 1;
+          console.log(`SynthProcessor: Received cycle_waveform, direction code: ${event_code}`);
+          synth.process_operator_event(event_code);
+        } else {
+           console.warn("SynthProcessor: Received cycle_waveform but synth not ready.");
         }
       }
     };

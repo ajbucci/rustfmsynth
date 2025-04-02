@@ -1,4 +1,5 @@
 import init from "./pkg/rustfmsynth.js"; // Import init here
+import { setupKeyboardInput, removeKeyboardInput } from './keyboard-input.js'; // Import keyboard handler
 
 let audioContext;
 let processorNode;
@@ -53,6 +54,8 @@ async function startSynth() {
       processorNode.port.onmessage = (event) => {
         if (event.data.type === 'initialized') {
           console.log("Received initialization confirmation from worklet.");
+          // Setup keyboard input *after* worklet confirms it's ready
+          setupKeyboardInput(processorNode.port);
           resolve(); // Resolve the promise when worklet confirms
         } else {
           // Handle other potential messages from worklet if needed
@@ -113,23 +116,32 @@ async function ensureSynthStarted() {
     }
 }
 
-document.getElementById("note-on").addEventListener("click", async () => {
-  try {
-      await ensureSynthStarted(); // Wait here
-      if (processorNode) {
-        console.log("Sending note_on");
-        processorNode.port.postMessage({ type: "note_on", note: 63, velocity: 100 });
-      }
-  } catch (error) {
-      console.error("Cannot send note_on due to initialization failure.");
-  }
-});
+// Remove button event listeners as keyboard input is now primary
+// document.getElementById("note-on").addEventListener("click", ...);
+// document.getElementById("note-off").addEventListener("click", ...);
 
-document.getElementById("note-off").addEventListener("click", async () => {
-  // Don't need to ensure started here, just check if node exists.
-  // If init failed, processorNode might be null.
-  if (processorNode) {
-    console.log("Sending note_off");
-    processorNode.port.postMessage({ type: "note_off", note: 63 });
-  }
-});
+// Start the synth automatically on load or user interaction
+// We need a user gesture to start AudioContext reliably.
+// Let's use a button or a click anywhere on the body.
+document.body.addEventListener('click', async () => {
+    try {
+        // Only attempt to start if not already started/starting
+        if (!synthInitializationPromise) {
+             console.log("User interaction detected, ensuring synth is started...");
+             await ensureSynthStarted();
+             console.log("Synth ready for keyboard input.");
+        } else {
+            // If already started, ensure context is running
+            await ensureSynthStarted(); 
+        }
+    } catch (error) {
+        console.error("Failed to start synth on user interaction:", error);
+    }
+}, { once: true }); // Only run this setup once on the first click
+
+console.log("Click anywhere on the page to enable audio and keyboard input.");
+
+// Optional: Add cleanup if needed (e.g., for hot module replacement)
+// window.addEventListener('beforeunload', () => {
+//    removeKeyboardInput();
+// });
