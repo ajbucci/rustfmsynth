@@ -1,3 +1,5 @@
+import { pressKey, releaseKey } from './keyboard-ui.js'; // Import UI functions
+
 // Map JavaScript event.code to MIDI note numbers (similar to Rust key_to_note)
 const keyToNoteMap = new Map([
   // Bottom row - natural notes (A3 to C5)
@@ -34,6 +36,7 @@ function handleKeyDown(event) {
   const note = keyToNoteMap.get(event.code);
   if (note !== undefined && !pressedKeys.has(event.code)) {
     pressedKeys.add(event.code);
+    pressKey(event.code);
     console.log(`Key '${event.code}' down, sending note_on: ${note}`);
     processorPort.postMessage({ type: 'note_on', note: note, velocity: 100 }); // Using fixed velocity 100
     event.preventDefault(); // Prevent default browser action for mapped keys
@@ -42,12 +45,14 @@ function handleKeyDown(event) {
   // Handle control keys (waveform cycle)
   if (event.code === 'Comma' && !pressedKeys.has(event.code)) {
       pressedKeys.add(event.code);
+      pressKey(event.code);
       console.log("Key 'Comma' down, sending cycle_waveform backward");
       // Send event code 0 for backward, matching WasmSynth::process_operator_event
       processorPort.postMessage({ type: 'cycle_waveform', direction_code: 0 });
       event.preventDefault();
   } else if (event.code === 'Period' && !pressedKeys.has(event.code)) { // Note: JS uses 'Period' for '.'
       pressedKeys.add(event.code);
+      pressKey(event.code);
       console.log("Key 'Period' down, sending cycle_waveform forward");
       // Send event code 1 for forward
       processorPort.postMessage({ type: 'cycle_waveform', direction_code: 1 });
@@ -63,6 +68,7 @@ function handleKeyUp(event) {
   const note = keyToNoteMap.get(event.code);
   if (note !== undefined && pressedKeys.has(event.code)) {
     pressedKeys.delete(event.code);
+    releaseKey(event.code);
     console.log(`Key '${event.code}' up, sending note_off: ${note}`);
     processorPort.postMessage({ type: 'note_off', note: note });
      event.preventDefault();
@@ -71,6 +77,7 @@ function handleKeyUp(event) {
    // Handle control keys release
    if ((event.code === 'Comma' || event.code === 'Period') && pressedKeys.has(event.code)) {
         pressedKeys.delete(event.code);
+        releaseKey(event.code);
         event.preventDefault();
     }
 }

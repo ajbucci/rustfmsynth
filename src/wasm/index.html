@@ -1,18 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8">
-  <title>Rust FM Synth (WASM)</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rust FM Synth</title>
+    <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-  <h1>Rust FM Synth - WASM</h1>
-  <button id="note-on">Play C4</button>
-  <button id="note-off">Stop C4</button>
+    <h1>Rust FM Synthesizer (WASM)</h1>
 
-  <script type="module" src="app.js"></script>
+    <!-- Container for the visual keyboard -->
+    <div id="synth-container">
+      <div id="keyboard-container">
+          <!-- Keyboard will be generated here by JS -->
+      </div>
+    </div>
+
+    <p>Play notes using your keyboard (A,S,D,F...) or click the keys below. Use ',' and '.' to cycle waveform.</p>
+    <p>Click anywhere on the page first to enable audio.</p>
+
+    <script type="module" src="app.js"></script>
 </body>
-
 </html>

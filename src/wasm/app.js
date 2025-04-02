@@ -1,5 +1,6 @@
 import init from "./pkg/rustfmsynth.js"; // Import init here
 import { setupKeyboardInput, removeKeyboardInput } from './keyboard-input.js'; // Import keyboard handler
+import { generateKeyboard, connectKeyboardUIPort } from './keyboard-ui.js'; // Import keyboard UI functions
 
 let audioContext;
 let processorNode;
@@ -23,6 +24,13 @@ async function loadWasm() {
             throw e; // Re-throw to prevent synth start
         }
     }
+}
+
+// Generate the keyboard UI as soon as the script runs
+try {
+    generateKeyboard();
+} catch (e) {
+    console.error("Error generating initial keyboard UI:", e);
 }
 
 async function startSynth() {
@@ -54,8 +62,9 @@ async function startSynth() {
       processorNode.port.onmessage = (event) => {
         if (event.data.type === 'initialized') {
           console.log("Received initialization confirmation from worklet.");
-          // Setup keyboard input *after* worklet confirms it's ready
+          // Setup keyboard input and connect UI port after worklet confirms
           setupKeyboardInput(processorNode.port);
+          connectKeyboardUIPort(processorNode.port);
           resolve(); // Resolve the promise when worklet confirms
         } else {
           // Handle other potential messages from worklet if needed

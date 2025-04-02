@@ -8,3 +8,94 @@ button {
     margin: 10px;
     padding: 10px;
 }
+
+#synth-container {
+    display: flex;
+    justify-content: center;
+}
+
+#keyboard-container {
+    display: flex; /* Arrange keys horizontally */
+    position: relative; /* Needed for positioning black keys */
+    background-color: #333;
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    margin-top: 20px;
+    height: 180px; /* Adjust height as needed */
+    width: fit-content; /* Adjust width based on keys */
+    border: 3px solid #555;
+}
+
+.key {
+    border: 1px solid #555;
+    box-sizing: border-box;
+    position: relative; /* For label positioning */
+    cursor: pointer;
+    transition: background-color 0.1s ease; /* Smooth transition for active state */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end; /* Position label at the bottom */
+    align-items: center;
+    padding-bottom: 5px;
+    font-family: sans-serif;
+    user-select: none; /* Prevent text selection on click */
+}
+
+.key.white {
+    width: 50px; /* Width of white keys */
+    height: 100%; /* Full height of container */
+    background-color: #fff;
+    color: #333;
+    border-bottom-left-radius: 3px;
+    border-bottom-right-radius: 3px;
+    z-index: 1; /* White keys below black keys */
+}
+
+.key.black {
+    width: 30px; /* Width of black keys */
+    height: 60%; /* Height relative to container */
+    background-color: #222;
+    color: #eee;
+    position: absolute; /* Position relative to container */
+    margin-left: 10px; /* Overlap previous white key -- this should be calculated not hardcoded. */
+    z-index: 2; /* Black keys above white keys */
+    border-radius: 0 0 3px 3px;
+}
+
+/* Adjust left margin for specific black keys based on preceding white key */
+.key.black[data-code="KeyW"],
+.key.black[data-code="KeyR"],
+.key.black[data-code="KeyU"],
+.key.black[data-code="KeyI"],
+.key.black[data-code="KeyO"] {
+    /* Standard overlap is fine */
+}
+/* Example: If there was no black key between E and F, F# would need different margin */
+
+
+.key.active, .key:active { /* Style for pressed key (JS controlled or mouse down) */
+    background-color: #87ceeb; /* Sky blue for active state */
+}
+
+.key.black.active, .key.black:active {
+    background-color: #add8e6; /* Lighter blue for active black keys */
+}
+
+.key-label {
+    font-size: 10px;
+    text-align: center;
+}
+
+.key-label .note-name {
+    font-weight: bold;
+    display: block;
+}
+
+.key-label .key-code {
+     font-size: 9px;
+     color: #777;
+}
+.key.black .key-label .key-code {
+     color: #aaa;
+}
