@@ -3,7 +3,6 @@ import init, { WasmSynth } from "./pkg/rustfmsynth.js";
 let synth = null;
 let ready = false;
 let sampleRate = 44100;
-let isPoweredOn = false;
 
 class SynthProcessor extends AudioWorkletProcessor {
   constructor() {
@@ -33,23 +32,20 @@ class SynthProcessor extends AudioWorkletProcessor {
           ready = false;
         }
 
-      } else if (data.type === "power") {
-        isPoweredOn = data.state;
-        console.log(`SynthProcessor: Power state changed to ${isPoweredOn}`);
       } else if (data.type === "note_on") {
-        if (synth && isPoweredOn) {
+        if (synth && ready) {
           synth.note_on(data.note, data.velocity);
         } else {
-          console.warn("SynthProcessor: Note_on ignored - synth not ready or powered off.");
+          console.warn("SynthProcessor: Note_on ignored - synth not ready.");
         }
       } else if (data.type === "note_off") {
-        if (synth && isPoweredOn) {
+        if (synth && ready) {
           synth.note_off(data.note);
         } else {
-           console.warn("SynthProcessor: Note_off ignored - synth not ready or powered off.");
+           console.warn("SynthProcessor: Note_off ignored - synth not ready.");
         }
       } else if (data.type === "cycle_waveform") {
-        if (synth) {
+        if (synth && ready) {
           // Ensure direction_code is either 0 or 1, matching Rust expectation
           const event_code = data.direction_code === 0 ? 0 : 1;
           console.log(`SynthProcessor: Received cycle_waveform, direction code: ${event_code}`);
