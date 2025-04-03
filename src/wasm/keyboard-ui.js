@@ -1,3 +1,7 @@
+import { ensureSynthStarted } from './app.js'; // Import synth starter
+// Import the shared helper function
+import { tryEnsureSynthAndSendMessage } from './keyboard-input.js'; 
+
 // Define the keyboard layout, notes, and key codes
 // Matches the mapping in keyboard-input.js
 const keyboardLayout = [
@@ -37,9 +41,9 @@ export function generateKeyboard() {
   }
   keyboardContainer.innerHTML = ''; // Clear previous content
 
-  // TODO: pull from css or set directly
-  const whiteKeyWidth = 50; // px - match CSS
-  const blackKeyWidth = 30; // px - match CSS, need to pull from css directly
+  // Pull key widths directly from CSS
+  const whiteKeyWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--white-key-width')) || 50; // Fallback to 50 if not found
+  const blackKeyWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--black-key-width')) || 30; // Fallback to 30 if not found
 
   let whiteKeyIndex = 0; // Track only the index of white keys
 
@@ -72,13 +76,13 @@ export function generateKeyboard() {
       // DO NOT increment whiteKeyIndex here
     }
 
-    // Mouse interaction listeners (Attached now, but handlers check for port)
+    // Mouse interaction listeners
     keyElement.addEventListener('mousedown', handleMouseDown);
     keyElement.addEventListener('mouseup', handleMouseUp);
     keyElement.addEventListener('mouseleave', handleMouseLeave);
   });
 
-  // Control Keys (Waveform Cycle) - Append after piano keys
+  // Control Keys (Waveform Cycle)
   controlKeyLayout.forEach(keyData => {
     const keyElement = document.createElement('div');
     keyElement.classList.add('key', 'white'); // Style as white key for simplicity
@@ -91,19 +95,29 @@ export function generateKeyboard() {
     labelElement.innerHTML = `<span class="note-name">${keyData.label}</span><span class="key-code">${keyData.code === 'Comma' ? ',' : '.'}</span>`;
     keyElement.appendChild(labelElement);
 
-    // Mouse interaction for control keys (Attached now)
-    keyElement.addEventListener('mousedown', (e) => {
-      if (!processorPort) return; // <-- Check if port is set
-      const direction_code = parseInt(e.currentTarget.dataset.direction_code);
-      console.log(`Control Key '${keyData.code}' clicked, sending cycle_waveform: ${direction_code}`);
-      processorPort.postMessage({ type: 'cycle_waveform', direction_code: direction_code });
-      e.currentTarget.classList.add('active');
+    // Mouse interaction for control keys
+    keyElement.addEventListener('mousedown', async (e) => {
+      const targetElement = e.currentTarget;
+      const eventCode = targetElement.dataset.code;
+      const direction_code = parseInt(targetElement.dataset.direction_code);
+      
+      targetElement.classList.add('active'); // Immediate visual feedback
+
+      const message = { type: 'cycle_waveform', direction_code: direction_code };
+      const success = await tryEnsureSynthAndSendMessage(eventCode, message);
+
+      if (!success) {
+        targetElement.classList.remove('active');
+        console.warn(`Failed to send cycle_waveform for mouse event ${eventCode}`);
+      }
     });
     keyElement.addEventListener('mouseup', (e) => {
       e.currentTarget.classList.remove('active');
     });
     keyElement.addEventListener('mouseleave', (e) => {
-      e.currentTarget.classList.remove('active');
+      if (e.currentTarget.classList.contains('active')) {
+          e.currentTarget.classList.remove('active');
+      }
     });
 
     keyboardContainer.appendChild(keyElement);
@@ -113,41 +127,52 @@ export function generateKeyboard() {
 
 
 // Mouse event handlers
-function handleMouseDown(event) {
-  if (!processorPort) return; // <-- Check if port is set
+async function handleMouseDown(event) {
   const keyElement = event.currentTarget;
   const note = parseInt(keyElement.dataset.note);
   const code = keyElement.dataset.code;
 
   if (!isNaN(note) && !activeMouseKeys.has(code)) {
-    activeMouseKeys.add(code);
-    console.log(`Mouse down on key '${code}', sending note_on: ${note}`);
-    processorPort.postMessage({ type: 'note_on', note: note, velocity: 100 });
-    keyElement.classList.add('active'); // Also activate visual state
+    activeMouseKeys.add(code); // Update internal state
+    keyElement.classList.add('active'); // Immediate visual feedback
+
+    const message = { type: 'note_on', note: note, velocity: 100 };
+    const success = await tryEnsureSynthAndSendMessage(code, message);
+
+    if (!success) {
+      keyElement.classList.remove('active');
+      activeMouseKeys.delete(code);
+      console.warn(`Failed to send note_on for mouse event ${code}`);
+    }
   }
 }
 
 function handleMouseUp(event) {
-  if (!processorPort) return; // <-- Check if port is set
   const keyElement = event.currentTarget;
   const note = parseInt(keyElement.dataset.note);
   const code = keyElement.dataset.code;
 
   if (!isNaN(note) && activeMouseKeys.has(code)) {
     activeMouseKeys.delete(code);
-    console.log(`Mouse up on key '${code}', sending note_off: ${note}`);
-    processorPort.postMessage({ type: 'note_off', note: note });
-    // Visual state updated by pressKey/releaseKey called from keyboard-input.js
-    // We remove active class here only if the mouse up happens *before* keyboard release calls releaseKey
-    if (!document.querySelector(`.key[data-code="${code}"]`).classList.contains('physical-press')) {
-      keyElement.classList.remove('active');
+    if (processorPort) { // Only send if port exists
+        processorPort.postMessage({ type: 'note_off', note: note });
+    }
+    
+    // Handle visual state removal
+    if (!keyElement.classList.contains('physical-press')) {
+      keyElement.classList.remove('active'); 
     }
   }
 }
 
 // Handle case where mouse is dragged off the key while pressed down
 function handleMouseLeave(event) {
-  handleMouseUp(event); // Treat leaving the key same as mouse up
+  const keyElement = event.currentTarget;
+  const code = keyElement.dataset.code;
+  
+  if (activeMouseKeys.has(code)) {
+      handleMouseUp(event);
+  }
 }
 
 
@@ -190,5 +215,5 @@ export function connectKeyboardUIPort(port) {
     return;
   }
   processorPort = port;
-  console.log("Keyboard UI port connected, interactions enabled.");
+  console.log("Keyboard UI port connected."); // Changed log message
 }
