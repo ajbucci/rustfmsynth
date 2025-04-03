@@ -1,4 +1,4 @@
-import { ensureSynthStarted } from './app.js'; // Import synth starter
+import { ensureSynthStarted, resumeAudioContext } from './app.js'; // Import synth starter and resumeAudioContext
 // Import the shared helper function
 import { tryEnsureSynthAndSendMessage } from './keyboard-input.js'; 
 
@@ -80,6 +80,12 @@ export function generateKeyboard() {
     keyElement.addEventListener('mousedown', handleMouseDown);
     keyElement.addEventListener('mouseup', handleMouseUp);
     keyElement.addEventListener('mouseleave', handleMouseLeave);
+
+    // Touch interaction listeners
+    keyElement.addEventListener('touchstart', handleMouseDown);
+    keyElement.addEventListener('touchend', handleMouseUp);
+    keyElement.addEventListener('touchcancel', handleMouseUp);
+    keyElement.addEventListener('touchleave', handleMouseUp);
   });
 
   // Control Keys (Waveform Cycle)
@@ -97,6 +103,7 @@ export function generateKeyboard() {
 
     // Mouse interaction for control keys
     keyElement.addEventListener('mousedown', async (e) => {
+      resumeAudioContext(); // Call resume early
       const targetElement = e.currentTarget;
       const eventCode = targetElement.dataset.code;
       const direction_code = parseInt(targetElement.dataset.direction_code);
@@ -128,6 +135,8 @@ export function generateKeyboard() {
 
 // Mouse event handlers
 async function handleMouseDown(event) {
+  resumeAudioContext(); // Call resume early
+  event.preventDefault();
   const keyElement = event.currentTarget;
   const note = parseInt(keyElement.dataset.note);
   const code = keyElement.dataset.code;

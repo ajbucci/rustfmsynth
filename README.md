@@ -44,5 +44,5 @@ cargo build --release
 
 ```bash
 # Dependencies: wasm-pack
-wasm-pack build --target web --out-dir ./src/wasm/pkg --no-default-features --features wasm
+wasm-pack build --target web --out-dir ./web/pkg --no-default-features --features wasm
 ```

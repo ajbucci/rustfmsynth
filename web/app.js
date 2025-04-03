@@ -11,6 +11,21 @@ let audioSystemInitializationPromise = null; // Promise to track core audio setu
 // Flag to track if the core audio setup is done (still useful for quick check)
 let audioSystemInitialized = false;
 
+// Add this new exported function
+/**
+ * Attempts to resume the AudioContext if it exists and is suspended.
+ * Should be called directly within a user interaction event handler.
+ */
+export function resumeAudioContext() {
+  if (audioContext && audioContext.state === 'suspended') {
+    console.log("Attempting to resume AudioContext due to user interaction...");
+    audioContext.resume().then(() => {
+      console.log("AudioContext resumed successfully.");
+    }).catch(e => console.warn("AudioContext.resume() failed:", e));
+    // Note: We don't await here. Let the main initialization flow handle state checks.
+  }
+}
+
 async function loadWasm() {
   // Fetch the WASM binary only once
   if (!wasmBinary) {
