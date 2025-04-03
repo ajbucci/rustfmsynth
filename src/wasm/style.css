@@ -1,4 +1,3 @@
-
 body {
     font-family: sans-serif;
     text-align: center;
@@ -11,7 +10,8 @@ button {
 
 #synth-container {
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
 }
 
 #keyboard-container {
@@ -82,6 +82,17 @@ button {
     background-color: #add8e6; /* Lighter blue for active black keys */
 }
 
+/* Disable key highlights when power is off */
+#keyboard-container.power-off .key.active,
+#keyboard-container.power-off .key:active {
+    background-color: #fff; /* Reset to default white key color */
+}
+
+#keyboard-container.power-off .key.black.active,
+#keyboard-container.power-off .key.black:active {
+    background-color: #222; /* Reset to default black key color */
+}
+
 .key-label {
     font-size: 10px;
     text-align: center;
@@ -99,3 +110,103 @@ button {
 .key.black .key-label .key-code {
      color: #aaa;
 }
+
+/* --- Clean Power Button Styles --- */
+.power-button-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px; /* Reduced gap */
+    margin: 20px 0;
+}
+
+.power-button {
+    position: relative;
+    width: 50px; /* Slightly smaller */
+    height: 50px;
+    border-radius: 50%;
+    cursor: pointer;
+    background-color: #f0f0f0; /* Light grey background */
+    border: 2px solid #ddd; /* Subtle border */
+    display: flex; /* Center symbol easily */
+    justify-content: center;
+    align-items: center;
+    transition: all 0.2s ease-out;
+}
+
+.power-button:active {
+    transform: scale(0.96);
+    background-color: #e0e0e0; /* Slightly darker on press */
+}
+
+/* Remove ring and glow elements styling if not needed or simplify */
+.power-button-ring,
+.power-glow {
+    display: none; /* Hide unused elements */
+}
+
+.power-button-symbol {
+    /* Combined symbol styling */
+    position: relative;
+    width: 18px; /* Size of the power icon circle */
+    height: 18px;
+    border: 3px solid #999; /* Grey symbol color */
+    border-radius: 50%;
+    border-top-color: transparent; /* Cut in the circle */
+    transition: all 0.2s ease-out;
+}
+
+.power-button-symbol::before {
+    /* Power icon line */
+    content: '';
+    position: absolute;
+    top: -6px; /* Position line above the cut */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 3px;
+    height: 10px;
+    background-color: #999; /* Grey symbol color */
+    border-radius: 1.5px;
+    transition: all 0.2s ease-out;
+}
+
+.power-status {
+    font-family: sans-serif; /* Cleaner font */
+    font-size: 11px; /* Smaller */
+    font-weight: 600; /* Semi-bold */
+    color: #999; /* Grey to match off state */
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.2s ease-out;
+}
+
+/* --- On State --- */
+.power-button.on {
+    background-color: #e6f7ed; /* Light green background */
+    border-color: #a0d9b3; /* Softer green border */
+}
+
+.power-button.on .power-button-symbol {
+    border-color: #2ecc71; /* Bright green symbol */
+    border-top-color: transparent;
+}
+
+.power-button.on .power-button-symbol::before {
+    background-color: #2ecc71; /* Bright green symbol */
+}
+
+.power-button.on + .power-status {
+    color: #2ecc71; /* Bright green text */
+}
+
+/* Hover effects */
+.power-button:hover {
+    border-color: #ccc;
+}
+
+.power-button.on:hover {
+    border-color: #79d0a0;
+    background-color: #d9f2e3;
+}
+
+/* --- End Clean Power Button Styles --- */

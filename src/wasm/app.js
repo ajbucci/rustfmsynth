@@ -6,31 +6,79 @@ let audioContext;
 let processorNode;
 let wasmBinary = null; // Store fetched WASM binary
 let synthInitializationPromise = null; // Promise to track synth readiness
+let isPoweredOn = false; // Track power state
+
+// Function to handle power button state
+async function handlePowerToggle() {
+  const powerButton = document.getElementById('power-button');
+  const powerStatus = powerButton.nextElementSibling; // Get the status element
+  const keyboardContainer = document.getElementById('keyboard-container'); // Get keyboard container
+  
+  if (!isPoweredOn) {
+    try {
+      // First time power on - ensure synth is started
+      await ensureSynthStarted();
+      
+      // Update power state
+      isPoweredOn = true;
+      powerButton.classList.remove('off');
+      powerButton.classList.add('on');
+      powerStatus.textContent = 'ON'; // Update status text
+      keyboardContainer.classList.remove('power-off'); // Remove power-off class
+      
+      // Notify processor of power state
+      if (processorNode) {
+        processorNode.port.postMessage({
+          type: "power",
+          state: true
+        });
+      }
+    } catch (error) {
+      console.error("Failed to power on synth:", error);
+      return; // Don't update UI if startup failed
+    }
+  } else {
+    // Power off
+    isPoweredOn = false;
+    powerButton.classList.remove('on');
+    powerButton.classList.add('off');
+    powerStatus.textContent = 'OFF'; // Update status text
+    keyboardContainer.classList.add('power-off'); // Add power-off class
+    
+    // Notify processor of power state
+    if (processorNode) {
+      processorNode.port.postMessage({
+        type: "power",
+        state: false
+      });
+    }
+  }
+}
 
 async function loadWasm() {
-    // Fetch the WASM binary only once
-    if (!wasmBinary) {
-        try {
-            console.log("Fetching Wasm binary...");
-            const response = await fetch("./pkg/rustfmsynth_bg.wasm");
-            if (!response.ok) {
-                throw new Error(`Failed to fetch Wasm binary: ${response.statusText}`);
-            }
-            wasmBinary = await response.arrayBuffer();
-            console.log("Wasm binary fetched successfully.");
-        } catch (e) {
-            console.error("Error fetching Wasm binary:", e);
-            wasmBinary = null; // Reset on error
-            throw e; // Re-throw to prevent synth start
-        }
+  // Fetch the WASM binary only once
+  if (!wasmBinary) {
+    try {
+      console.log("Fetching Wasm binary...");
+      const response = await fetch("./pkg/rustfmsynth_bg.wasm");
+      if (!response.ok) {
+        throw new Error(`Failed to fetch Wasm binary: ${response.statusText}`);
+      }
+      wasmBinary = await response.arrayBuffer();
+      console.log("Wasm binary fetched successfully.");
+    } catch (e) {
+      console.error("Error fetching Wasm binary:", e);
+      wasmBinary = null; // Reset on error
+      throw e; // Re-throw to prevent synth start
     }
+  }
 }
 
 // Generate the keyboard UI as soon as the script runs
 try {
-    generateKeyboard();
+  generateKeyboard();
 } catch (e) {
-    console.error("Error generating initial keyboard UI:", e);
+  console.error("Error generating initial keyboard UI:", e);
 }
 
 async function startSynth() {
@@ -47,12 +95,12 @@ async function startSynth() {
       }
 
       try {
-          await audioContext.audioWorklet.addModule("synth-processor.js");
-          console.log("AudioWorklet module added successfully.");
+        await audioContext.audioWorklet.addModule("synth-processor.js");
+        console.log("AudioWorklet module added successfully.");
       } catch (e) {
-          console.error("Error adding AudioWorklet module:", e);
-          reject(e); // Reject the promise if module loading fails
-          return;
+        console.error("Error adding AudioWorklet module:", e);
+        reject(e); // Reject the promise if module loading fails
+        return;
       }
 
       processorNode = new AudioWorkletNode(audioContext, "synth-processor");
@@ -73,17 +121,17 @@ async function startSynth() {
       };
       // Handle errors from the worklet port
       processorNode.port.onmessageerror = (event) => {
-          console.error("Error receiving message from worklet:", event);
-          reject(new Error("Message error from worklet"));
+        console.error("Error receiving message from worklet:", event);
+        reject(new Error("Message error from worklet"));
       };
       // --- End listener setup --- 
 
       // Send the init message WITH the Wasm binary
       if (!wasmBinary) {
-          const err = new Error("Wasm binary not available to send to worklet!");
-          console.error(err);
-          reject(err);
-          return;
+        const err = new Error("Wasm binary not available to send to worklet!");
+        console.error(err);
+        reject(err);
+        return;
       }
       processorNode.port.postMessage({
         type: "init",
@@ -97,58 +145,45 @@ async function startSynth() {
       console.log("Processor node connected to destination.");
 
     } catch (error) {
-        console.error("Error during synth startup:", error);
-        reject(error); // Reject the promise on any startup error
+      console.error("Error during synth startup:", error);
+      reject(error); // Reject the promise on any startup error
     }
   }); // End of Promise constructor
 }
 
 // Helper to ensure synth is started before sending messages
 async function ensureSynthStarted() {
-    if (!synthInitializationPromise) {
-        console.log("Starting synth initialization...");
-        synthInitializationPromise = startSynth(); // Store the promise
+  if (!synthInitializationPromise) {
+    console.log("Starting synth initialization...");
+    synthInitializationPromise = startSynth(); // Store the promise
+  }
+  try {
+    await synthInitializationPromise; // Wait for initialization to complete
+    console.log("Synth initialization complete.");
+    // Ensure context is running after potential user gesture
+    if (audioContext && audioContext.state === 'suspended') {
+      console.log("Resuming potentially suspended AudioContext...")
+      await audioContext.resume();
     }
-    try {
-        await synthInitializationPromise; // Wait for initialization to complete
-        console.log("Synth initialization complete.");
-        // Ensure context is running after potential user gesture
-        if (audioContext && audioContext.state === 'suspended') {
-            console.log("Resuming potentially suspended AudioContext...")
-            await audioContext.resume();
-        }
-    } catch (error) {
-        console.error("Synth initialization failed:", error);
-        // Reset promise if init failed, allowing retry? Or maybe keep it failed.
-        // synthInitializationPromise = null; 
-        throw error; // Re-throw so caller knows it failed
-    }
+  } catch (error) {
+    console.error("Synth initialization failed:", error);
+    // Reset promise if init failed, allowing retry? Or maybe keep it failed.
+    // synthInitializationPromise = null; 
+    throw error; // Re-throw so caller knows it failed
+  }
 }
 
 // Remove button event listeners as keyboard input is now primary
 // document.getElementById("note-on").addEventListener("click", ...);
 // document.getElementById("note-off").addEventListener("click", ...);
 
-// Start the synth automatically on load or user interaction
-// We need a user gesture to start AudioContext reliably.
-// Let's use a button or a click anywhere on the body.
-document.body.addEventListener('click', async () => {
-    try {
-        // Only attempt to start if not already started/starting
-        if (!synthInitializationPromise) {
-             console.log("User interaction detected, ensuring synth is started...");
-             await ensureSynthStarted();
-             console.log("Synth ready for keyboard input.");
-        } else {
-            // If already started, ensure context is running
-            await ensureSynthStarted(); 
-        }
-    } catch (error) {
-        console.error("Failed to start synth on user interaction:", error);
-    }
-}, { once: true }); // Only run this setup once on the first click
+// Remove the old click handler and replace with power button initialization
+document.addEventListener('DOMContentLoaded', () => {
+  const powerButton = document.getElementById('power-button');
+  powerButton.addEventListener('click', handlePowerToggle);
+});
 
-console.log("Click anywhere on the page to enable audio and keyboard input.");
+console.log("Click the power button to enable audio and keyboard input.");
 
 // Optional: Add cleanup if needed (e.g., for hot module replacement)
 // window.addEventListener('beforeunload', () => {

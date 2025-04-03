@@ -3,6 +3,7 @@ import init, { WasmSynth } from "./pkg/rustfmsynth.js";
 let synth = null;
 let ready = false;
 let sampleRate = 44100;
+let isPoweredOn = false;
 
 class SynthProcessor extends AudioWorkletProcessor {
   constructor() {
@@ -32,17 +33,20 @@ class SynthProcessor extends AudioWorkletProcessor {
           ready = false;
         }
 
+      } else if (data.type === "power") {
+        isPoweredOn = data.state;
+        console.log(`SynthProcessor: Power state changed to ${isPoweredOn}`);
       } else if (data.type === "note_on") {
-        if (synth) {
+        if (synth && isPoweredOn) {
           synth.note_on(data.note, data.velocity);
         } else {
-          console.warn("SynthProcessor: Received note_on but synth not ready.");
+          console.warn("SynthProcessor: Note_on ignored - synth not ready or powered off.");
         }
       } else if (data.type === "note_off") {
-        if (synth) {
+        if (synth && isPoweredOn) {
           synth.note_off(data.note);
         } else {
-           console.warn("SynthProcessor: Received note_off but synth not ready.");
+           console.warn("SynthProcessor: Note_off ignored - synth not ready or powered off.");
         }
       } else if (data.type === "cycle_waveform") {
         if (synth) {

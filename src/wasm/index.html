@@ -9,15 +9,23 @@
 <body>
     <h1>Rust FM Synthesizer (WASM)</h1>
 
+    <p>Play notes using your keyboard (A,S,D,F...) or click the keys below. Use ',' and '.' to cycle waveform.</p>
+    <p>Click the power button to enable audio.</p>
     <!-- Container for the visual keyboard -->
     <div id="synth-container">
-      <div id="keyboard-container">
-          <!-- Keyboard will be generated here by JS -->
-      </div>
+        <div class="power-button-container">
+            <div class="power-button off" id="power-button">
+                <div class="power-button-ring"></div>
+                <div class="power-button-symbol"></div>
+                <div class="power-glow"></div>
+            </div>
+            <div class="power-status">OFF</div>
+        </div>
+        <div id="keyboard-container" class="power-off">
+            <!-- Keyboard will be generated here by JS -->
+        </div>
     </div>
 
-    <p>Play notes using your keyboard (A,S,D,F...) or click the keys below. Use ',' and '.' to cycle waveform.</p>
-    <p>Click anywhere on the page first to enable audio.</p>
 
     <script type="module" src="app.js"></script>
 </body>
