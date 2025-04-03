@@ -1,0 +1,42 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Build WASM
+        run: wasm-pack build --target web --out-dir ./web/pkg --no-default-features --features wasm
+
+      - name: Prepare deploy dir
+        run: |
+          mkdir -p out
+          cp -r web/* out/
+          cp -r web/pkg out/pkg
+          touch out/.nojekyll
+          rm -f out/pkg/.gitignore
+
+      - name: Deploy manually to gh-pages
+        run: |
+          cd out
+          git init
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add .
+          git status
+          git commit -m "Deploy to gh-pages"
+          git branch -M gh-pages
+          git push --force "https://${GITHUB_ACTOR}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" gh-pages

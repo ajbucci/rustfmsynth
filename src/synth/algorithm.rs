@@ -163,7 +163,7 @@ impl Algorithm {
         if num_operators < 1 {
             return Self::default_simple(num_operators);
         }
-        let mut matrix = vec![vec![None; num_operators]; num_operators];
+        let matrix = vec![vec![None; num_operators]; num_operators];
         // TODO: check if this is correct. When I added Repeat Rules did I remove the matrix > 1 -> feedback?
         let mut alg = Self::new(matrix, vec![0])?;
         alg.add_repeat_rule(0, 0, 1);

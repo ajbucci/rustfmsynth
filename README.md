@@ -1,10 +1,24 @@
 # An FM Synthesizer written in Rust
 
-Currently supports using a QWERTY keyboard to trigger notes. Keys A through ; on the home row correspond to natural notes. Sharps and flats can be found on the QWERTY row.
+A fun project to learn Rust, WASM, and make some noise.
 
-Users can cycle waveforms using the "," and "." keys on their keyboard.
+Web app: <https://ajbucci.github.io/rustfmsynth/>
 
-## Running
+## Input Modes
+
+### Native
+
+- QWERTY
+- MIDI
+
+### WASM
+
+- QWERTY
+- (MIDI coming soon)
+
+## Building
+
+### Native
 
 Tested on MacOS and Linux.
 
@@ -24,4 +38,11 @@ cargo run
 # Optionally build and run --release for more performance
 cargo build --release
 ./target/release/rustfmsynth
+```
+
+### WASM
+
+```bash
+# Dependencies: wasm-pack
+wasm-pack build --target web --out-dir ./src/wasm/pkg --no-default-features --features wasm
 ```
