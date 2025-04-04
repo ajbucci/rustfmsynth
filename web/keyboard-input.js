@@ -76,18 +76,23 @@ export async function handleKeyDown(event) {
 // Export the handler to be attached in app.js
 export async function handleKeyUp(event) {
   const eventCode = event.code;
-  
+
   // Handle Note Keys Release
   const note = keyToNoteMap.get(eventCode);
   if (note !== undefined) {
     event.preventDefault(); // Prevent default immediately for mapped note keys
+    // Check if we were tracking this key as pressed
     if (pressedKeys.has(eventCode)) {
-        pressedKeys.delete(eventCode);
-        releaseKey(eventCode);
-        
-        // Use the helper function to ensure synth is ready and send note_off
+        // Prepare the message first
         const message = { type: 'note_off', note: note };
+        
+        // Attempt to ensure synth is ready and send the message
         const success = await tryEnsureSynthAndSendMessage(eventCode, message);
+
+        // --- Update state and UI AFTER the async operation ---
+        pressedKeys.delete(eventCode); // Remove from tracking regardless of success
+        releaseKey(eventCode);      // Update UI regardless of success
+
         if (!success) {
             // Log error if ensureSynthStarted fails or sending fails
             console.warn(`handleKeyUp ${eventCode}: Failed attempt to send note_off.`);
@@ -95,14 +100,6 @@ export async function handleKeyUp(event) {
     }
     return; // Don't process as control key if it was a note key
   }
-
-   if (eventCode === 'Comma' || eventCode === 'Period') {
-       event.preventDefault(); // Prevent default immediately
-       if (pressedKeys.has(eventCode)) {
-            pressedKeys.delete(eventCode);
-            releaseKey(eventCode);
-       }
-    }
 }
 
 /**
