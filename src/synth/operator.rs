@@ -15,10 +15,22 @@ pub enum OperatorEvent {
     // We can add more operator events here in the future
 }
 
+#[derive(Clone, Debug)]
+pub struct OperatorState {
+    current_phase: f32,
+    current_ratio: f32,
+}
+impl Default for OperatorState {
+    fn default() -> Self {
+        Self {
+            current_phase: 0.0,
+            current_ratio: 1.0,
+        }
+    }
+}
 pub struct Operator {
     pub waveform_generator: WaveformGenerator,
-    pub frequency: f32,
-    pub frequency_ratio: f32, // Ratio relative to the voice's base frequency
+    frequency_ratio: f32, // Ratio relative to the voice's base frequency
     pub fixed_frequency: Option<f32>, // Optional fixed frequency in Hz
     pub envelope: EnvelopeGenerator, // Operator-specific envelope (optional)
     pub modulation_index: f32,
@@ -101,6 +113,14 @@ impl Operator {
         println!("Operator gain set to: {}", gain);
         self.gain = gain;
     }
+
+    pub fn set_ratio(&mut self, ratio: f32) {
+        println!("Operator frequency ratio set to: {}", ratio);
+        if ratio < 0.0 {
+            panic!("Frequency ratio must be non-negative");
+        }
+        self.frequency_ratio = ratio;
+    }
 }
 
 // Implement Default trait for easy preallocation
@@ -108,8 +128,7 @@ impl Default for Operator {
     fn default() -> Self {
         Self {
             waveform_generator: WaveformGenerator::new(Waveform::Sine),
-            frequency: 440.0, // Default base frequency (may not be used directly)
-            frequency_ratio: 1.0,
+            frequency_ratio: 1.0,  // Target ratio
             fixed_frequency: None, // Default to using ratio
             modulation_index: 1.0,
             envelope: EnvelopeGenerator::new(),

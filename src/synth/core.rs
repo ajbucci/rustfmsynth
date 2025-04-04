@@ -54,7 +54,7 @@ impl Synth {
     }
     pub fn set_operator_ratio(&mut self, op_index: usize, ratio: f32) {
         if op_index < self.operators.len() {
-            self.operators[op_index].frequency_ratio = ratio;
+            self.operators[op_index].set_ratio(ratio);
         } else {
             eprintln!("Operator index out of bounds");
         }
@@ -252,27 +252,27 @@ impl Default for Synth {
         operators[0].set_waveform(Waveform::Sine);
         operators[0].set_envelope(0.01, 1.0, 0.7, 0.5);
         operators[0].set_gain(0.5);
-        operators[0].frequency_ratio = 1.0;
+        operators[0].set_ratio(1.0);
 
         // Carrier B (slightly detuned)
         operators[1].set_waveform(Waveform::Sine);
         operators[1].set_envelope(0.01, 1.0, 0.7, 0.5);
         operators[1].set_gain(0.5);
-        operators[1].frequency_ratio = 1.01;
+        operators[1].set_ratio(1.01);
         operators[1].modulation_index = 2.0;
 
         // Modulator A
         operators[2].set_waveform(Waveform::Sine);
         operators[2].set_envelope(0.005, 0.3, 0.0, 0.2);
         operators[2].set_gain(1.0);
-        operators[2].frequency_ratio = 2.0;
+        operators[2].set_ratio(2.0);
         operators[2].modulation_index = 3.0;
 
         // Modulator B
         operators[3].set_waveform(Waveform::Sine);
         operators[3].set_envelope(0.005, 0.3, 0.0, 0.2);
         operators[3].set_gain(1.0);
-        operators[3].frequency_ratio = 2.02;
+        operators[3].set_ratio(2.02);
         operators[3].modulation_index = 3.0;
 
         // Initialize with a default algorithm (e.g., a simple 2-operator stack)
