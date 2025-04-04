@@ -283,7 +283,9 @@ impl Default for Synth {
         default_algorithm.print_evaluation_chains();
         default_algorithm.print_structure();
         // Initialize voices
-        let voices = (0..config.max_voices).map(|_| Voice::new()).collect();
+        let voices = (0..config.max_voices)
+            .map(|_| Voice::new(operators.len()))
+            .collect();
 
         Self {
             voices,

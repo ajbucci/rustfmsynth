@@ -1,4 +1,5 @@
-use super::{envelope::EnvelopeGenerator, operator::Operator};
+use super::envelope::EnvelopeGenerator;
+use super::operator::{Operator, OperatorState};
 use crate::synth::prelude::HashMap;
 
 // --- Internal Node ---
@@ -178,6 +179,7 @@ impl Algorithm {
         sample_rate: f32,
         start_sample_index: u64,
         samples_since_note_off: Option<u64>,
+        operator_states: &mut [OperatorState],
     ) {
         let buffer_size = output.len();
         if buffer_size == 0 || operators.is_empty() || self.matrix.len() != operators.len() {
@@ -203,6 +205,7 @@ impl Algorithm {
                         sample_rate,
                         start_sample_index,
                         samples_since_note_off,
+                        operator_states,
                     );
                     let carrier_output = &scratch_buffers[i];
                     for (out_sample, &carrier_sample) in
@@ -335,6 +338,7 @@ impl Algorithm {
         sample_rate: f32,
         start_sample_index: u64,
         samples_since_note_off: Option<u64>,
+        operator_states: &mut [OperatorState],
     ) {
         let node = &self.unrolled_nodes[node_idx];
         let buffer_size = scratch_buffers[node_idx].len();
@@ -349,6 +353,7 @@ impl Algorithm {
                 sample_rate,
                 start_sample_index,
                 samples_since_note_off,
+                operator_states,
             );
             let input_output = &scratch_buffers[input_idx];
 
@@ -382,6 +387,7 @@ impl Algorithm {
             sample_rate,
             start_sample_index,
             samples_since_note_off,
+            &mut operator_states[node.original_op_index],
         );
     }
     pub fn print_structure(&self) {

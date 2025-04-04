@@ -20,6 +20,7 @@ pub use std::collections::HashMap;
 
 // PI constant
 pub use core::f32::consts::PI;
+pub use core::f32::consts::TAU;
 
 #[cfg(target_arch = "wasm32")]
 pub fn random_range(min: f32, max: f32) -> f32 {

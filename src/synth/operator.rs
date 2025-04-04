@@ -1,7 +1,7 @@
 use super::envelope::EnvelopeGenerator;
 use super::filter::FilterType;
 use super::waveform::{Waveform, WaveformGenerator};
-use crate::synth::prelude::PI;
+use crate::synth::prelude::{PI, TAU};
 
 #[derive(Clone, Copy, Debug)]
 pub enum CycleDirection {
@@ -15,16 +15,18 @@ pub enum OperatorEvent {
     // We can add more operator events here in the future
 }
 
+const RATIO_SMOOTHING_FACTOR: f32 = 0.001;
+
 #[derive(Clone, Debug)]
 pub struct OperatorState {
     current_phase: f32,
-    current_ratio: f32,
+    current_ratio: Option<f32>,
 }
 impl Default for OperatorState {
     fn default() -> Self {
         Self {
             current_phase: 0.0,
-            current_ratio: 1.0,
+            current_ratio: None,
         }
     }
 }
@@ -51,30 +53,38 @@ impl Operator {
         sample_rate: f32,
         samples_since_note_on: u64,
         samples_since_note_off: Option<u64>,
+        state: &mut OperatorState,
     ) {
-        // Determine the actual frequency for this operator
-        let actual_frequency = match self.fixed_frequency {
-            Some(fixed_freq) => fixed_freq,
-            None => base_frequency * self.frequency_ratio,
-        };
-
-        // Calculate the phase offset based on the starting sample index
-        let phase_increment = 2.0 * PI * actual_frequency / sample_rate;
+        // --- State Initialization ---
+        if state.current_ratio.is_none() {
+            state.current_ratio = Some(self.frequency_ratio);
+        }
+        let mut current_smoothed_ratio = state.current_ratio.unwrap_or(self.frequency_ratio);
 
         // Generate the waveform using the WaveformGenerator
         for (i, sample) in output.iter_mut().enumerate() {
-            let sample_index = samples_since_note_on + i as u64;
-            // NOTE: can wrap phase if it grows large: let wrapped_phase = phase % (2.0 * PI);
-            let phase = phase_increment * (sample_index as f32) + modulation[i];
-            let wave = self.waveform_generator.evaluate(phase);
+            current_smoothed_ratio +=
+                (self.frequency_ratio - current_smoothed_ratio) * RATIO_SMOOTHING_FACTOR;
+            // Determine the actual frequency for this operator
+            let actual_frequency = match self.fixed_frequency {
+                Some(fixed_freq) => fixed_freq,
+                None => base_frequency * current_smoothed_ratio,
+            };
+            let phase_increment = TAU * actual_frequency / sample_rate;
+            state.current_phase += phase_increment;
+            state.current_phase %= TAU;
+            let modulated_phase = state.current_phase + modulation[i];
+            let wave = self.waveform_generator.evaluate(modulated_phase);
 
-            let time_since_on = sample_index as f32 / sample_rate;
+            // --- Envelope Calculation ---
+            let time_since_on = (samples_since_note_on + i as u64) as f32 / sample_rate;
             let time_since_off =
                 samples_since_note_off.map(|off| (off + i as u64) as f32 / sample_rate);
             let env = self.envelope.evaluate(time_since_on, time_since_off);
             *sample = wave * env * self.gain * self.modulation_index;
             // TODO: apply filter
         }
+        state.current_ratio = Some(current_smoothed_ratio);
     }
 
     pub fn set_amplitude(&mut self, amp: f32) {

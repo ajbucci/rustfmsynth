@@ -1,11 +1,13 @@
 use super::algorithm::Algorithm;
 use super::envelope::EnvelopeGenerator;
 use super::note::{NoteEvent, NoteSource};
-use super::operator::Operator;
+use super::operator::{Operator, OperatorState};
 use super::voice_config::VoiceConfig;
 
 /// Represents a single polyphonic voice in the synthesizer.
+/// TODO: add VoiceState and NoteState to keep more organized?
 pub struct Voice {
+    operator_states: Vec<OperatorState>, // State for the operator (e.g., phase, frequency ratio)
     pub active: bool,                    // Is the voice currently playing a note?
     pub releasing: bool, // If the voice is playing a note, has it been released yet?
     pub note_number: u8, // MIDI note number (0-127)
@@ -21,8 +23,21 @@ pub struct Voice {
 
 impl Voice {
     /// Creates a new, inactive voice.
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(num_operators: usize) -> Self {
+        Self {
+            active: false,
+            releasing: false,
+            note_number: 0,
+            note_frequency: 0.0, // Will be set on activation
+            note_source: None,
+            note_velocity: 0,
+            velocity_scale: 0.0,
+            envelope: EnvelopeGenerator::new(),
+            samples_elapsed_since_trigger: 0,
+            note_off_sample_index: None,
+            config: VoiceConfig::default(),
+            operator_states: vec![OperatorState::default(); num_operators],
+        }
     }
     /// Fully resets the voice to an inactive state.
     pub fn reset(&mut self) {
@@ -35,6 +50,9 @@ impl Voice {
         self.note_source = None;
         self.samples_elapsed_since_trigger = 0;
         self.note_off_sample_index = None;
+        self.operator_states.iter_mut().for_each(|state| {
+            *state = OperatorState::default();
+        });
     }
     /// Activates the voice for a given note.
     /// Resets the sample counter and triggers the envelope.
@@ -105,6 +123,7 @@ impl Voice {
             sample_rate,
             start_sample_index,
             samples_since_note_off,
+            &mut self.operator_states,
         );
 
         // --- Apply Main Voice Envelope ---
@@ -144,23 +163,6 @@ impl Voice {
             self.envelope.evaluate(time_since_on, Some(time_since_off)) == 0.0
         } else {
             false
-        }
-    }
-}
-impl Default for Voice {
-    fn default() -> Self {
-        Self {
-            active: false,
-            releasing: false,
-            note_number: 0,
-            note_frequency: 0.0, // Will be set on activation
-            note_source: None,
-            note_velocity: 0,
-            velocity_scale: 0.0,
-            envelope: EnvelopeGenerator::new(),
-            samples_elapsed_since_trigger: 0,
-            note_off_sample_index: None,
-            config: VoiceConfig::default(),
         }
     }
 }
