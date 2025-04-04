@@ -52,6 +52,30 @@ impl Synth {
     fn find_free_voice(&mut self) -> Option<&mut Voice> {
         self.voices.iter_mut().find(|voice| !voice.active)
     }
+    pub fn set_operator_ratio(&mut self, op_index: usize, ratio: f32) {
+        if op_index < self.operators.len() {
+            self.operators[op_index].frequency_ratio = ratio;
+        } else {
+            eprintln!("Operator index out of bounds");
+        }
+    }
+
+    /// Set the waveform for a specific operator index.
+    pub fn set_operator_waveform(&mut self, op_index: usize, waveform: Waveform) {
+        if op_index < self.operators.len() {
+            self.operators[op_index].set_waveform(waveform);
+            println!(
+                "Synth core: Set operator {} waveform to {:?}",
+                op_index, waveform
+            );
+        } else {
+            eprintln!(
+                "Error: set_operator_waveform index {} out of bounds ({} operators)",
+                op_index,
+                self.operators.len()
+            );
+        }
+    }
 
     // TODO: Implement a better voice stealing strategy (e.g., oldest note, quietest voice)
     fn steal_voice(&mut self) -> &mut Voice {

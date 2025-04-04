@@ -1,6 +1,7 @@
 import init from "./pkg/rustfmsynth.js"; // Import init here
 import { setupKeyboardInput, removeKeyboardInput, handleKeyDown, handleKeyUp } from './keyboard-input.js'; // Import keyboard handler + handlers
 import { generateKeyboard, connectKeyboardUIPort } from './keyboard-ui.js'; // Import keyboard UI functions
+import { initializeOperatorControls } from './operator-controls.js'; // Import the new setup function
 
 let audioContext;
 let processorNode;
@@ -189,9 +190,10 @@ export async function ensureSynthStarted() {
 document.addEventListener('DOMContentLoaded', () => {
   try {
     generateKeyboard(); // Regenerate UI (or ensure it's generated)
+    initializeOperatorControls(); // Initialize the new operator dials
     console.log("Synthesizer UI ready.");
   } catch (e) {
-    console.error("Error generating keyboard UI on DOMContentLoaded:", e);
+    console.error("Error generating UI on DOMContentLoaded:", e);
     // Decide if we should stop here or try to continue
   }
   

@@ -71,37 +71,6 @@ export async function handleKeyDown(event) {
     }
     return; // Don't process as control key if it was a note key
   }
-
-  if (eventCode === 'Comma') {
-    event.preventDefault(); // Prevent default immediately
-    if (!pressedKeys.has(eventCode)){
-        pressedKeys.add(eventCode);
-        pressKey(eventCode);
-        const message = { type: 'cycle_waveform', direction_code: 0 };
-        const success = await tryEnsureSynthAndSendMessage(eventCode, message);
-        if (!success) {
-          pressedKeys.delete(eventCode);
-          releaseKey(eventCode);
-          console.warn(`Failed to send cycle_waveform (0) for ${eventCode}`);
-        }
-    }
-    return; // Don't process as Period key
-  }
-  
-  if (eventCode === 'Period') {
-    event.preventDefault(); // Prevent default immediately
-    if (!pressedKeys.has(eventCode)) {
-        pressedKeys.add(eventCode);
-        pressKey(eventCode);
-        const message = { type: 'cycle_waveform', direction_code: 1 };
-        const success = await tryEnsureSynthAndSendMessage(eventCode, message);
-        if (!success) {
-          pressedKeys.delete(eventCode);
-          releaseKey(eventCode);
-          console.warn(`Failed to send cycle_waveform (1) for ${eventCode}`);
-        }
-    }
-  }
 }
 
 // Export the handler to be attached in app.js

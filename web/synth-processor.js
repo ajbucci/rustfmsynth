@@ -44,14 +44,37 @@ class SynthProcessor extends AudioWorkletProcessor {
         } else {
            console.warn("SynthProcessor: Note_off ignored - synth not ready.");
         }
-      } else if (data.type === "cycle_waveform") {
+      } else if (data.type === "set_operator_ratio") {
         if (synth && ready) {
-          // Ensure direction_code is either 0 or 1, matching Rust expectation
-          const event_code = data.direction_code === 0 ? 0 : 1;
-          console.log(`SynthProcessor: Received cycle_waveform, direction code: ${event_code}`);
-          synth.process_operator_event(event_code);
+          // Validate inputs slightly before sending to Wasm? (Optional)
+          const opIndex = parseInt(data.operator_index);
+          const ratio = parseFloat(data.ratio);
+          if (!isNaN(opIndex) && isFinite(ratio) && opIndex >= 0 && opIndex < 4) { // Basic check
+             console.log(`SynthProcessor: Setting operator ${opIndex} ratio to ${ratio}`);
+             synth.set_operator_ratio(opIndex, ratio);
+          } else {
+             console.warn(`SynthProcessor: Invalid set_operator_ratio data received:`, data);
+          }
         } else {
-           console.warn("SynthProcessor: Received cycle_waveform but synth not ready.");
+          console.warn("SynthProcessor: Received set_operator_ratio but synth not ready.");
+        }
+      } else if (data.type === "set_operator_waveform") {
+        if (synth && ready) {
+          const opIndex = parseInt(data.operator_index);
+          const waveformInt = parseInt(data.waveform_value);
+
+          if (!isNaN(opIndex) && !isNaN(waveformInt) && opIndex >= 0 && opIndex < 4 && waveformInt >= 0 && waveformInt <= 4) {
+             console.log(`SynthProcessor: Setting operator ${opIndex} waveform to ${waveformInt}`);
+             try {
+                 synth.set_operator_waveform(opIndex, waveformInt);
+             } catch (e) {
+                 console.error(`SynthProcessor: Error calling synth.set_operator_waveform(${opIndex}, ${waveformInt})`, e);
+             }
+          } else {
+             console.warn(`SynthProcessor: Invalid set_operator_waveform data received:`, data);
+          }
+        } else {
+          console.warn("SynthProcessor: Received set_operator_waveform but synth not ready.");
         }
       }
     };

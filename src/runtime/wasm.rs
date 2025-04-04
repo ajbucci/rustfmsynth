@@ -1,5 +1,5 @@
 use crate::synth::note::{NoteEvent, NoteSource};
-use crate::synth::operator::{CycleDirection, OperatorEvent};
+use crate::synth::waveform::Waveform;
 use crate::synth::Synth;
 use js_sys::Float32Array;
 use wasm_bindgen::prelude::*;
@@ -48,15 +48,33 @@ impl WasmSynth {
     }
 
     #[wasm_bindgen]
-    pub fn process_operator_event(&mut self, event_code: u8) {
-        let event = OperatorEvent::CycleWaveform {
-            direction: if event_code == 0 {
-                CycleDirection::Backward
-            } else {
-                CycleDirection::Forward
-            },
+    pub fn set_operator_ratio(&mut self, operator_index: usize, ratio: f32) {
+        self.synth.set_operator_ratio(operator_index, ratio);
+    }
+
+    /// Set the waveform for a specific operator using an integer code from JS.
+    /// Mapping: 0: Sine, 1: Triangle, 2: Square, 3: Sawtooth, 4: Noise
+    #[wasm_bindgen]
+    pub fn set_operator_waveform(&mut self, operator_index: usize, waveform_value: u8) {
+        let waveform = match waveform_value {
+            0 => Waveform::Sine,
+            1 => Waveform::Triangle,
+            2 => Waveform::Square,
+            3 => Waveform::Sawtooth,
+            4 => Waveform::Noise,
+            _ => {
+                eprintln!(
+                    "WasmSynth Error: Invalid waveform value received: {}",
+                    waveform_value
+                );
+                // Optionally default to Sine or return without changing
+                Waveform::Sine // Defaulting to Sine on invalid input
+                // return; // Alternative: do nothing if value is invalid
+            }
         };
-        self.synth.process_operator_events(&event);
+
+        // Call the core synth method with the mapped enum
+        self.synth.set_operator_waveform(operator_index, waveform);
     }
 
     #[wasm_bindgen]

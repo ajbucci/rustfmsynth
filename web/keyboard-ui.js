@@ -24,11 +24,6 @@ const keyboardLayout = [
   { code: 'BracketLeft', note: 73, noteName: 'C#5', type: 'black' },
 ];
 
-const controlKeyLayout = [
-  { code: 'Comma', label: 'Prev', type: 'control', direction_code: 0 },
-  { code: 'Period', label: 'Next', type: 'control', direction_code: 1 },
-];
-
 const keyboardContainer = document.getElementById('keyboard-container');
 let processorPort = null; // Set by connectKeyboardUIPort
 const activeMouseKeys = new Set(); // Track keys pressed by mouse
@@ -88,47 +83,9 @@ export function generateKeyboard() {
     keyElement.addEventListener('touchleave', handleMouseUp);
   });
 
-  // Control Keys (Waveform Cycle)
-  controlKeyLayout.forEach(keyData => {
-    const keyElement = document.createElement('div');
-    keyElement.classList.add('key', 'white'); // Style as white key for simplicity
-    keyElement.dataset.code = keyData.code;
-    keyElement.dataset.direction_code = keyData.direction_code;
-    keyElement.style.width = '60px';
+  // REMOVED: Control Keys (Waveform Cycle) loop
+  // controlKeyLayout.forEach(keyData => { ... });
 
-    const labelElement = document.createElement('div');
-    labelElement.classList.add('key-label');
-    labelElement.innerHTML = `<span class="note-name">${keyData.label}</span><span class="key-code">${keyData.code === 'Comma' ? ',' : '.'}</span>`;
-    keyElement.appendChild(labelElement);
-
-    // Mouse interaction for control keys
-    keyElement.addEventListener('mousedown', async (e) => {
-      resumeAudioContext(); // Call resume early
-      const targetElement = e.currentTarget;
-      const eventCode = targetElement.dataset.code;
-      const direction_code = parseInt(targetElement.dataset.direction_code);
-      
-      targetElement.classList.add('active'); // Immediate visual feedback
-
-      const message = { type: 'cycle_waveform', direction_code: direction_code };
-      const success = await tryEnsureSynthAndSendMessage(eventCode, message);
-
-      if (!success) {
-        targetElement.classList.remove('active');
-        console.warn(`Failed to send cycle_waveform for mouse event ${eventCode}`);
-      }
-    });
-    keyElement.addEventListener('mouseup', (e) => {
-      e.currentTarget.classList.remove('active');
-    });
-    keyElement.addEventListener('mouseleave', (e) => {
-      if (e.currentTarget.classList.contains('active')) {
-          e.currentTarget.classList.remove('active');
-      }
-    });
-
-    keyboardContainer.appendChild(keyElement);
-  });
   console.log("Keyboard UI generated.");
 }
 
@@ -224,5 +181,5 @@ export function connectKeyboardUIPort(port) {
     return;
   }
   processorPort = port;
-  console.log("Keyboard UI port connected."); // Changed log message
+  console.log("Keyboard UI port connected.");
 }

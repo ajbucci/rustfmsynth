@@ -93,3 +93,69 @@ button {
 .key.black .key-label .key-code {
      color: #aaa;
 }
+
+/* --- Operator Controls Styling --- */
+
+#operator-controls {
+  display: flex; /* Arrange controls horizontally */
+  flex-wrap: wrap; /* Allow wrapping if space is tight */
+  gap: 20px;      /* Spacing between controls */
+  padding: 15px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background-color: #f9f9f9;
+  margin-top: 15px; /* Space below keyboard */
+}
+
+.operator-control {
+  display: flex;       /* Arrange label, slider, input horizontally */
+  flex-direction: column; /* Stack vertically within the control */
+  align-items: center; /* Center items horizontally */
+  gap: 5px;          /* Space between label, slider, input */
+  min-width: 120px;   /* Give each control some minimum width */
+}
+
+.operator-control label {
+  font-weight: bold;
+  font-size: 0.9em;
+  color: #333;
+}
+
+/* Style the range slider */
+.operator-control input[type="range"] {
+  width: 100px; /* Adjust width as needed */
+  cursor: pointer;
+}
+
+/* Style the number input */
+.operator-control input[type="number"] {
+  width: 60px; /* Adjust width */
+  padding: 4px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  text-align: center;
+  font-size: 0.9em;
+}
+.operator-control input[type="number"]::-webkit-outer-spin-button,
+.operator-control input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+/* Style the waveform dropdown */
+.operator-control select {
+    width: 100%; /* Make dropdown take available width within the control */
+    max-width: 110px; /* Or set a specific max-width */
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    background-color: white;
+    cursor: pointer;
+    font-size: 0.9em;
+    margin-top: 2px; /* Small space below label */
+  }
+  
+  /* Add some general margin-bottom to controls if needed */
+  .operator-control {
+    /* ... other styles ... */
+    margin-bottom: 10px; /* Ensure controls don't touch if they wrap */
+  }
