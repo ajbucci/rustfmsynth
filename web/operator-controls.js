@@ -34,6 +34,7 @@ function createOperatorControl(index, container) {
     controlWrapper.appendChild(label);
 
     // --- Range Input (Dial) ---
+    // TODO: add initial value from operator state
     const dial = document.createElement('input');
     dial.type = 'range';
     dial.id = `op-${index}-ratio-dial`; // Unique ID for the dial

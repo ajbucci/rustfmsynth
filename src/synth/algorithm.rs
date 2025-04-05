@@ -179,43 +179,180 @@ impl Algorithm {
         sample_rate: f32,
         start_sample_index: u64,
         samples_since_note_off: Option<u64>,
-        operator_states: &mut [OperatorState],
+        operator_states: &mut [OperatorState], // Persistent state (includes phase + ratio)
     ) {
         let buffer_size = output.len();
-        if buffer_size == 0 || operators.is_empty() || self.matrix.len() != operators.len() {
+        if buffer_size == 0
+            || operators.is_empty()
+            || self.matrix.len() != operators.len()
+            || self.unrolled_nodes.is_empty()
+            || operator_states.len() != operators.len()
+        {
             return;
         }
 
+        // --- Temporary State (Phase + Ratio) per Unrolled Node ---
+        // Initialized with the persistent state from the *start* of this buffer.
+        let mut current_buffer_states: Vec<OperatorState> = self
+            .unrolled_nodes
+            .iter()
+            .map(|node| operator_states[node.original_op_index].clone())
+            .collect();
+
+        // --- Scratch Buffers for Operator Outputs ---
         let mut scratch_buffers: Vec<Vec<f32>> = self
             .unrolled_nodes
             .iter()
             .map(|_| vec![0.0; buffer_size])
             .collect();
 
+        // --- Visited flags to prevent reprocessing nodes in this buffer ---
+        // If the graph has cycles after unrolling (shouldn't happen?) or diamonds,
+        // we only want to process each node_idx once.
+        let mut visited = vec![false; self.unrolled_nodes.len()];
+
         output.fill(0.0);
 
-        for &carrier_op in &self.carriers {
-            for (i, node) in self.unrolled_nodes.iter().enumerate() {
-                if node.original_op_index == carrier_op {
-                    self.evaluate_node(
-                        operators,
-                        &mut scratch_buffers,
-                        i,
-                        base_frequency,
-                        sample_rate,
-                        start_sample_index,
-                        samples_since_note_off,
-                        operator_states,
-                    );
-                    let carrier_output = &scratch_buffers[i];
+        // --- Evaluate Graph - Ensure correct order by iterating ---
+        // Evaluate ALL nodes first to ensure dependencies are met before summing carriers.
+        for node_idx in 0..self.unrolled_nodes.len() {
+            self.evaluate_node_recursive(
+                operators,
+                &mut scratch_buffers,
+                node_idx,
+                base_frequency,
+                sample_rate,
+                start_sample_index,
+                samples_since_note_off,
+                &mut current_buffer_states, // Pass unique temporary states
+                &mut visited,               // Pass visited flags
+            );
+        }
+
+        // --- Sum Carrier Outputs ---
+        // (Keep the carrier summing logic from the previous attempt)
+        for &carrier_op_original_idx in &self.carriers {
+            for (node_idx, node) in self.unrolled_nodes.iter().enumerate() {
+                if node.original_op_index == carrier_op_original_idx {
+                    // Optional: Check if it's a "final" carrier instance
+                    // let is_final_carrier_instance = !self.unrolled_nodes.iter().any(|other_node| {
+                    //     other_node.input_node_indices.contains(&node_idx)
+                    // });
+                    // if is_final_carrier_instance {
+                    let carrier_output = &scratch_buffers[node_idx];
                     for (out_sample, &carrier_sample) in
                         output.iter_mut().zip(carrier_output.iter())
                     {
                         *out_sample += carrier_sample;
                     }
+                    // }
                 }
             }
         }
+
+        // --- Update Persistent State ---
+        // (Keep the update logic using last_occurrence_map from the previous attempt)
+        let mut last_occurrence_map: HashMap<usize, usize> = HashMap::new();
+        for (unrolled_idx, node) in self.unrolled_nodes.iter().enumerate() {
+            last_occurrence_map.insert(node.original_op_index, unrolled_idx);
+        }
+
+        for (original_op_idx, last_unrolled_idx) in last_occurrence_map {
+            if original_op_idx < operator_states.len() {
+                // Update persistent state (phase and ratio) from the temporary state
+                // of the last evaluation instance of that operator in this buffer.
+                operator_states[original_op_idx] = current_buffer_states[last_unrolled_idx].clone();
+            } else {
+                eprintln!("Warning: original_op_idx {} out of bounds for operator_states (len {}) during persistent state update.", original_op_idx, operator_states.len());
+            }
+        }
+    }
+
+    // Renamed to avoid confusion with the previous evaluate_node structure
+    fn evaluate_node_recursive(
+        &self,
+        operators: &[Operator],
+        scratch_buffers: &mut [Vec<f32>],
+        node_idx: usize,
+        base_frequency: f32,
+        sample_rate: f32,
+        start_sample_index: u64,
+        samples_since_note_off: Option<u64>,
+        current_buffer_states: &mut [OperatorState], // Use the temporary states
+        visited: &mut [bool], // Track visited nodes for this buffer evaluation
+    ) {
+        // If node already processed in this buffer call, skip.
+        if visited[node_idx] {
+            return;
+        }
+
+        let node = &self.unrolled_nodes[node_idx];
+        let buffer_size = scratch_buffers[node_idx].len();
+
+        // --- Ensure Inputs are Evaluated First ---
+        let mut modulation_input = vec![0.0; buffer_size];
+        for &input_idx in &node.input_node_indices {
+            // Recursively evaluate the input node
+            self.evaluate_node_recursive(
+                operators,
+                scratch_buffers,
+                input_idx, // Evaluate the input index
+                base_frequency,
+                sample_rate,
+                start_sample_index,
+                samples_since_note_off,
+                current_buffer_states, // Pass down temporary states
+                visited,               // Pass down visited flags
+            );
+
+            // --- Combine Input Contributions ---
+            // (Keep the modulation combining logic from previous attempts, using connection params)
+            let input_output = &scratch_buffers[input_idx]; // Output of the input node
+            let source_op_original_idx = self.unrolled_nodes[input_idx].original_op_index;
+            let target_op_original_idx = node.original_op_index;
+
+            if let Some(Some(conn)) = self
+                .matrix
+                .get(target_op_original_idx)
+                .and_then(|row| row.get(source_op_original_idx))
+            {
+                let scale = conn.scale;
+                for i in 0..buffer_size {
+                    let time_on = (start_sample_index + i as u64) as f32 / sample_rate;
+                    let time_off =
+                        samples_since_note_off.map(|n| (n + i as u64) as f32 / sample_rate);
+                    let env_value = conn
+                        .modulation_envelope
+                        .as_ref()
+                        .map(|e| e.evaluate(time_on, time_off))
+                        .unwrap_or(1.0);
+                    modulation_input[i] += input_output[i] * scale * env_value;
+                }
+            }
+            // Decide how to handle cases where connection isn't in matrix (e.g., implied by feedback unrolling)
+            // If unrolling implies connection, modulation should likely still happen.
+            // Maybe default to scale=1.0 if matrix doesn't specify? Or ensure matrix reflects all connections?
+            // For now, assume matrix covers intended connections.
+        }
+
+        // --- Process Current Node ---
+        let current_output = &mut scratch_buffers[node_idx];
+        let operator = &operators[node.original_op_index];
+        // Use the unique temporary state for this specific node instance
+        let state_for_this_node = &mut current_buffer_states[node_idx];
+
+        operator.process(
+            base_frequency,
+            current_output,
+            &modulation_input,
+            sample_rate,
+            start_sample_index,
+            samples_since_note_off,
+            state_for_this_node, // Pass the specific state for this node instance
+        );
+
+        // Mark this node as processed for this buffer evaluation
+        visited[node_idx] = true;
     }
 
     fn build_unrolled_graph(
@@ -329,67 +466,6 @@ impl Algorithm {
         Ok(current_idx)
     }
 
-    fn evaluate_node(
-        &self,
-        operators: &[Operator],
-        scratch_buffers: &mut [Vec<f32>],
-        node_idx: usize,
-        base_frequency: f32,
-        sample_rate: f32,
-        start_sample_index: u64,
-        samples_since_note_off: Option<u64>,
-        operator_states: &mut [OperatorState],
-    ) {
-        let node = &self.unrolled_nodes[node_idx];
-        let buffer_size = scratch_buffers[node_idx].len();
-
-        let mut modulation_input = vec![0.0; buffer_size];
-        for &input_idx in &node.input_node_indices {
-            self.evaluate_node(
-                operators,
-                scratch_buffers,
-                input_idx,
-                base_frequency,
-                sample_rate,
-                start_sample_index,
-                samples_since_note_off,
-                operator_states,
-            );
-            let input_output = &scratch_buffers[input_idx];
-
-            let source_op = self.unrolled_nodes[input_idx].original_op_index;
-            let target_op = node.original_op_index;
-            if let Some(Some(conn)) = self
-                .matrix
-                .get(target_op)
-                .and_then(|row| row.get(source_op))
-            {
-                let scale = conn.scale;
-                for i in 0..buffer_size {
-                    let time_on = (start_sample_index + i as u64) as f32 / sample_rate;
-                    let time_off =
-                        samples_since_note_off.map(|n| (n + i as u64) as f32 / sample_rate);
-                    let env_value = conn
-                        .modulation_envelope
-                        .as_ref()
-                        .map(|e| e.evaluate(time_on, time_off))
-                        .unwrap_or(1.0);
-                    modulation_input[i] += input_output[i] * scale * env_value;
-                }
-            }
-        }
-
-        let current_output = &mut scratch_buffers[node_idx];
-        operators[node.original_op_index].process(
-            base_frequency,
-            current_output,
-            &modulation_input,
-            sample_rate,
-            start_sample_index,
-            samples_since_note_off,
-            &mut operator_states[node.original_op_index],
-        );
-    }
     pub fn print_structure(&self) {
         println!("Algorithm Structure:");
         for (i, node) in self.unrolled_nodes.iter().enumerate() {

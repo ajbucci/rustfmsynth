@@ -1,7 +1,7 @@
 use super::envelope::EnvelopeGenerator;
 use super::filter::FilterType;
 use super::waveform::{Waveform, WaveformGenerator};
-use crate::synth::prelude::{PI, TAU};
+use crate::synth::prelude::TAU;
 
 #[derive(Clone, Copy, Debug)]
 pub enum CycleDirection {
