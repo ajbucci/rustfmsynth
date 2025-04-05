@@ -1,0 +1,178 @@
+:root {
+    --white-key-width: 50px;
+    --black-key-width: 30px;
+}
+
+body {
+    font-family: sans-serif;
+    text-align: center;
+    margin-top: 50px;
+}
+button {
+    margin: 10px;
+    padding: 10px;
+}
+
+#synth-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#keyboard-container {
+    display: flex; /* Arrange keys horizontally */
+    position: relative; /* Needed for positioning black keys */
+    background-color: #333;
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    margin-top: 20px;
+    height: 180px; /* Adjust height as needed */
+    width: fit-content; /* Adjust width based on keys */
+    border: 3px solid #555;
+}
+
+.key {
+    border: 1px solid #555;
+    box-sizing: border-box;
+    position: relative; /* For label positioning */
+    cursor: pointer;
+    transition: background-color 0.1s ease; /* Smooth transition for active state */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end; /* Position label at the bottom */
+    align-items: center;
+    padding-bottom: 5px;
+    font-family: sans-serif;
+    user-select: none; /* Prevent text selection on click */
+}
+
+.key.white {
+    width: var(--white-key-width); /* Width of white keys */
+    height: 100%; /* Full height of container */
+    background-color: #fff;
+    color: #333;
+    border-bottom-left-radius: 3px;
+    border-bottom-right-radius: 3px;
+    z-index: 1; /* White keys below black keys */
+}
+
+.key.black {
+    width: var(--black-key-width); /* Width of black keys */
+    height: 60%; /* Height relative to container */
+    background-color: #222;
+    color: #eee;
+    position: absolute; /* Position relative to container */
+    margin-left: 10px; /* Overlap previous white key -- this should be calculated not hardcoded. */
+    z-index: 2; /* Black keys above white keys */
+    border-radius: 0 0 3px 3px;
+}
+
+.key.active, .key:active { /* Style for pressed key (JS controlled or mouse down) */
+    background-color: #87ceeb; /* Sky blue for active state */
+}
+
+.key.black.active, .key.black:active {
+    background-color: #add8e6; /* Lighter blue for active black keys */
+}
+
+.key-label {
+    font-size: 10px;
+    text-align: center;
+}
+
+.key-label .note-name {
+    font-weight: bold;
+    display: block;
+}
+
+.key-label .key-code {
+     font-size: 9px;
+     color: #777;
+}
+.key.black .key-label .key-code {
+     color: #aaa;
+}
+
+/* --- Operator Controls Styling --- */
+
+#operator-controls {
+  display: flex; /* Arrange controls horizontally */
+  flex-wrap: wrap; /* Allow wrapping if space is tight */
+  gap: 20px;      /* Spacing between controls */
+  padding: 15px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background-color: #f9f9f9;
+  margin-top: 15px; /* Space below keyboard */
+}
+
+.operator-control {
+  display: flex;       /* Arrange label, slider, input horizontally */
+  flex-direction: column; /* Stack vertically within the control */
+  align-items: center; /* Center items horizontally */
+  gap: 5px;          /* Space between label, slider, input */
+  min-width: 120px;   /* Give each control some minimum width */
+  margin-bottom: 10px; /* Ensure controls don't touch if they wrap */
+}
+
+.operator-control label {
+  font-weight: bold;
+  font-size: 0.9em;
+  color: #333;
+}
+
+/* Style the range slider */
+.operator-control input[type="range"] {
+  width: 100px; /* Adjust width as needed */
+  cursor: pointer;
+}
+
+/* Style the number input */
+.operator-control input[type="number"] {
+  width: 60px; /* Adjust width */
+  padding: 4px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  text-align: center;
+  font-size: 0.9em;
+}
+.operator-control input[type="number"]::-webkit-outer-spin-button,
+.operator-control input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+/* Style the waveform dropdown */
+.operator-control select {
+    width: 100%; /* Make dropdown take available width within the control */
+    max-width: 110px; /* Or set a specific max-width */
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    background-color: white;
+    cursor: pointer;
+    font-size: 0.9em;
+    margin-top: 2px; /* Small space below label */
+  }
+
+/* --- Style Specific Controls --- */
+
+/* Keep Ratio slider horizontal (default) */
+.operator-control input[id$="-ratio-dial"] {
+  width: 100px;
+  height: auto; /* Default */
+  writing-mode: horizontal-tb; /* Explicitly horizontal */
+  appearance: auto;
+}
+
+/* Style Modulation Index Slider as Vertical */
+.operator-control input[id$="-mod-index-dial"] {
+  width: 20px;  /* Vertical sliders need width defined */
+  height: 80px; /* Adjust height as needed */
+  padding: 0 5px; /* Add some padding if needed */
+  writing-mode: vertical-lr; /* Use standardized vertical writing mode */
+  direction: rtl; /* Make the slider go bottom-to-top with vertical-lr */
+  cursor: pointer;
+  margin-top: 5px; /* Add space below label */
+  margin-bottom: 5px; /* Add space above number input */
+}

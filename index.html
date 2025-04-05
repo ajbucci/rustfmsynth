@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rust FM Synth</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Rust FM Synthesizer (WASM)</h1>
+
+    <p>Play notes using your keyboard (A,S,D,F...) or click the keys below. Use ',' and '.' to cycle waveform.</p>
+    <!-- Container for the visual keyboard -->
+    <div id="synth-container">
+        <div id="operator-controls">
+            
+        </div>
+        <div id="keyboard-container">
+            <!-- Keyboard will be generated here by JS -->
+        </div>
+    </div>
+
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
