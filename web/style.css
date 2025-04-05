@@ -113,6 +113,7 @@ button {
   align-items: center; /* Center items horizontally */
   gap: 5px;          /* Space between label, slider, input */
   min-width: 120px;   /* Give each control some minimum width */
+  margin-bottom: 10px; /* Ensure controls don't touch if they wrap */
 }
 
 .operator-control label {
@@ -153,9 +154,25 @@ button {
     font-size: 0.9em;
     margin-top: 2px; /* Small space below label */
   }
-  
-  /* Add some general margin-bottom to controls if needed */
-  .operator-control {
-    /* ... other styles ... */
-    margin-bottom: 10px; /* Ensure controls don't touch if they wrap */
-  }
+
+/* --- Style Specific Controls --- */
+
+/* Keep Ratio slider horizontal (default) */
+.operator-control input[id$="-ratio-dial"] {
+  width: 100px;
+  height: auto; /* Default */
+  writing-mode: horizontal-tb; /* Explicitly horizontal */
+  appearance: auto;
+}
+
+/* Style Modulation Index Slider as Vertical */
+.operator-control input[id$="-mod-index-dial"] {
+  width: 20px;  /* Vertical sliders need width defined */
+  height: 80px; /* Adjust height as needed */
+  padding: 0 5px; /* Add some padding if needed */
+  writing-mode: vertical-lr; /* Use standardized vertical writing mode */
+  direction: rtl; /* Make the slider go bottom-to-top with vertical-lr */
+  cursor: pointer;
+  margin-top: 5px; /* Add space below label */
+  margin-bottom: 5px; /* Add space above number input */
+}

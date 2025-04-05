@@ -17,6 +17,10 @@ const WAVEFORMS = [
 ];
 const DEFAULT_WAVEFORM_VALUE = 0; // Default to Sine (value 0)
 
+// Define the sticky points for the ratio slider
+const STICKY_RATIO_POINTS = [0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0];
+const STICKY_THRESHOLD = 0.05; // How close the slider needs to be to snap
+
 /**
  * Creates the HTML elements (label, dial, number input, waveform select) for a single operator
  * and adds the necessary event listeners for synchronization and updates.
@@ -152,9 +156,28 @@ function createOperatorControl(index, container) {
     dial.addEventListener('input', (event) => {
         const targetDial = event.currentTarget;
         const operatorIndex = parseInt(targetDial.dataset.operatorIndex);
-        const ratio = parseFloat(targetDial.value);
+        let ratio = parseFloat(targetDial.value);
 
-        // Update the number input's value to match the slider
+        // --- Sticky Logic ---
+        let snapped = false;
+        for (const stickyPoint of STICKY_RATIO_POINTS) {
+            if (Math.abs(ratio - stickyPoint) < STICKY_THRESHOLD) {
+                 // Check if the slider is actually moving *towards* the sticky point
+                 // or if it just snapped on the previous event. This prevents getting stuck.
+                 // We store the previous value temporarily for this check.
+                 const previousValue = parseFloat(targetDial.dataset.previousValue || ratio.toString());
+                 if (Math.abs(ratio - stickyPoint) < Math.abs(previousValue - stickyPoint)) {
+                    ratio = stickyPoint;
+                    targetDial.value = ratio.toString(); // Update the slider position itself
+                    snapped = true;
+                    break; // Snap to the first encountered sticky point
+                 }
+            }
+        }
+        // Store the current value (snapped or not) for the next event's check
+        targetDial.dataset.previousValue = ratio.toString();
+
+        // Update the number input's value to match the slider (potentially snapped)
         numberInput.value = ratio.toFixed(2);
 
         // Send the update to the synth processor
@@ -180,6 +203,8 @@ function createOperatorControl(index, container) {
 
         // Update the slider's value to match the number input
         dial.value = ratio.toString();
+        // Clear previous value tracker when number input changes directly
+        delete dial.dataset.previousValue;
 
         // Send the update to the synth processor
         // No need to await here
