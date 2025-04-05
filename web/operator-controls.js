@@ -59,6 +59,38 @@ function createOperatorControl(index, container) {
     numberInput.dataset.operatorIndex = index; // Store index here too
     controlWrapper.appendChild(numberInput);
 
+    // --- Modulation Index Label ---
+    const modIndexLabel = document.createElement('label');
+    modIndexLabel.htmlFor = `op-${index}-mod-index-dial`;
+    modIndexLabel.textContent = `Mod Index:`;
+    modIndexLabel.style.marginTop = '10px'; // Add some space
+    controlWrapper.appendChild(modIndexLabel);
+
+    // --- Modulation Index Range Input (Dial) ---
+    const modIndexDial = document.createElement('input');
+    modIndexDial.type = 'range';
+    modIndexDial.id = `op-${index}-mod-index-dial`;
+    const minModIndex = 0.0;
+    const maxModIndex = 10.0; // Example max value, adjust as needed
+    const stepModIndex = 0.1;
+    modIndexDial.min = minModIndex.toString();
+    modIndexDial.max = maxModIndex.toString();
+    modIndexDial.step = stepModIndex.toString();
+    modIndexDial.value = '0.0'; // Default modulation index
+    modIndexDial.dataset.operatorIndex = index;
+    controlWrapper.appendChild(modIndexDial);
+
+    // --- Modulation Index Number Input ---
+    const modIndexNumberInput = document.createElement('input');
+    modIndexNumberInput.type = 'number';
+    modIndexNumberInput.id = `op-${index}-mod-index-num`;
+    modIndexNumberInput.min = minModIndex.toString();
+    modIndexNumberInput.max = maxModIndex.toString();
+    modIndexNumberInput.step = stepModIndex.toString();
+    modIndexNumberInput.value = parseFloat(modIndexDial.value).toFixed(1); // Sync with dial
+    modIndexNumberInput.dataset.operatorIndex = index;
+    controlWrapper.appendChild(modIndexNumberInput);
+
     // --- Waveform Label ---
     const waveformLabel = document.createElement('label');
     waveformLabel.htmlFor = `op-${index}-waveform`;
@@ -100,6 +132,22 @@ function createOperatorControl(index, container) {
         }
     };
 
+    // --- Function to Send Modulation Index Update ---
+    const sendModulationIndexUpdate = async (opIndex, modIndexValue) => {
+        resumeAudioContext(); // Ensure context is running
+
+        const message = {
+            type: 'set_operator_modulation_index',
+            operator_index: opIndex,
+            modulation_index: modIndexValue
+        };
+        const messageId = `set-mod-index-op-${opIndex}`; // Unique ID
+        const success = await tryEnsureSynthAndSendMessage(messageId, message);
+        if (!success) {
+            console.warn(`Operator Controls: Failed to send set_operator_modulation_index for operator ${opIndex}`);
+        }
+    };
+
     // --- Event Listener for Slider ('input' for real-time) ---
     dial.addEventListener('input', (event) => {
         const targetDial = event.currentTarget;
@@ -136,6 +184,42 @@ function createOperatorControl(index, container) {
         // Send the update to the synth processor
         // No need to await here
         sendUpdate(operatorIndex, ratio);
+    });
+
+    // --- Event Listener for Modulation Index Slider ---
+    modIndexDial.addEventListener('input', (event) => {
+        const targetDial = event.currentTarget;
+        const operatorIndex = parseInt(targetDial.dataset.operatorIndex);
+        const modIndex = parseFloat(targetDial.value);
+
+        // Update the number input
+        modIndexNumberInput.value = modIndex.toFixed(1);
+
+        // Send the update
+        sendModulationIndexUpdate(operatorIndex, modIndex);
+    });
+
+    // --- Event Listener for Modulation Index Number Input ---
+    modIndexNumberInput.addEventListener('change', (event) => {
+        const targetInput = event.currentTarget;
+        const operatorIndex = parseInt(targetInput.dataset.operatorIndex);
+        let modIndex = parseFloat(targetInput.value);
+
+        // Validate and clamp
+        if (isNaN(modIndex)) {
+            modIndex = parseFloat(modIndexDial.value); // Revert
+        } else {
+            modIndex = Math.max(minModIndex, Math.min(maxModIndex, modIndex)); // Clamp
+        }
+
+        // Update the input field
+        targetInput.value = modIndex.toFixed(1);
+
+        // Update the slider
+        modIndexDial.value = modIndex.toString();
+
+        // Send the update
+        sendModulationIndexUpdate(operatorIndex, modIndex);
     });
 
     // --- Event Listener for Waveform Select ---

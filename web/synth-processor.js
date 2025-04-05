@@ -76,6 +76,25 @@ class SynthProcessor extends AudioWorkletProcessor {
         } else {
           console.warn("SynthProcessor: Received set_operator_waveform but synth not ready.");
         }
+      } else if (data.type === "set_operator_modulation_index") {
+        if (synth && ready) {
+          const opIndex = parseInt(data.operator_index);
+          const modIndex = parseFloat(data.modulation_index);
+
+          // Basic validation
+          if (!isNaN(opIndex) && isFinite(modIndex) && opIndex >= 0 && opIndex < 4) { // Assuming 4 operators
+             console.log(`SynthProcessor: Setting operator ${opIndex} modulation index to ${modIndex}`);
+             try {
+                 synth.set_operator_modulation_index(opIndex, modIndex);
+             } catch (e) {
+                 console.error(`SynthProcessor: Error calling synth.set_operator_modulation_index(${opIndex}, ${modIndex})`, e);
+             }
+          } else {
+             console.warn(`SynthProcessor: Invalid set_operator_modulation_index data received:`, data);
+          }
+        } else {
+          console.warn("SynthProcessor: Received set_operator_modulation_index but synth not ready.");
+        }
       }
     };
   }

@@ -1,5 +1,5 @@
 use super::envelope::EnvelopeGenerator;
-use super::filter::FilterType;
+use super::filter::{self, FilterType};
 use super::waveform::{Waveform, WaveformGenerator};
 use crate::synth::prelude::TAU;
 
@@ -16,17 +16,30 @@ pub enum OperatorEvent {
 }
 
 const RATIO_SMOOTHING_FACTOR: f32 = 0.001;
+const MODULATION_INDEX_SMOOTHING_FACTOR: f32 = 0.001; // Add a factor for modulation index
 
 #[derive(Clone, Debug)]
 pub struct OperatorState {
     current_phase: f32,
     current_ratio: Option<f32>,
+    current_modulation_index: Option<f32>, // Add field for smoothed mod index
+    // --- Biquad Filter State ---
+    filter_x1: f32, // Previous input sample x[n-1]
+    filter_x2: f32, // Input sample before previous x[n-2]
+    filter_y1: f32, // Previous output sample y[n-1]
+    filter_y2: f32, // Output sample before previous y[n-2]
 }
 impl Default for OperatorState {
     fn default() -> Self {
         Self {
             current_phase: 0.0,
             current_ratio: None,
+            current_modulation_index: None, // Initialize as None
+            // Initialize filter state to zero
+            filter_x1: 0.0,
+            filter_x2: 0.0,
+            filter_y1: 0.0,
+            filter_y2: 0.0,
         }
     }
 }
@@ -59,12 +72,25 @@ impl Operator {
         if state.current_ratio.is_none() {
             state.current_ratio = Some(self.frequency_ratio);
         }
+        if state.current_modulation_index.is_none() { // Initialize mod index state
+            state.current_modulation_index = Some(self.modulation_index);
+        }
         let mut current_smoothed_ratio = state.current_ratio.unwrap_or(self.frequency_ratio);
+        let mut current_smoothed_modulation_index = state.current_modulation_index.unwrap_or(self.modulation_index); // Get current smoothed mod index
+
+        // Define a default Q factor for filters (e.g., Butterworth)
+        // You might want to make this configurable per operator later
+        const DEFAULT_Q: f32 = 0.70710678; // 1.0 / sqrt(2.0)
 
         // Generate the waveform using the WaveformGenerator
         for (i, sample) in output.iter_mut().enumerate() {
+            // --- Smooth Ratio ---
             current_smoothed_ratio +=
                 (self.frequency_ratio - current_smoothed_ratio) * RATIO_SMOOTHING_FACTOR;
+            // --- Smooth Modulation Index ---
+            current_smoothed_modulation_index +=
+                (self.modulation_index - current_smoothed_modulation_index) * MODULATION_INDEX_SMOOTHING_FACTOR;
+
             // Determine the actual frequency for this operator
             let actual_frequency = match self.fixed_frequency {
                 Some(fixed_freq) => fixed_freq,
@@ -81,10 +107,32 @@ impl Operator {
             let time_since_off =
                 samples_since_note_off.map(|off| (off + i as u64) as f32 / sample_rate);
             let env = self.envelope.evaluate(time_since_on, time_since_off);
-            *sample = wave * env * self.gain * self.modulation_index;
-            // TODO: apply filter
+            // Use the smoothed modulation index here
+            let raw_output = wave * env * self.gain * current_smoothed_modulation_index;
+
+            // --- Apply Filter (Stateful Biquad, per-sample) ---
+            let filtered_output = match self.filter {
+                FilterType::LowPass(cutoff) => filter::process_biquad_lpf(
+                    raw_output,
+                    cutoff,
+                    sample_rate,
+                    DEFAULT_Q, // Use default Q for now
+                    &mut state.filter_x1,
+                    &mut state.filter_x2,
+                    &mut state.filter_y1,
+                    &mut state.filter_y2,
+                ),
+                // TODO: Implement other filter types using biquad state if needed
+                // FilterType::HighPass(cutoff) => filter::process_biquad_hpf(...),
+                // FilterType::BandPass(center, bw) => filter::process_biquad_bpf(...),
+                _ => raw_output, // Pass through if type not handled
+            };
+
+            *sample = filtered_output; // Assign filtered output
         }
+        // Store the final smoothed values back into the state
         state.current_ratio = Some(current_smoothed_ratio);
+        state.current_modulation_index = Some(current_smoothed_modulation_index);
     }
 
     pub fn set_amplitude(&mut self, amp: f32) {
@@ -127,9 +175,21 @@ impl Operator {
     pub fn set_ratio(&mut self, ratio: f32) {
         println!("Operator frequency ratio set to: {}", ratio);
         if ratio < 0.0 {
-            panic!("Frequency ratio must be non-negative");
+            eprintln!("Frequency ratio must be non-negative. Frequency clamped to 0.0");
+            self.frequency_ratio = 0.0;
+        } else {
+            self.frequency_ratio = ratio;
         }
-        self.frequency_ratio = ratio;
+    }
+
+    pub fn set_modulation_index(&mut self, modulation_index: f32) {
+        println!("Operator modulation index set to: {}", modulation_index);
+        if modulation_index < 0.0 {
+            eprintln!("Modulation index must be non-negative. Modulation index clamped to 0.0");
+            self.modulation_index = 0.0;
+        } else {
+            self.modulation_index = modulation_index;
+        }
     }
 }
 

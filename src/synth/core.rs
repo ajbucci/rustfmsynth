@@ -59,6 +59,13 @@ impl Synth {
             eprintln!("Operator index out of bounds");
         }
     }
+    pub fn set_operator_modulation_index(&mut self, op_index: usize, modulation_index: f32) {
+        if op_index < self.operators.len() {
+            self.operators[op_index].set_modulation_index(modulation_index);
+        } else {
+            eprintln!("Operator index out of bounds");
+        }
+    }
 
     /// Set the waveform for a specific operator index.
     pub fn set_operator_waveform(&mut self, op_index: usize, waveform: Waveform) {
@@ -259,21 +266,21 @@ impl Default for Synth {
         operators[1].set_envelope(0.01, 1.0, 0.7, 0.5);
         operators[1].set_gain(0.5);
         operators[1].set_ratio(1.01);
-        operators[1].modulation_index = 2.0;
+        operators[1].set_modulation_index(2.0);
 
         // Modulator A
         operators[2].set_waveform(Waveform::Sine);
         operators[2].set_envelope(0.005, 0.3, 0.0, 0.2);
         operators[2].set_gain(1.0);
         operators[2].set_ratio(2.0);
-        operators[2].modulation_index = 3.0;
+        operators[2].set_modulation_index(3.0);
 
         // Modulator B
         operators[3].set_waveform(Waveform::Sine);
         operators[3].set_envelope(0.005, 0.3, 0.0, 0.2);
         operators[3].set_gain(1.0);
         operators[3].set_ratio(2.02);
-        operators[3].modulation_index = 3.0;
+        operators[3].set_modulation_index(3.0);
 
         // Initialize with a default algorithm (e.g., a simple 2-operator stack)
         let default_algorithm = Algorithm::default_fanout_feedback(operators.len()).unwrap();

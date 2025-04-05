@@ -78,6 +78,11 @@ impl WasmSynth {
     }
 
     #[wasm_bindgen]
+    pub fn set_operator_modulation_index(&mut self, operator_index: usize, modulation_index: f32) {
+        self.synth.set_operator_modulation_index(operator_index, modulation_index);
+    }
+
+    #[wasm_bindgen]
     pub fn set_buffer_size(&mut self, buffer_size: usize) {
         self.synth.set_buffer_size(buffer_size);
         self.temp_buffer = vec![0.0; buffer_size];
