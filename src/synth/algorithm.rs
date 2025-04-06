@@ -79,6 +79,11 @@ impl Algorithm {
         });
         self.rebuild_unrolled_graph();
     }
+    // TODO: implement for a real matrix from UI, placeholder for now
+    pub fn set_matrix(&mut self, matrix: &[Vec<usize>]) {
+        self.matrix = matrix.iter().map(|row| row.iter().map(|&col| if col == 1 { Some(ConnectionParams::default()) } else { None }).collect()).collect();
+        self.rebuild_unrolled_graph();
+    }
     pub fn set_connection(
         &mut self,
         from_operator: usize,

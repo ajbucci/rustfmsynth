@@ -47,11 +47,14 @@ impl Synth {
             }
         }
     }
-    pub fn set_algorithm(&mut self, algorithm: Algorithm) {
-        self.algorithm = algorithm;
+    fn update_voice_algorithm(&mut self) {
         for voice in self.voices.iter_mut() {
             voice.update_algorithm(&self.algorithm);
         }
+    }
+    pub fn set_algorithm(&mut self, algorithm_matrix: &[Vec<usize>]) {
+        self.algorithm.set_matrix(algorithm_matrix);
+        self.update_voice_algorithm();
     }
 
     /// Find an available voice (one that is completely finished)
