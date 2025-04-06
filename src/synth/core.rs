@@ -121,7 +121,7 @@ impl Synth {
             OperatorEvent::CycleWaveform { direction } => {
                 println!("Processing CycleWaveform event: {:?}", direction);
                 // Cycle the waveform for *all* operators managed by the engine
-                for (i, operator) in self.operators.iter_mut().enumerate() {
+                for (_i, operator) in self.operators.iter_mut().enumerate() {
                     operator.cycle_waveform(*direction);
                     // Log the waveform of the first operator as an example
                     // println!(

@@ -14,9 +14,10 @@ pub use std::sync::OnceLock;
 
 // collections
 #[cfg(target_arch = "wasm32")]
-pub use hashbrown::HashMap;
+pub use hashbrown::{HashMap, HashSet};
+
 #[cfg(not(target_arch = "wasm32"))]
-pub use std::collections::HashMap;
+pub use std::collections::{ HashMap, HashSet };
 
 // PI constant
 pub use core::f32::consts::PI;

@@ -1,11 +1,11 @@
+use super::context::ProcessContext;
 use super::envelope::EnvelopeGenerator;
 use super::operator::OperatorState;
-use super::context::ProcessContext;
-use crate::synth::prelude::HashMap;
+use crate::synth::prelude::{HashMap,HashSet};
 
 // --- Internal Node ---
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct UnrolledNode {
     original_op_index: usize,
     input_node_indices: Vec<usize>,
@@ -95,9 +95,13 @@ impl Algorithm {
         let mut new_carriers: Vec<usize> = Vec::new();
         for i in 0..ui_op_count {
             // Bounds check UI matrix's last column
-            if i >= combined_matrix_from_ui.len() || ui_op_count >= combined_matrix_from_ui[i].len() { continue; }
+            if i >= combined_matrix_from_ui.len() || ui_op_count >= combined_matrix_from_ui[i].len()
+            {
+                continue;
+            }
 
-            if combined_matrix_from_ui[i][ui_op_count] >= 1 { // Check the last column
+            if combined_matrix_from_ui[i][ui_op_count] >= 1 {
+                // Check the last column
                 new_carriers.push(i);
             }
         }
@@ -113,17 +117,20 @@ impl Algorithm {
         }
         // --- *** END CHECK *** ---
 
-
         // --- If carriers exist, proceed with updating the algorithm state ---
 
         // --- Update Internal Connection Matrix ---
         // ... (existing logic to update self.matrix based on UI matrix and zero out others) ...
         for i in 0..synth_op_count {
             for j in 0..synth_op_count {
-                 if i >= self.matrix.len() || j >= self.matrix[i].len() { continue; }
+                if i >= self.matrix.len() || j >= self.matrix[i].len() {
+                    continue;
+                }
                 if i < ui_op_count && j < ui_op_count {
                     if combined_matrix_from_ui[i][j] >= 1 {
-                        if self.matrix[i][j].is_none() { self.matrix[i][j] = Some(ConnectionParams::default()); }
+                        if self.matrix[i][j].is_none() {
+                            self.matrix[i][j] = Some(ConnectionParams::default());
+                        }
                     } else {
                         self.matrix[i][j] = None;
                     }
@@ -140,16 +147,6 @@ impl Algorithm {
 
         // --- Clear Old Feedback Rules ---
         self.repeat_rules.clear();
-
-        // --- Add New Feedback Rules based on UI matrix diagonal ---
-        for i in 0..ui_op_count {
-             if i < combined_matrix_from_ui.len() && i < combined_matrix_from_ui[i].len() {
-                 if combined_matrix_from_ui[i][i] >= 1 {
-                     self.repeat_rules.push(FeedbackLoop { from_node: i, to_node: i, count: 1 });
-                 }
-             }
-        }
-
 
         // --- Call the helper function to rebuild the graph ---
         // This only runs if the carrier check passed
@@ -175,16 +172,13 @@ impl Algorithm {
     }
 
     fn rebuild_unrolled_graph(&mut self) {
-        let build_result = Self::build_unrolled_graph(
-            &self.matrix,
-            &self.carriers,
-            &self.repeat_rules
-        );
+        let build_result =
+            Self::build_unrolled_graph(&self.matrix, &self.carriers, &self.repeat_rules);
 
         match build_result {
             Ok(nodes) => {
                 self.unrolled_nodes = nodes; // Assign the new nodes
-            },
+            }
             Err(e) => {
                 // Log error both ways for visibility
                 eprintln!("Error building unrolled graph: {}", e);
@@ -302,7 +296,7 @@ impl Algorithm {
                 node_idx,
                 node_states,
                 &mut scratch_buffers,
-                &mut visited,               // Pass visited flags
+                &mut visited, // Pass visited flags
             );
         }
 
@@ -363,9 +357,11 @@ impl Algorithm {
             {
                 let scale = conn.scale;
                 for i in 0..buffer_size {
-                    let time_on = (context.samples_elapsed_since_trigger + i as u64) as f32 / context.sample_rate;
-                    let time_off =
-                        context.note_off_sample_index.map(|n| (n + i as u64) as f32 / context.sample_rate);
+                    let time_on = (context.samples_elapsed_since_trigger + i as u64) as f32
+                        / context.sample_rate;
+                    let time_off = context
+                        .note_off_sample_index
+                        .map(|n| (n + i as u64) as f32 / context.sample_rate);
                     let env_value = conn
                         .modulation_envelope
                         .as_ref()
@@ -397,129 +393,243 @@ impl Algorithm {
         visited[node_idx] = true;
     }
 
+    // --- NEW HELPER FUNCTION ---
+    /// Recursively builds the unrolled graph structure starting from a target operator.
+    /// Tracks the visited path to prevent cycles deeper than MAX_CYCLE_DEPTH.
+    /// Creates new nodes even if the operator index has been seen before (up to the depth limit).
+    /// Returns Ok(Some(node_idx)) on success, Ok(None) if depth limit reached, Err on true error.
+    fn build_node_recursive(
+        matrix: &[Vec<Option<ConnectionParams>>],
+        target_op_idx: usize,
+        nodes: &mut Vec<UnrolledNode>,
+        visited_path: &mut Vec<usize>, // Tracks op indices in the current recursion path
+    ) -> Result<Option<usize>, String> {
+        const MAX_CYCLE_DEPTH: usize = 2; // Define the cycle limit
+
+        // Check for cycles based on depth limit
+        let cycle_count = visited_path
+            .iter()
+            .filter(|&&op| op == target_op_idx)
+            .count();
+        if cycle_count >= MAX_CYCLE_DEPTH {
+            // Reached limit, stop recursion for this path, but it's not an error
+            return Ok(None);
+        }
+
+        // Bounds check
+        if target_op_idx >= matrix.len() {
+            // This is a real error
+            return Err(format!("Operator index {} out of bounds.", target_op_idx));
+        }
+
+        // Mark current node as visited for this path *before* recursive calls
+        visited_path.push(target_op_idx);
+
+        // Create new node *unconditionally* (no reuse based on op_idx via a map)
+        let current_node_idx = nodes.len();
+        nodes.push(UnrolledNode {
+            original_op_index: target_op_idx,
+            input_node_indices: Vec::new(), // Inputs added after recursive calls
+        });
+
+        // Recursively create all input nodes
+        let mut input_indices = Vec::new();
+        // Iterate through potential sources (columns) for the target operator (row)
+        for source_idx in 0..matrix.len() {
+            // Check the connection from source_idx to target_op_idx
+            if matrix[target_op_idx][source_idx].is_some() {
+                // Recursively build the input node
+                match Self::build_node_recursive(matrix, source_idx, nodes, visited_path) {
+                    Ok(Some(input_node_idx)) => {
+                        // Successfully created input node
+                        input_indices.push(input_node_idx);
+                    }
+                    Ok(None) => {
+                        // Recursion stopped due to depth limit down this path,
+                        // so no input node index to add from this branch.
+                    }
+                    Err(e) => {
+                        // Propagate real errors up the chain
+                        // Pop current node before returning Err to keep visited_path consistent
+                        visited_path.pop();
+                        return Err(e);
+                    }
+                }
+            }
+        }
+
+        // Assign inputs to the newly created node
+        nodes[current_node_idx].input_node_indices = input_indices;
+
+        // Pop current node from visited path *after* processing inputs and returning from this call
+        visited_path.pop();
+
+        Ok(Some(current_node_idx))
+    }
+
+    // --- UPDATED BUILD FUNCTION ---
     fn build_unrolled_graph(
         matrix: &[Vec<Option<ConnectionParams>>],
         carriers: &[usize],
         feedback_loops: &[FeedbackLoop],
     ) -> Result<Vec<UnrolledNode>, String> {
         let mut nodes = Vec::new();
-        let mut created_nodes = HashMap::new();
+        // Keep track of the top-level nodes created for each carrier index
+        // to avoid adding the same carrier multiple times if listed multiple times.
+        // This doesn't prevent subgraph duplication if carriers share inputs.
+        let mut root_node_indices = HashMap::new(); // Map<original_op_index, node_index>
 
-        // --- Step 1: Build base graph (DAG) from matrix ---
+        // --- Step 1: Build base graph by traversing from carriers using new recursive function ---
         for &op_idx in carriers {
-            Self::get_or_create_node(
-                matrix,
-                op_idx,
-                &mut nodes,
-                &mut created_nodes,
-                &mut Vec::new(), // visited stack
-            )?;
+            if !root_node_indices.contains_key(&op_idx) {
+                let mut visited_path = Vec::new(); // Fresh path for each carrier root
+                                                   // Use the new recursive builder
+                match Self::build_node_recursive(matrix, op_idx, &mut nodes, &mut visited_path) {
+                    Ok(Some(root_node_idx)) => {
+                        root_node_indices.insert(op_idx, root_node_idx);
+                    }
+                    Ok(None) => {
+                        // Hitting the depth limit immediately for a carrier.
+                        // This could happen if MAX_CYCLE_DEPTH <= 1 and the carrier feeds itself.
+                        // Log a warning but don't treat as error - might result in empty path for this carrier.
+                         eprintln!(
+                            "Warning: Build for carrier {} stopped immediately due to cycle depth limit. No nodes generated for this root.",
+                             op_idx
+                        );
+                    }
+                    Err(e) => {
+                        // If any carrier encounters a real error, the whole graph build fails.
+                        return Err(format!(
+                            "Failed building graph from carrier {}: {}",
+                            op_idx, e
+                        ));
+                    }
+                }
+            }
         }
 
-        // --- Step 2: Apply FeedbackLoops (repeat structural chains) ---
+        // --- Step 2: Apply FeedbackLoops ---
+        // NOTE: This logic operates on the graph *after* initial cycle unrolling.
+        // Indices in feedback_loops refer to indices in the 'nodes' vec *before* feedback is applied.
+        let initial_nodes = nodes.clone(); // State before applying feedback
+                                           // Maps original node indices (from initial_nodes) to their *current* index in the 'nodes' vec,
+                                           // updating as duplication occurs.
+        let mut node_index_mapping = (0..initial_nodes.len())
+            .map(|i| (i, i))
+            .collect::<HashMap<_, _>>();
+
         for loop_rule in feedback_loops {
-            for _ in 0..loop_rule.count {
-                let mut mapping = HashMap::new();
-                let start = loop_rule.to_node;
-                let end = loop_rule.from_node;
-                let mut stack = vec![start];
+            // Validate node indices against the size of the graph *before* feedback application
+            if loop_rule.from_node >= initial_nodes.len()
+                || loop_rule.to_node >= initial_nodes.len()
+            {
+                eprintln!(
+                    "Warning: Feedback loop rule {:?} references node indices out of bounds (initial graph size {}). Skipping rule.",
+                    loop_rule, initial_nodes.len()
+                );
+                continue;
+            }
 
-                // --- 2a: Copy chain from to_node back to from_node ---
-                while let Some(current) = stack.pop() {
-                    if mapping.contains_key(&current) {
-                        continue; // Already duplicated
+            for i in 0..loop_rule.count {
+                // Find the *current* node index for from_node (where the input will be added)
+                let target_node_idx_for_input = match node_index_mapping.get(&loop_rule.from_node) {
+                    Some(&idx) => idx,
+                    None => {
+                        eprintln!("Warning: Could not map 'from_node' {} to current index for feedback loop {:?} iteration {}. Skipping iteration.", loop_rule.from_node, loop_rule, i);
+                        continue; // Should not happen if initial validation passes, but for safety
                     }
-                    let current_idx = nodes.len();
-                    mapping.insert(current, current_idx);
+                };
 
-                    let inputs = &nodes[current].input_node_indices;
-                    for &input in inputs {
-                        stack.push(input);
+                // --- Duplicate subgraph starting from original 'to_node' index ---
+                let mut duplication_mapping = HashMap::new(); // original_idx -> new_idx for this duplication pass
+                let mut duplication_stack = vec![loop_rule.to_node]; // Stack holds *original* indices to duplicate
+                let mut visited_duplication = HashSet::new(); // Track nodes visited *during this duplication pass* to prevent infinite loops in cyclic subgraphs
+
+                // Phase 1: Create duplicated nodes
+                while let Some(original_idx) = duplication_stack.pop() {
+                    // Check bounds against initial_nodes and if already visited in this duplication pass
+                    if original_idx >= initial_nodes.len()
+                        || !visited_duplication.insert(original_idx)
+                    {
+                        continue;
                     }
 
+                    let node_to_copy = &initial_nodes[original_idx];
+                    let new_node_idx = nodes.len(); // Index for the new node
                     nodes.push(UnrolledNode {
-                        original_op_index: nodes[current].original_op_index,
-                        input_node_indices: Vec::new(), // filled next
+                        original_op_index: node_to_copy.original_op_index,
+                        input_node_indices: Vec::new(), // Links added in Phase 2
                     });
+                    duplication_mapping.insert(original_idx, new_node_idx);
+
+                    // Add inputs (original indices) to the stack to be duplicated
+                    for &input_original_idx in &node_to_copy.input_node_indices {
+                        // Only push if not already visited in this pass
+                        if !visited_duplication.contains(&input_original_idx) {
+                            duplication_stack.push(input_original_idx);
+                        }
+                    }
                 }
 
-                // --- 2b: Link duplicated chain inputs ---
-                for (&old_idx, &new_idx) in &mapping {
-                    let inputs = &nodes[old_idx].input_node_indices;
-                    let new_inputs: Vec<usize> = inputs.iter().map(|i| mapping[i]).collect();
+                // Phase 2: Link inputs within the duplicated subgraph
+                for (&original_idx, &new_idx) in &duplication_mapping {
+                    if original_idx >= initial_nodes.len() || new_idx >= nodes.len() {
+                        continue;
+                    } // Bounds check
+
+                    let original_node = &initial_nodes[original_idx];
+                    let mut new_inputs = Vec::new();
+                    for &input_original_idx in &original_node.input_node_indices {
+                        // Try to find the duplicated counterpart of the input
+                        if let Some(&mapped_input_idx) =
+                            duplication_mapping.get(&input_original_idx)
+                        {
+                            new_inputs.push(mapped_input_idx);
+                        } else {
+                            // Input refers to a node outside the duplicated segment.
+                            // Link to its *current* index using node_index_mapping.
+                            if let Some(&current_external_input_idx) =
+                                node_index_mapping.get(&input_original_idx)
+                            {
+                                if current_external_input_idx < nodes.len() {
+                                    // Check if mapped target exists
+                                    new_inputs.push(current_external_input_idx);
+                                } else {
+                                    eprintln!("Warning: Mapped external input index {} for original input {} is out of bounds (nodes len {}). Input skipped for duplicated node {}.", current_external_input_idx, input_original_idx, nodes.len(), new_idx);
+                                }
+                            } else {
+                                eprintln!("Warning: Could not map external input {} (from original node {}) for duplicated node {}. Input skipped.", input_original_idx, original_idx, new_idx);
+                            }
+                        }
+                    }
                     nodes[new_idx].input_node_indices = new_inputs;
                 }
 
-                // --- 2c: Connect end node to start of duplicated chain ---
-                nodes[end].input_node_indices.push(mapping[&start]);
+                // Phase 3: Connect the target node (current version of from_node) to the root of the duplicated chain
+                if let Some(&duplicated_chain_root_idx) =
+                    duplication_mapping.get(&loop_rule.to_node)
+                {
+                    if target_node_idx_for_input < nodes.len() {
+                        // Bounds check target
+                        nodes[target_node_idx_for_input]
+                            .input_node_indices
+                            .push(duplicated_chain_root_idx);
+                    } else {
+                        eprintln!("Error: target_node_idx_for_input {} is out of bounds (nodes len {}) during feedback connection. Connection skipped.", target_node_idx_for_input, nodes.len());
+                    }
+                } else {
+                    eprintln!("Warning: Root of duplicated chain (original index {}) not found for feedback rule {:?} iter {}. Connection skipped.", loop_rule.to_node, loop_rule, i);
+                }
+
+                // --- Update node_index_mapping for the next iteration/rule ---
+                // Nodes that were duplicated now map to their newest copies.
+                for (original_idx, new_idx) in duplication_mapping {
+                    node_index_mapping.insert(original_idx, new_idx);
+                }
             }
         }
 
         Ok(nodes)
-    }
-
-    // --- get_or_create_node: Ignore diagonal elements ---
-    fn get_or_create_node(
-        matrix: &[Vec<Option<ConnectionParams>>],
-        target_op_idx: usize,
-        nodes: &mut Vec<UnrolledNode>,
-        created_nodes: &mut HashMap<usize, usize>,
-        visited: &mut Vec<usize>, // Tracks visited nodes *within this specific build path*
-    ) -> Result<usize, String> {
-        // --- Check for cycles *excluding* self-reference ---
-        if visited.contains(&target_op_idx) {
-             // If target is already in visited, it means we have A->B->...->A cycle
-            return Err(format!(
-                "Cycle detected in modulation graph involving Operator {}. Path: {:?}",
-                target_op_idx, visited
-            ));
-        }
-
-        // If node was already created, return its index
-        if let Some(&idx) = created_nodes.get(&target_op_idx) {
-            return Ok(idx);
-        }
-
-        // Bounds check
-        if target_op_idx >= matrix.len() {
-            return Err(format!("Operator index {} out of bounds.", target_op_idx));
-        }
-
-        // Mark current node as visited for this path
-        visited.push(target_op_idx);
-
-        // Create new node
-        let current_idx = nodes.len();
-        nodes.push(UnrolledNode {
-            original_op_index: target_op_idx,
-            input_node_indices: Vec::new(),
-        });
-        created_nodes.insert(target_op_idx, current_idx);
-
-        // Recursively create all input nodes
-        let mut input_indices = Vec::new();
-        // Iterate through the row corresponding to the target_op_idx
-        for source_idx in 0..matrix.len() {
-            // Skip if source is the same as target (ignore diagonal/self-reference)
-            if source_idx == target_op_idx {
-                continue;
-            }
-
-            // Check the connection from source_idx (column) to target_op_idx (row)
-            if matrix[target_op_idx][source_idx].is_some() {
-                let input_idx =
-                    Self::get_or_create_node(matrix, source_idx, nodes, created_nodes, visited)?;
-                input_indices.push(input_idx);
-            }
-        }
-
-        // Assign inputs to current node
-        nodes[current_idx].input_node_indices = input_indices;
-
-        // Pop visited stack *after* processing all inputs for this node
-        visited.pop();
-
-        Ok(current_idx)
     }
 
     pub fn print_structure(&self) {
@@ -588,4 +698,58 @@ impl Algorithm {
             }
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*; 
+
+    #[test]
+    fn test_simple_self_feedback() {
+        println!("\n--- Running test_simple_self_feedback (in-module) ---");
+        let num_ops = 1;
+        let mut algorithm = Algorithm::default_simple(num_ops).expect("Failed to create simple algorithm");
+
+        println!("Initial Structure (1 op, no connections):");
+        algorithm.print_structure();
+
+        let ui_matrix: Vec<Vec<u32>> = vec![
+            // Mod Targets-> 0   OUT
+            /* From Op 0 */ vec![1,  1],
+        ];
+
+        println!("\nCalling set_matrix with self-feedback [1, 1]...");
+        match algorithm.set_matrix(&ui_matrix) {
+            Ok(_) => println!("set_matrix call succeeded."),
+            Err(e) => {
+                println!("set_matrix call failed: {}", e);
+                panic!("set_matrix failed unexpectedly: {}", e);
+            }
+        }
+
+        println!("\nStructure after set_matrix (Self-Feedback):");
+        algorithm.print_structure();
+
+        let unrolled_nodes = &algorithm.unrolled_nodes; // Direct access ok!
+        assert_eq!(unrolled_nodes.len(), 2, "Expected 2 unrolled nodes for A->A feedback (depth limit 2)");
+
+        if unrolled_nodes.len() == 2 {
+            // Check Node 0
+            assert_eq!(unrolled_nodes[0].original_op_index, 0, "Node 0 should be Operator 0");
+            assert_eq!(unrolled_nodes[0].input_node_indices, vec![1], "Node 0 should have Node 1 as input");
+
+            // Check Node 1
+            assert_eq!(unrolled_nodes[1].original_op_index, 0, "Node 1 should be Operator 0");
+            assert!(unrolled_nodes[1].input_node_indices.is_empty(), "Node 1 should have no inputs (end of feedback unroll)");
+        } else {
+             // If the length check failed, provide more info if possible
+             panic!("Node count assertion failed, cannot check node details.");
+        }
+
+        assert_eq!(algorithm.carriers, vec![0], "Carrier should still be Op 0"); // Direct access ok!
+        assert!(algorithm.repeat_rules.is_empty(), "set_matrix should clear repeat rules"); // Direct access ok!
+
+        println!("--- Test Finished: test_simple_self_feedback (in-module) ---");
+    }
+
 }
