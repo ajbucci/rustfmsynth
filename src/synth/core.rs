@@ -47,6 +47,12 @@ impl Synth {
             }
         }
     }
+    pub fn set_algorithm(&mut self, algorithm: Algorithm) {
+        self.algorithm = algorithm;
+        for voice in self.voices.iter_mut() {
+            voice.update_algorithm(&self.algorithm);
+        }
+    }
 
     /// Find an available voice (one that is completely finished)
     fn find_free_voice(&mut self) -> Option<&mut Voice> {
@@ -290,9 +296,13 @@ impl Default for Synth {
         default_algorithm.print_evaluation_chains();
         default_algorithm.print_structure();
         // Initialize voices
-        let voices = (0..config.max_voices)
+        let mut voices: Vec<Voice> = (0..config.max_voices)
             .map(|_| Voice::new(operators.len()))
             .collect();
+        
+        for voice in voices.iter_mut() {
+            voice.update_algorithm(&default_algorithm);
+        }
 
         Self {
             voices,

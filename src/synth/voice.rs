@@ -1,4 +1,5 @@
 use super::algorithm::Algorithm;
+use super::context::ProcessContext;
 use super::envelope::EnvelopeGenerator;
 use super::note::{NoteEvent, NoteSource};
 use super::operator::{Operator, OperatorState};
@@ -7,7 +8,7 @@ use super::voice_config::VoiceConfig;
 /// Represents a single polyphonic voice in the synthesizer.
 /// TODO: add VoiceState and NoteState to keep more organized?
 pub struct Voice {
-    operator_states: Vec<OperatorState>, // State for the operator (e.g., phase, frequency ratio)
+    node_states: Vec<OperatorState>, // State for the operator (e.g., phase, frequency ratio)
     pub active: bool,                    // Is the voice currently playing a note?
     pub releasing: bool, // If the voice is playing a note, has it been released yet?
     pub note_number: u8, // MIDI note number (0-127)
@@ -23,8 +24,9 @@ pub struct Voice {
 
 impl Voice {
     /// Creates a new, inactive voice.
-    pub fn new(num_operators: usize) -> Self {
+    pub fn new(num_nodes: usize) -> Self {
         Self {
+            node_states: vec![OperatorState::default(); num_nodes],
             active: false,
             releasing: false,
             note_number: 0,
@@ -36,7 +38,6 @@ impl Voice {
             samples_elapsed_since_trigger: 0,
             note_off_sample_index: None,
             config: VoiceConfig::default(),
-            operator_states: vec![OperatorState::default(); num_operators],
         }
     }
     /// Fully resets the voice to an inactive state.
@@ -50,7 +51,7 @@ impl Voice {
         self.note_source = None;
         self.samples_elapsed_since_trigger = 0;
         self.note_off_sample_index = None;
-        self.operator_states.iter_mut().for_each(|state| {
+        self.node_states.iter_mut().for_each(|state| {
             *state = OperatorState::default();
         });
     }
@@ -83,7 +84,17 @@ impl Voice {
             println!("Voice released note {}", self.note_number);
         }
     }
-
+    /// Called by Synth when the global algorithm changes.
+    /// Resizes the internal state vector to match the new algorithm structure.
+    pub fn update_algorithm(&mut self, algorithm: &Algorithm) {
+        let new_len = algorithm.length();
+        // Resize the state vector. This might discard existing state,
+        // which is often desired for phase/filters when structure changes.
+        // Or, you could try to intelligently preserve state if nodes match,
+        // but that adds significant complexity. Resetting is simpler.
+        self.node_states.clear(); // Clear existing state
+        self.node_states.resize_with(new_len, OperatorState::default); // Resize and fill with defaults
+    }
     /// Processes a buffer of audio for this voice using the provided algorithm and operators.
     /// `algorithm`: The FM algorithm defining operator connections.
     /// `operators`: The set of operators configured in the SynthEngine.
@@ -91,9 +102,9 @@ impl Voice {
     /// `sample_rate`: The audio sample rate.
     pub fn process(
         &mut self,
-        algorithm: &Algorithm,  // Pass algorithm
-        operators: &[Operator], // Pass operators slice
-        output: &mut [f32],     // Note: This should likely be additive or cleared upstream
+        algorithm: &Algorithm,
+        operators: &[Operator],
+        output: &mut [f32],
         sample_rate: f32,
     ) {
         // If the voice is fully finished (inactive AND envelope done), skip processing.
@@ -102,52 +113,31 @@ impl Voice {
             return;
         }
 
-        let buffer_len = output.len();
-        if buffer_len == 0 {
-            return; // Nothing to process
-        }
-
-        // Store the sample index corresponding to the START of this buffer.
-        let start_sample_index = self.samples_elapsed_since_trigger;
-        let samples_since_note_off = self
-            .note_off_sample_index
-            .map(|off| start_sample_index.saturating_sub(off));
-
-        // --- Generate Raw Audio using Algorithm and Operators ---
-        // Create a temporary buffer for the raw operator output before enveloping.
-        let mut raw_output = vec![0.0; buffer_len];
-        algorithm.process(
-            operators, // Pass the operators slice
-            self.note_frequency,
-            &mut raw_output, // Generate into the temporary buffer
+        let context = ProcessContext {
             sample_rate,
-            start_sample_index,
-            samples_since_note_off,
-            &mut self.operator_states,
-        );
+            base_frequency: self.note_frequency,
+            samples_elapsed_since_trigger: self.samples_elapsed_since_trigger,
+            note_off_sample_index: self.note_off_sample_index,
+            operators,
+            velocity_scale: self.velocity_scale,
+        };
 
-        // --- Apply Main Voice Envelope ---
-        // Apply the overall envelope to the raw generated sound.
-        // --- Add to Final Output ---
-        // Add the enveloped sound of this voice to the main output buffer.
-        // Assumes the main output buffer might contain other voices.
+        algorithm.process(&context, &mut self.node_states, output);
+
+        let buffer_len = output.len();
         for i in 0..buffer_len {
-            // Additive mixing
-            let time_since_on = (start_sample_index + i as u64) as f32 / sample_rate;
-            let time_since_off = self.note_off_sample_index.map(|off_sample| {
-                (start_sample_index + i as u64 - off_sample) as f32 / sample_rate
-            });
+            let samples_at_this_point = self.samples_elapsed_since_trigger + i as u64;
+            let time_on = samples_at_this_point as f32 / sample_rate;
+            let time_off = self
+                .note_off_sample_index
+                .map(|off| samples_at_this_point.saturating_sub(off) as f32 / sample_rate);
 
-            let env_value =
-                self.velocity_scale * self.envelope.evaluate(time_since_on, time_since_off);
-            output[i] += raw_output[i] * env_value;
+            let env_value = self.envelope.evaluate(time_on, time_off);
+            output[i] *= env_value * self.velocity_scale;
         }
 
-        // --- Update State & Increment Counter ---
-
-        // Increment the sample counter *after* processing this buffer.
         self.samples_elapsed_since_trigger += buffer_len as u64;
-        // Check if envelope has finished
+
         if self.releasing && self.is_finished(sample_rate) {
             println!("Voice fully inactive (note {} released)", self.note_number);
             self.reset();

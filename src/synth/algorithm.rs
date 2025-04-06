@@ -1,5 +1,6 @@
 use super::envelope::EnvelopeGenerator;
-use super::operator::{Operator, OperatorState};
+use super::operator::OperatorState;
+use super::context::ProcessContext;
 use crate::synth::prelude::HashMap;
 
 // --- Internal Node ---
@@ -91,6 +92,9 @@ impl Algorithm {
         self.rebuild_unrolled_graph();
         Ok(())
     }
+    pub fn length(&self) -> usize {
+        self.unrolled_nodes.len()
+    }
 
     fn rebuild_unrolled_graph(&mut self) {
         let unrolled_nodes =
@@ -173,31 +177,19 @@ impl Algorithm {
 
     pub fn process(
         &self,
-        operators: &[Operator],
-        base_frequency: f32,
+        context: &ProcessContext,
+        node_states: &mut [OperatorState],
         output: &mut [f32],
-        sample_rate: f32,
-        start_sample_index: u64,
-        samples_since_note_off: Option<u64>,
-        operator_states: &mut [OperatorState], // Persistent state (includes phase + ratio)
     ) {
         let buffer_size = output.len();
         if buffer_size == 0
-            || operators.is_empty()
-            || self.matrix.len() != operators.len()
+            || context.operators.is_empty()
+            || self.matrix.len() != context.operators.len()
             || self.unrolled_nodes.is_empty()
-            || operator_states.len() != operators.len()
+            || node_states.len() != self.unrolled_nodes.len()
         {
             return;
         }
-
-        // --- Temporary State (Phase + Ratio) per Unrolled Node ---
-        // Initialized with the persistent state from the *start* of this buffer.
-        let mut current_buffer_states: Vec<OperatorState> = self
-            .unrolled_nodes
-            .iter()
-            .map(|node| operator_states[node.original_op_index].clone())
-            .collect();
 
         // --- Scratch Buffers for Operator Outputs ---
         let mut scratch_buffers: Vec<Vec<f32>> = self
@@ -211,59 +203,29 @@ impl Algorithm {
         // we only want to process each node_idx once.
         let mut visited = vec![false; self.unrolled_nodes.len()];
 
-        output.fill(0.0);
-
         // --- Evaluate Graph - Ensure correct order by iterating ---
         // Evaluate ALL nodes first to ensure dependencies are met before summing carriers.
         for node_idx in 0..self.unrolled_nodes.len() {
             self.evaluate_node_recursive(
-                operators,
-                &mut scratch_buffers,
+                context,
                 node_idx,
-                base_frequency,
-                sample_rate,
-                start_sample_index,
-                samples_since_note_off,
-                &mut current_buffer_states, // Pass unique temporary states
+                node_states,
+                &mut scratch_buffers,
                 &mut visited,               // Pass visited flags
             );
         }
 
         // --- Sum Carrier Outputs ---
-        // (Keep the carrier summing logic from the previous attempt)
+        output.fill(0.0);
         for &carrier_op_original_idx in &self.carriers {
             for (node_idx, node) in self.unrolled_nodes.iter().enumerate() {
                 if node.original_op_index == carrier_op_original_idx {
-                    // Optional: Check if it's a "final" carrier instance
-                    // let is_final_carrier_instance = !self.unrolled_nodes.iter().any(|other_node| {
-                    //     other_node.input_node_indices.contains(&node_idx)
-                    // });
-                    // if is_final_carrier_instance {
                     let carrier_output = &scratch_buffers[node_idx];
-                    for (out_sample, &carrier_sample) in
-                        output.iter_mut().zip(carrier_output.iter())
-                    {
-                        *out_sample += carrier_sample;
+                    for i in 0..buffer_size {
+                        output[i] += carrier_output[i];
                     }
-                    // }
+                    break;
                 }
-            }
-        }
-
-        // --- Update Persistent State ---
-        // (Keep the update logic using last_occurrence_map from the previous attempt)
-        let mut last_occurrence_map: HashMap<usize, usize> = HashMap::new();
-        for (unrolled_idx, node) in self.unrolled_nodes.iter().enumerate() {
-            last_occurrence_map.insert(node.original_op_index, unrolled_idx);
-        }
-
-        for (original_op_idx, last_unrolled_idx) in last_occurrence_map {
-            if original_op_idx < operator_states.len() {
-                // Update persistent state (phase and ratio) from the temporary state
-                // of the last evaluation instance of that operator in this buffer.
-                operator_states[original_op_idx] = current_buffer_states[last_unrolled_idx].clone();
-            } else {
-                eprintln!("Warning: original_op_idx {} out of bounds for operator_states (len {}) during persistent state update.", original_op_idx, operator_states.len());
             }
         }
     }
@@ -271,14 +233,10 @@ impl Algorithm {
     // Renamed to avoid confusion with the previous evaluate_node structure
     fn evaluate_node_recursive(
         &self,
-        operators: &[Operator],
-        scratch_buffers: &mut [Vec<f32>],
+        context: &ProcessContext,
         node_idx: usize,
-        base_frequency: f32,
-        sample_rate: f32,
-        start_sample_index: u64,
-        samples_since_note_off: Option<u64>,
-        current_buffer_states: &mut [OperatorState], // Use the temporary states
+        node_states: &mut [OperatorState],
+        scratch_buffers: &mut [Vec<f32>],
         visited: &mut [bool], // Track visited nodes for this buffer evaluation
     ) {
         // If node already processed in this buffer call, skip.
@@ -294,15 +252,11 @@ impl Algorithm {
         for &input_idx in &node.input_node_indices {
             // Recursively evaluate the input node
             self.evaluate_node_recursive(
-                operators,
-                scratch_buffers,
+                context,
                 input_idx, // Evaluate the input index
-                base_frequency,
-                sample_rate,
-                start_sample_index,
-                samples_since_note_off,
-                current_buffer_states, // Pass down temporary states
-                visited,               // Pass down visited flags
+                node_states,
+                scratch_buffers,
+                visited,
             );
 
             // --- Combine Input Contributions ---
@@ -318,9 +272,9 @@ impl Algorithm {
             {
                 let scale = conn.scale;
                 for i in 0..buffer_size {
-                    let time_on = (start_sample_index + i as u64) as f32 / sample_rate;
+                    let time_on = (context.samples_elapsed_since_trigger + i as u64) as f32 / context.sample_rate;
                     let time_off =
-                        samples_since_note_off.map(|n| (n + i as u64) as f32 / sample_rate);
+                        context.note_off_sample_index.map(|n| (n + i as u64) as f32 / context.sample_rate);
                     let env_value = conn
                         .modulation_envelope
                         .as_ref()
@@ -336,19 +290,16 @@ impl Algorithm {
         }
 
         // --- Process Current Node ---
-        let current_output = &mut scratch_buffers[node_idx];
-        let operator = &operators[node.original_op_index];
+        let output_for_this_node = &mut scratch_buffers[node_idx];
+        let operator = &context.operators[node.original_op_index];
         // Use the unique temporary state for this specific node instance
-        let state_for_this_node = &mut current_buffer_states[node_idx];
+        let state_for_this_node = &mut node_states[node_idx];
 
         operator.process(
-            base_frequency,
-            current_output,
+            context,
             &modulation_input,
-            sample_rate,
-            start_sample_index,
-            samples_since_note_off,
-            state_for_this_node, // Pass the specific state for this node instance
+            state_for_this_node,
+            output_for_this_node,
         );
 
         // Mark this node as processed for this buffer evaluation

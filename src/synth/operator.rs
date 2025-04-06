@@ -1,4 +1,5 @@
 use super::envelope::EnvelopeGenerator;
+use super::context::ProcessContext;
 use super::filter::{self, FilterType};
 use super::waveform::{Waveform, WaveformGenerator};
 use crate::synth::prelude::TAU;
@@ -60,21 +61,21 @@ impl Operator {
 
     pub fn process(
         &self,
-        base_frequency: f32, // Base frequency from the voice/note
-        output: &mut [f32],
-        modulation: &[f32], // Input modulation signal
-        sample_rate: f32,
-        samples_since_note_on: u64,
-        samples_since_note_off: Option<u64>,
+        context: &ProcessContext,
+        modulation: &[f32],
         state: &mut OperatorState,
+        output: &mut [f32],
     ) {
+        let buffer_len = output.len();
+        if buffer_len == 0 || modulation.len() != buffer_len {
+            // Basic validation
+            return;
+        }
+        let sample_rate = context.sample_rate;
         // --- State Initialization ---
-        if state.current_ratio.is_none() {
-            state.current_ratio = Some(self.frequency_ratio);
-        }
-        if state.current_modulation_index.is_none() { // Initialize mod index state
-            state.current_modulation_index = Some(self.modulation_index);
-        }
+        state.current_ratio.get_or_insert(self.frequency_ratio);
+        state.current_modulation_index.get_or_insert(self.modulation_index);
+
         let mut current_smoothed_ratio = state.current_ratio.unwrap_or(self.frequency_ratio);
         let mut current_smoothed_modulation_index = state.current_modulation_index.unwrap_or(self.modulation_index); // Get current smoothed mod index
 
@@ -94,7 +95,7 @@ impl Operator {
             // Determine the actual frequency for this operator
             let actual_frequency = match self.fixed_frequency {
                 Some(fixed_freq) => fixed_freq,
-                None => base_frequency * current_smoothed_ratio,
+                None => context.base_frequency * current_smoothed_ratio,
             };
             let phase_increment = TAU * actual_frequency / sample_rate;
             state.current_phase += phase_increment;
@@ -103,11 +104,12 @@ impl Operator {
             let wave = self.waveform_generator.evaluate(modulated_phase);
 
             // --- Envelope Calculation ---
-            let time_since_on = (samples_since_note_on + i as u64) as f32 / sample_rate;
-            let time_since_off =
-                samples_since_note_off.map(|off| (off + i as u64) as f32 / sample_rate);
+            let current_sample_abs_idx = context.samples_elapsed_since_trigger + i as u64;
+            let time_since_on = current_sample_abs_idx as f32 / sample_rate;
+            let time_since_off = context
+                .note_off_sample_index
+                .map(|off_idx| current_sample_abs_idx.saturating_sub(off_idx) as f32 / sample_rate);
             let env = self.envelope.evaluate(time_since_on, time_since_off);
-            // Use the smoothed modulation index here
             let raw_output = wave * env * self.gain * current_smoothed_modulation_index;
 
             // --- Apply Filter (Stateful Biquad, per-sample) ---
