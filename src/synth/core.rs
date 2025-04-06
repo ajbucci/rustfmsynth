@@ -52,9 +52,16 @@ impl Synth {
             voice.update_algorithm(&self.algorithm);
         }
     }
-    pub fn set_algorithm(&mut self, algorithm_matrix: &[Vec<usize>]) {
-        self.algorithm.set_matrix(algorithm_matrix);
-        self.update_voice_algorithm();
+    pub fn set_algorithm(&mut self, combined_matrix: &[Vec<u32>]) {
+        if let Err(e) = self.algorithm.set_matrix(combined_matrix) {
+             eprintln!("Synth Error: Failed to set algorithm matrix: {}", e);
+             // Depending on the error, maybe log more or take other action
+        } else {
+            // Only update voices if setting the algorithm structure succeeded
+            self.update_voice_algorithm();
+            println!("Synth: Algorithm updated successfully.");
+            // self.algorithm.print_structure(); // Optional debug print
+        }
     }
 
     /// Find an available voice (one that is completely finished)
@@ -80,10 +87,10 @@ impl Synth {
     pub fn set_operator_waveform(&mut self, op_index: usize, waveform: Waveform) {
         if op_index < self.operators.len() {
             self.operators[op_index].set_waveform(waveform);
-            println!(
-                "Synth core: Set operator {} waveform to {:?}",
-                op_index, waveform
-            );
+            // println!( // Keep logging minimal unless debugging
+            //     "Synth core: Set operator {} waveform to {:?}",
+            //     op_index, waveform
+            // );
         } else {
             eprintln!(
                 "Error: set_operator_waveform index {} out of bounds ({} operators)",
@@ -117,10 +124,10 @@ impl Synth {
                 for (i, operator) in self.operators.iter_mut().enumerate() {
                     operator.cycle_waveform(*direction);
                     // Log the waveform of the first operator as an example
-                    println!(
-                        "Operator {:?} waveform changed to: {:?}",
-                        i, operator.waveform_generator
-                    );
+                    // println!(
+                    //     "Operator {:?} waveform changed to: {:?}",
+                    //     i, operator.waveform_generator
+                    // );
                 }
             } // Add other OperatorEvent cases here
         }

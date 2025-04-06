@@ -1,7 +1,14 @@
 import init from "./pkg/rustfmsynth.js"; // Import init here
 import { setupKeyboardInput, removeKeyboardInput, handleKeyDown, handleKeyUp } from './keyboard-input.js'; // Import keyboard handler + handlers
 import { generateKeyboard, connectKeyboardUIPort } from './keyboard-ui.js'; // Import keyboard UI functions
-import { initializeOperatorControls } from './operator-controls.js'; // Import the new setup function
+import { initializeOperatorControls, NUM_OPERATORS as OP_CONTROL_NUM } from './operator-controls.js'; // Import the new setup function and NUM_OPERATORS
+// Import the new matrix functions
+import {
+    createAlgorithmMatrixUI,
+    getAlgorithmFromMatrix,
+    setupMatrixEventListeners,
+    displayAlgorithm
+} from './algorithm-matrix.js';
 
 let audioContext;
 let processorNode;
@@ -11,6 +18,13 @@ let audioSystemInitializationPromise = null; // Promise to track core audio setu
 
 // Flag to track if the core audio setup is done (still useful for quick check)
 let audioSystemInitialized = false;
+
+// Use the number of operators defined in operator-controls.js or define globally
+// Ensure this is consistent across your modules!
+const NUM_OPERATORS = OP_CONTROL_NUM || 6; // Example: Use value from operator-controls or default to 6
+
+const matrixContainer = document.getElementById('algorithm-matrix');
+const operatorControlsContainer = document.getElementById('operator-controls');
 
 // Add this new exported function
 /**
@@ -180,32 +194,66 @@ export async function ensureSynthStarted() {
   }
 }
 
+// --- Callback function to handle matrix updates ---
+function handleMatrixUpdate(combinedMatrix) {
+    console.log("Sending combined algorithm matrix to processor:", combinedMatrix);
+    ensureSynthStarted()
+        .then(() => {
+            processorNode.port.postMessage({
+                type: 'set-algorithm',
+                payload: combinedMatrix
+            });
+        })
+        .catch(err => {
+            console.error("Failed to ensure synth started before sending algorithm update:", err);
+        });
+}
+
+// --- Renamed Initialisation Function ---
+async function initializeApp() {
+    // ... potentially other DOM setup before audio ...
+
+    // --- Generate UI Elements ---
+    // Generate Operator Controls first (it might define NUM_OPERATORS)
+    if (operatorControlsContainer) {
+         initializeOperatorControls(operatorControlsContainer); // Pass container
+    } else {
+        console.warn("Operator controls container not found.");
+    }
+
+    // Generate and insert the Algorithm Matrix UI
+    if (matrixContainer) {
+        createAlgorithmMatrixUI(NUM_OPERATORS, matrixContainer);
+        setupMatrixEventListeners(matrixContainer, handleMatrixUpdate);
+
+    } else {
+        console.error("Algorithm matrix container not found.");
+    }
+
+    // Generate Keyboard UI
+    try {
+        generateKeyboard(); // This adds the mouse listeners internally
+    } catch (e) {
+        console.error("Error generating keyboard UI:", e);
+    }
+
+    console.log("Synthesizer UI ready.");
+
+    // Attach keyboard listeners to the window
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    console.log("Keyboard listeners attached.");
+
+    console.log("Interact with the keyboard (physical or virtual) or controls to start audio system and synth.");
+    // ensureSynthStarted() will be called lazily on first interaction needing audio.
+}
 
 // Remove button event listeners as keyboard input is now primary
 // document.getElementById("note-on").addEventListener("click", ...);
 // document.getElementById("note-off").addEventListener("click", ...);
 
-// DOMContentLoaded listener now generates UI, adds key listeners, and logs readiness.
-// Core audio setup happens lazily on first interaction via ensureSynthStarted.
-document.addEventListener('DOMContentLoaded', () => {
-  try {
-    generateKeyboard(); // Regenerate UI (or ensure it's generated)
-    initializeOperatorControls(); // Initialize the new operator dials
-    console.log("Synthesizer UI ready.");
-  } catch (e) {
-    console.error("Error generating UI on DOMContentLoaded:", e);
-    // Decide if we should stop here or try to continue
-  }
-  
-  // Attach keyboard listeners to the window
-  window.addEventListener('keydown', handleKeyDown);
-  window.addEventListener('keyup', handleKeyUp);
-  console.log("Keyboard listeners attached.");
-  
-  console.log("Interact with the keyboard (physical or virtual) to start audio system and synth.");
-  // Note: We don't call initializeAudioSystem() here anymore.
-  // It will be called by the first call to ensureSynthStarted().
-});
+// DOMContentLoaded listener now calls the renamed function
+document.addEventListener('DOMContentLoaded', initializeApp);
 
 
 // Optional: Add cleanup if needed (e.g., for hot module replacement)

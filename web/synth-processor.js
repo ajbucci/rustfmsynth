@@ -9,6 +9,8 @@ class SynthProcessor extends AudioWorkletProcessor {
     super();
     this.port.onmessage = async (event) => {
       const data = event.data;
+      const payload = data.payload; // Often data is nested under payload
+
       if (data.type === "init" && data.wasmBinary) {
         sampleRate = data.sampleRate;
 
@@ -47,8 +49,8 @@ class SynthProcessor extends AudioWorkletProcessor {
       } else if (data.type === "set_operator_ratio") {
         if (synth && ready) {
           // Validate inputs slightly before sending to Wasm? (Optional)
-          const opIndex = parseInt(data.operator_index);
-          const ratio = parseFloat(data.ratio);
+          const opIndex = parseInt(payload?.operator_index ?? data.operator_index);
+          const ratio = parseFloat(payload?.ratio ?? data.ratio);
           if (!isNaN(opIndex) && isFinite(ratio) && opIndex >= 0 && opIndex < 4) { // Basic check
              console.log(`SynthProcessor: Setting operator ${opIndex} ratio to ${ratio}`);
              synth.set_operator_ratio(opIndex, ratio);
@@ -60,8 +62,8 @@ class SynthProcessor extends AudioWorkletProcessor {
         }
       } else if (data.type === "set_operator_waveform") {
         if (synth && ready) {
-          const opIndex = parseInt(data.operator_index);
-          const waveformInt = parseInt(data.waveform_value);
+          const opIndex = parseInt(payload?.operator_index ?? data.operator_index);
+          const waveformInt = parseInt(payload?.waveform_value ?? data.waveform_value);
 
           if (!isNaN(opIndex) && !isNaN(waveformInt) && opIndex >= 0 && opIndex < 4 && waveformInt >= 0 && waveformInt <= 4) {
              console.log(`SynthProcessor: Setting operator ${opIndex} waveform to ${waveformInt}`);
@@ -78,8 +80,8 @@ class SynthProcessor extends AudioWorkletProcessor {
         }
       } else if (data.type === "set_operator_modulation_index") {
         if (synth && ready) {
-          const opIndex = parseInt(data.operator_index);
-          const modIndex = parseFloat(data.modulation_index);
+          const opIndex = parseInt(payload?.operator_index ?? data.operator_index);
+          const modIndex = parseFloat(payload?.modulation_index ?? data.modulation_index);
 
           // Basic validation
           if (!isNaN(opIndex) && isFinite(modIndex) && opIndex >= 0 && opIndex < 4) { // Assuming 4 operators
@@ -95,6 +97,23 @@ class SynthProcessor extends AudioWorkletProcessor {
         } else {
           console.warn("SynthProcessor: Received set_operator_modulation_index but synth not ready.");
         }
+      } else if (data.type === "set-algorithm") {
+          const combinedMatrix = data.payload; // Payload is the combined matrix
+          if (synth && ready && Array.isArray(combinedMatrix)) {
+              console.log("SynthProcessor: Received set-algorithm combined matrix:", combinedMatrix);
+              try {
+                  // Pass the combined matrix directly to the Wasm function
+                  // NOTE: Assumes Wasm binding accepts this structure (likely via JsValue)
+                  synth.set_algorithm(combinedMatrix);
+                  console.log("SynthProcessor: Algorithm updated successfully via combined matrix.");
+              } catch (e) {
+                  console.error("SynthProcessor: Error calling synth.set_algorithm:", e, "with matrix:", combinedMatrix);
+              }
+          } else {
+              console.warn("SynthProcessor: Received set-algorithm but synth not ready or payload is not a valid matrix.", { ready, synthExists: !!synth, payloadExists: !!combinedMatrix });
+          }
+      } else {
+         console.warn("SynthProcessor: Received unknown message type:", data.type, data);
       }
     };
   }

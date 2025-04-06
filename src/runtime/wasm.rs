@@ -3,6 +3,10 @@ use crate::synth::waveform::Waveform;
 use crate::synth::Synth;
 use js_sys::Float32Array;
 use wasm_bindgen::prelude::*;
+use serde_wasm_bindgen;
+
+// Import serde for deserialization if needed (implicitly used by serde_wasm_bindgen)
+// use serde::Deserialize;
 
 /// WASM Synth runtime (no threads, no channels, direct API)
 #[wasm_bindgen]
@@ -67,13 +71,9 @@ impl WasmSynth {
                     "WasmSynth Error: Invalid waveform value received: {}",
                     waveform_value
                 );
-                // Optionally default to Sine or return without changing
                 Waveform::Sine // Defaulting to Sine on invalid input
-                // return; // Alternative: do nothing if value is invalid
             }
         };
-
-        // Call the core synth method with the mapped enum
         self.synth.set_operator_waveform(operator_index, waveform);
     }
 
@@ -86,5 +86,21 @@ impl WasmSynth {
     pub fn set_buffer_size(&mut self, buffer_size: usize) {
         self.synth.set_buffer_size(buffer_size);
         self.temp_buffer = vec![0.0; buffer_size];
+    }
+
+    /// Accepts the combined algorithm matrix (connections + carriers) from JavaScript.
+    /// Expects a JsValue representing a number[][] (specifically Vec<Vec<u32>>).
+    /// Dimensions: opCount x (opCount + 1)
+    #[wasm_bindgen]
+    pub fn set_algorithm(&mut self, combined_matrix_js: JsValue) {
+        match serde_wasm_bindgen::from_value::<Vec<Vec<u32>>>(combined_matrix_js) {
+            Ok(combined_matrix) => {
+                // Pass a slice reference (&[Vec<u32>]) as expected by Synth::set_algorithm
+                self.synth.set_algorithm(&combined_matrix);
+            }
+            Err(e) => {
+                eprintln!("WasmSynth Error: Failed to deserialize algorithm matrix: {}", e);
+            }
+        }
     }
 }

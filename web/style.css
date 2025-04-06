@@ -176,3 +176,130 @@ button {
   margin-top: 5px; /* Add space below label */
   margin-bottom: 5px; /* Add space above number input */
 }
+
+/* --- Algorithm Matrix Styling --- */
+
+.algorithm-matrix {
+    /* Add position relative if info box is absolutely positioned relative to it */
+     position: relative;
+     padding-bottom: 30px; /* Add space at bottom for info box */
+}
+
+.algorithm-matrix table {
+    border-collapse: collapse;
+    margin-bottom: 10px;
+}
+
+.algorithm-matrix th, .algorithm-matrix td {
+    border: 1px solid grey;
+    width: 35px;
+    height: 35px;
+    text-align: center;
+    vertical-align: middle;
+    position: relative;
+    cursor: pointer; /* All cells clickable */
+    box-sizing: border-box; /* Include border in width/height */
+}
+
+/* Style the added OUT header */
+.algorithm-matrix th.out-header {
+    background-color: #e0e0e0; /* Slightly different background */
+    font-weight: bold;
+    writing-mode: vertical-rl; /* Vertical text */
+    text-orientation: mixed;
+    padding: 2px 0; /* Adjust padding */
+}
+
+/* Style the added OUT cells */
+.algorithm-matrix td.output-cell {
+    background-color: #f5f5f5; /* Light background for the whole column */
+    border-left: 2px solid #aaa; /* Make column visually distinct */
+}
+
+/* Style the connection point within OUT cells */
+.algorithm-matrix td.output-cell .output-point {
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    background-color: #ccc; /* Default off color */
+    border: 1px solid #aaa;
+    border-radius: 3px; /* Square-ish */
+    transition: background-color 0.1s ease;
+}
+
+/* Style the connection point when the OUT cell is active */
+.algorithm-matrix td.output-cell.active .output-point {
+    background-color: #28a745; /* Green for output active */
+    border-color: #1e7e34;
+}
+
+/* Style the feedback cells (diagonal) */
+.algorithm-matrix td.feedback-cell {
+    background-color: #f0e68c; /* Khaki */
+}
+/* Style the connection point INSIDE feedback cells (default state) */
+.algorithm-matrix td.feedback-cell .connection-point {
+     display: inline-block; /* Ensure it's displayed */
+     width: 15px;
+     height: 15px;
+     border-radius: 20%; /* Slightly square-ish? */
+     background-color: #b8a94e; /* Darker khaki */
+     border: 1px solid #9e8f3e;
+     transition: background-color 0.1s ease; /* Add transition */
+}
+/* Style the connection point INSIDE feedback cells WHEN ACTIVE */
+/* Make this selector specific */
+.algorithm-matrix td.feedback-cell.active .connection-point {
+     background-color: #ff4500 !important; /* OrangeRed when active - use !important as a test if needed */
+     border-color: #cc3700 !important;
+}
+
+/* Connection points (non-feedback, non-output) */
+.algorithm-matrix td:not(.feedback-cell):not(.output-cell) .connection-point {
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    background-color: #ddd;
+    border: 1px solid #bbb;
+    border-radius: 50%; /* Circle */
+    transition: background-color 0.1s ease;
+}
+.algorithm-matrix td:not(.feedback-cell):not(.output-cell).active .connection-point {
+    background-color: #007bff; /* Blue */
+    border-color: #0056b3;
+}
+
+.carrier-selectors { /* Removed .feedback-selectors */
+    margin-top: 15px;
+    text-align: left;
+    padding-left: 5px;
+}
+.carrier-selectors span {
+    font-weight: bold;
+    margin-right: 10px;
+}
+.carrier-selectors label {
+    margin-right: 15px;
+    cursor: pointer;
+}
+
+/* --- Hover Info Box Styling --- */
+.matrix-info-box {
+    position: absolute; /* Position relative to .algorithm-matrix container */
+    bottom: 0;          /* Place at the bottom */
+    left: 0;
+    width: calc(100% - 10px); /* Adjust width as needed */
+    padding: 5px;
+    margin-top: 10px; /* Space above it */
+    font-size: 0.9em;
+    color: #555;
+    background-color: #f0f0f0;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    text-align: center;
+    min-height: 1.2em; /* Ensure it doesn't collapse */
+    box-sizing: border-box;
+}
+
+/* --- Existing styles --- */
+/* ... */

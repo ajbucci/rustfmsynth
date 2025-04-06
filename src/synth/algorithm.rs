@@ -66,7 +66,6 @@ impl Algorithm {
             repeat_rules: Vec::new(),
             unrolled_nodes: Vec::new(),
         };
-
         algo.rebuild_unrolled_graph();
         Ok(algo)
     }
@@ -79,10 +78,84 @@ impl Algorithm {
         });
         self.rebuild_unrolled_graph();
     }
-    // TODO: implement for a real matrix from UI, placeholder for now
-    pub fn set_matrix(&mut self, matrix: &[Vec<usize>]) {
-        self.matrix = matrix.iter().map(|row| row.iter().map(|&col| if col == 1 { Some(ConnectionParams::default()) } else { None }).collect()).collect();
+    /// Sets the algorithm structure based on a combined matrix from the UI,
+    /// defining connections/carriers for the first `ui_op_count` operators
+    /// and clearing connections/carriers/feedback rules for all operators >= `ui_op_count`.
+    /// Matrix format: `ui_op_count x (ui_op_count + 1)`, where the last column indicates carriers.
+    /// Expects input matrix values to be 0 or 1.
+    pub fn set_matrix(&mut self, combined_matrix_from_ui: &[Vec<u32>]) -> Result<(), String> {
+        let ui_op_count = combined_matrix_from_ui.len();
+        let synth_op_count = self.matrix.len();
+
+        if ui_op_count == 0 {
+            return Ok(());
+        }
+
+        // --- Determine New Carriers from UI Matrix *before* modifying state ---
+        let mut new_carriers: Vec<usize> = Vec::new();
+        for i in 0..ui_op_count {
+            // Bounds check UI matrix's last column
+            if i >= combined_matrix_from_ui.len() || ui_op_count >= combined_matrix_from_ui[i].len() { continue; }
+
+            if combined_matrix_from_ui[i][ui_op_count] >= 1 { // Check the last column
+                new_carriers.push(i);
+            }
+        }
+
+        // --- *** ADD CHECK FOR NO CARRIERS *** ---
+        if new_carriers.is_empty() {
+            let warning_msg = "Algorithm update ignored: The provided matrix configuration results in no carrier operators.";
+            // Log the warning to both terminals if possible
+            eprintln!("Warning: {}", warning_msg);
+            // Return Ok(()) to indicate the operation completed without error,
+            // even though no change was made.
+            return Ok(());
+        }
+        // --- *** END CHECK *** ---
+
+
+        // --- If carriers exist, proceed with updating the algorithm state ---
+
+        // --- Update Internal Connection Matrix ---
+        // ... (existing logic to update self.matrix based on UI matrix and zero out others) ...
+        for i in 0..synth_op_count {
+            for j in 0..synth_op_count {
+                 if i >= self.matrix.len() || j >= self.matrix[i].len() { continue; }
+                if i < ui_op_count && j < ui_op_count {
+                    if combined_matrix_from_ui[i][j] >= 1 {
+                        if self.matrix[i][j].is_none() { self.matrix[i][j] = Some(ConnectionParams::default()); }
+                    } else {
+                        self.matrix[i][j] = None;
+                    }
+                } else {
+                    self.matrix[i][j] = None;
+                }
+            }
+        }
+
+        // --- Set Carriers (already calculated and validated non-empty) ---
+        new_carriers.sort_unstable(); // Sort is still good practice
+        new_carriers.dedup();
+        self.carriers = new_carriers;
+
+        // --- Clear Old Feedback Rules ---
+        self.repeat_rules.clear();
+
+        // --- Add New Feedback Rules based on UI matrix diagonal ---
+        for i in 0..ui_op_count {
+             if i < combined_matrix_from_ui.len() && i < combined_matrix_from_ui[i].len() {
+                 if combined_matrix_from_ui[i][i] >= 1 {
+                     self.repeat_rules.push(FeedbackLoop { from_node: i, to_node: i, count: 1 });
+                 }
+             }
+        }
+
+
+        // --- Call the helper function to rebuild the graph ---
+        // This only runs if the carrier check passed
         self.rebuild_unrolled_graph();
+
+        Ok(())
     }
     pub fn set_connection(
         &mut self,
@@ -102,9 +175,22 @@ impl Algorithm {
     }
 
     fn rebuild_unrolled_graph(&mut self) {
-        let unrolled_nodes =
-            Self::build_unrolled_graph(&self.matrix, &self.carriers, &self.repeat_rules);
-        self.unrolled_nodes = unrolled_nodes.unwrap();
+        let build_result = Self::build_unrolled_graph(
+            &self.matrix,
+            &self.carriers,
+            &self.repeat_rules
+        );
+
+        match build_result {
+            Ok(nodes) => {
+                self.unrolled_nodes = nodes; // Assign the new nodes
+            },
+            Err(e) => {
+                // Log error both ways for visibility
+                eprintln!("Error building unrolled graph: {}", e);
+                self.unrolled_nodes.clear(); // Clear nodes on error to prevent panic later
+            }
+        }
     }
 
     pub fn default_stack_2(num_operators: usize) -> Result<Self, String> {
@@ -372,30 +458,37 @@ impl Algorithm {
         Ok(nodes)
     }
 
+    // --- get_or_create_node: Ignore diagonal elements ---
     fn get_or_create_node(
         matrix: &[Vec<Option<ConnectionParams>>],
         target_op_idx: usize,
         nodes: &mut Vec<UnrolledNode>,
         created_nodes: &mut HashMap<usize, usize>,
-        visited: &mut Vec<usize>,
+        visited: &mut Vec<usize>, // Tracks visited nodes *within this specific build path*
     ) -> Result<usize, String> {
-        // --- Prevent structural cycles (should never happen in matrix) ---
+        // --- Check for cycles *excluding* self-reference ---
         if visited.contains(&target_op_idx) {
+             // If target is already in visited, it means we have A->B->...->A cycle
             return Err(format!(
-                "Cycle detected in modulation graph at Operator {}.",
-                target_op_idx
+                "Cycle detected in modulation graph involving Operator {}. Path: {:?}",
+                target_op_idx, visited
             ));
         }
 
-        // --- If node was already created, return its index ---
+        // If node was already created, return its index
         if let Some(&idx) = created_nodes.get(&target_op_idx) {
             return Ok(idx);
         }
 
-        // --- Mark current node as visited ---
+        // Bounds check
+        if target_op_idx >= matrix.len() {
+            return Err(format!("Operator index {} out of bounds.", target_op_idx));
+        }
+
+        // Mark current node as visited for this path
         visited.push(target_op_idx);
 
-        // --- Create new node ---
+        // Create new node
         let current_idx = nodes.len();
         nodes.push(UnrolledNode {
             original_op_index: target_op_idx,
@@ -403,9 +496,16 @@ impl Algorithm {
         });
         created_nodes.insert(target_op_idx, current_idx);
 
-        // --- Recursively create all input nodes ---
+        // Recursively create all input nodes
         let mut input_indices = Vec::new();
+        // Iterate through the row corresponding to the target_op_idx
         for source_idx in 0..matrix.len() {
+            // Skip if source is the same as target (ignore diagonal/self-reference)
+            if source_idx == target_op_idx {
+                continue;
+            }
+
+            // Check the connection from source_idx (column) to target_op_idx (row)
             if matrix[target_op_idx][source_idx].is_some() {
                 let input_idx =
                     Self::get_or_create_node(matrix, source_idx, nodes, created_nodes, visited)?;
@@ -413,10 +513,10 @@ impl Algorithm {
             }
         }
 
-        // --- Assign inputs to current node ---
+        // Assign inputs to current node
         nodes[current_idx].input_node_indices = input_indices;
 
-        // --- Pop visited stack when done ---
+        // Pop visited stack *after* processing all inputs for this node
         visited.pop();
 
         Ok(current_idx)

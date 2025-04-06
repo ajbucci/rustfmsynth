@@ -2,7 +2,7 @@
 import { tryEnsureSynthAndSendMessage } from './keyboard-input.js';
 import { resumeAudioContext } from './app.js';
 
-const NUM_OPERATORS = 4; // Hardcoded number of operators
+export const NUM_OPERATORS = 4; // Example: Define and export
 const containerId = 'operator-controls'; // ID of the container div in index.html
 
 // Define the available waveforms and their corresponding integer values
@@ -279,9 +279,12 @@ function createOperatorControl(index, container) {
  * Initializes the operator control dials.
  * Finds the container element and generates controls for each operator.
  * Should be called once the DOM is ready.
+ * @param {HTMLElement} container - The container element to populate. If null, it will try to find by ID.
  */
-export function initializeOperatorControls() {
-    const container = document.getElementById(containerId);
+export function initializeOperatorControls(container = null) {
+    if (!container) {
+        container = document.getElementById(containerId);
+    }
     if (!container) {
         console.error(`Operator Controls: Container element with ID #${containerId} not found.`);
         return;
