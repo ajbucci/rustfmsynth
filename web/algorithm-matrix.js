@@ -199,31 +199,46 @@ export function displayAlgorithm(container, combinedMatrix) {
     container.querySelectorAll('td.active').forEach(cell => cell.classList.remove('active'));
 
     // Iterate through the combined matrix to set active states
-    for (let i = 0; i < opCount; i++) {       // Iterate rows (modulator op / carrier op)
+    // combinedMatrix[i][j] = 1 means operator j modulates operator i (or op i is carrier if j=opCount)
+    for (let i = 0; i < opCount; i++) {       // Iterate rows (INDEX of the MODULATED or OUTPUTTING operator 'i')
         if (!combinedMatrix[i]) continue;
-        for (let j = 0; j < opCount + 1; j++) { // Iterate columns (modulated op or OUT column)
+        for (let j = 0; j < opCount + 1; j++) { // Iterate columns (INDEX of the MODULATING operator 'j', or OUT column)
             if (combinedMatrix[i][j] === 1) {
-                const modulatorNum = i + 1; // 1-based row index
+                // i = 0-based index of the operator being modulated (or outputting)
+                // j = 0-based index of the operator doing the modulation (or OUT flag)
 
                 let cell;
-                if (j < opCount) { // Connection or Feedback column
-                    const modulatedNum = j + 1; // 1-based col index
-                    if (i === j) { // Feedback (diagonal)
-                        cell = container.querySelector(`td.feedback-cell[data-modulator="${modulatorNum}"]`);
+                if (j < opCount) { // Connection or Feedback column (j is the modulator index)
+                    const modulatedOpNum = i + 1; // 1-based index for UI data attribute (operator being modulated)
+                    const modulatorOpNum = j + 1; // 1-based index for UI data attribute (operator doing the modulation)
+
+                    // The UI stores connections based on the visual layout:
+                    // data-modulator = the ROW number (operator DOING the modulation)
+                    // data-modulated = the COLUMN number (operator BEING modulated)
+                    // Feedback cells only have data-modulator (as modulator === modulated visually on the diagonal)
+
+                    if (i === j) { // Feedback (diagonal): Modulator Index === Modulated Index
+                        // Find the cell on the diagonal corresponding to this operator index
+                        // The feedback cell's data-modulator attribute holds the operator index.
+                        cell = container.querySelector(`td.feedback-cell[data-modulator="${modulatorOpNum}"]`); // or modulatedOpNum, they are the same here
                     } else { // Connection
-                        cell = container.querySelector(`td[data-modulator="${modulatorNum}"][data-modulated="${modulatedNum}"]`);
+                        // Find the cell using the correct modulator (row) and modulated (column) numbers
+                        cell = container.querySelector(`td[data-modulator="${modulatorOpNum}"][data-modulated="${modulatedOpNum}"]`);
                     }
                 } else { // Carrier flag (j == opCount - the last column)
-                    cell = container.querySelector(`td.output-cell[data-output-op="${modulatorNum}"]`);
+                    // i = 0-based index of the operator that is outputting
+                    const outputOpNum = i + 1; // 1-based index for UI data attribute
+                    // The output cell's data-output-op attribute holds the operator index.
+                    cell = container.querySelector(`td.output-cell[data-output-op="${outputOpNum}"]`);
                 }
 
                 if (cell) {
                     cell.classList.add('active');
                 } else {
-                    // console.warn(`Algorithm Matrix display: Could not find cell for matrix[${i}][${j}]`);
+                    // console.warn(`Algorithm Matrix display: Could not find UI cell for matrix[${i}][${j}]`);
                 }
             }
         }
     }
-    console.log("Algorithm Matrix UI updated from combined matrix data (Carriers in Col).");
+    console.log("Algorithm Matrix UI updated from combined matrix data."); // Removed specific format mention for simplicity
 } 

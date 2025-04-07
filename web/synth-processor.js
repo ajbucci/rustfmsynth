@@ -4,6 +4,7 @@ let synth = null;
 let ready = false;
 let sampleRate = 44100;
 
+// TODO: clean this up. remove redundant checks
 class SynthProcessor extends AudioWorkletProcessor {
   constructor() {
     super();
@@ -51,7 +52,7 @@ class SynthProcessor extends AudioWorkletProcessor {
           // Validate inputs slightly before sending to Wasm? (Optional)
           const opIndex = parseInt(payload?.operator_index ?? data.operator_index);
           const ratio = parseFloat(payload?.ratio ?? data.ratio);
-          if (!isNaN(opIndex) && isFinite(ratio) && opIndex >= 0 && opIndex < 4) { // Basic check
+          if (!isNaN(opIndex) && isFinite(ratio) && opIndex >= 0 && opIndex < 6) { // Basic check
             console.log(`SynthProcessor: Setting operator ${opIndex} ratio to ${ratio}`);
             synth.set_operator_ratio(opIndex, ratio);
           } else {
@@ -65,7 +66,7 @@ class SynthProcessor extends AudioWorkletProcessor {
           const opIndex = parseInt(payload?.operator_index ?? data.operator_index);
           const waveformInt = parseInt(payload?.waveform_value ?? data.waveform_value);
 
-          if (!isNaN(opIndex) && !isNaN(waveformInt) && opIndex >= 0 && opIndex < 4 && waveformInt >= 0 && waveformInt <= 4) {
+          if (!isNaN(opIndex) && !isNaN(waveformInt) && opIndex >= 0 && opIndex < 6 && waveformInt >= 0 && waveformInt <= 4) {
             console.log(`SynthProcessor: Setting operator ${opIndex} waveform to ${waveformInt}`);
             try {
               synth.set_operator_waveform(opIndex, waveformInt);
@@ -84,7 +85,7 @@ class SynthProcessor extends AudioWorkletProcessor {
           const modIndex = parseFloat(payload?.modulation_index ?? data.modulation_index);
 
           // Basic validation
-          if (!isNaN(opIndex) && isFinite(modIndex) && opIndex >= 0 && opIndex < 4) { // Assuming 4 operators
+          if (!isNaN(opIndex) && isFinite(modIndex) && opIndex >= 0 && opIndex < 6) { // Assuming 4 operators
             console.log(`SynthProcessor: Setting operator ${opIndex} modulation index to ${modIndex}`);
             try {
               synth.set_operator_modulation_index(opIndex, modIndex);
