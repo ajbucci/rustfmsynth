@@ -127,39 +127,39 @@ async function completeSynthInitialization() {
 
           // +++ Send Initial State AFTER worklet is ready +++
           if (!initialStateSentToWorklet && initialStateLoaded) {
-             console.log("Worklet initialized, sending initial state loaded from fragment...");
-             try {
-                 // Send Algorithm Matrix update
-                 processorNode.port.postMessage({
-                     type: 'set-algorithm',
-                     payload: initialStateLoaded.matrix
-                 });
+            console.log("Worklet initialized, sending initial state loaded from fragment...");
+            try {
+              // Send Algorithm Matrix update
+              processorNode.port.postMessage({
+                type: 'set-algorithm',
+                payload: initialStateLoaded.matrix
+              });
 
-                 // Send Operator States updates
-                 if (Array.isArray(initialStateLoaded.operators)) {
-                     const count = Math.min(initialStateLoaded.operators.length, NUM_OPERATORS);
-                     for (let i = 0; i < count; i++) {
-                          const opState = initialStateLoaded.operators[i];
-                          if (opState) {
-                              if (opState.ratio !== undefined) processorNode.port.postMessage({ type: 'set_operator_ratio', operator_index: i, ratio: opState.ratio });
-                              if (opState.modIndex !== undefined) processorNode.port.postMessage({ type: 'set_operator_modulation_index', operator_index: i, modulation_index: opState.modIndex });
-                              if (opState.waveform !== undefined) processorNode.port.postMessage({ type: 'set_operator_waveform', operator_index: i, waveform_value: opState.waveform });
-                              if (opState.attack !== undefined && opState.decay !== undefined && opState.sustain !== undefined && opState.release !== undefined) {
-                                  processorNode.port.postMessage({ type: 'set_operator_envelope', operator_index: i, attack: opState.attack, decay: opState.decay, sustain: opState.sustain, release: opState.release });
-                              }
-                          }
-                     }
-                     console.log(`Sent initial state for ${count} operators to worklet.`);
-                 }
-                 initialStateSentToWorklet = true; // Mark as sent
-             } catch (stateSendError) {
-                  console.error("Error sending initial state to worklet:", stateSendError);
-                  // Don't reject the main promise here, synth is technically ready
-                  // but state might be default.
-             }
+              // Send Operator States updates
+              if (Array.isArray(initialStateLoaded.operators)) {
+                const count = Math.min(initialStateLoaded.operators.length, NUM_OPERATORS);
+                for (let i = 0; i < count; i++) {
+                  const opState = initialStateLoaded.operators[i];
+                  if (opState) {
+                    if (opState.ratio !== undefined) processorNode.port.postMessage({ type: 'set_operator_ratio', operator_index: i, ratio: opState.ratio });
+                    if (opState.modIndex !== undefined) processorNode.port.postMessage({ type: 'set_operator_modulation_index', operator_index: i, modulation_index: opState.modIndex });
+                    if (opState.waveform !== undefined) processorNode.port.postMessage({ type: 'set_operator_waveform', operator_index: i, waveform_value: opState.waveform });
+                    if (opState.attack !== undefined && opState.decay !== undefined && opState.sustain !== undefined && opState.release !== undefined) {
+                      processorNode.port.postMessage({ type: 'set_operator_envelope', operator_index: i, attack: opState.attack, decay: opState.decay, sustain: opState.sustain, release: opState.release });
+                    }
+                  }
+                }
+                console.log(`Sent initial state for ${count} operators to worklet.`);
+              }
+              initialStateSentToWorklet = true; // Mark as sent
+            } catch (stateSendError) {
+              console.error("Error sending initial state to worklet:", stateSendError);
+              // Don't reject the main promise here, synth is technically ready
+              // but state might be default.
+            }
           } else if (!initialStateSentToWorklet) {
-             console.log("Worklet initialized, no initial state loaded, using defaults already in worklet.");
-             initialStateSentToWorklet = true; // Mark default state as "sent" (i.e., accepted)
+            console.log("Worklet initialized, no initial state loaded, using defaults already in worklet.");
+            initialStateSentToWorklet = true; // Mark default state as "sent" (i.e., accepted)
           }
           // +++ End Initial State Sending +++
 
@@ -210,10 +210,10 @@ export async function ensureSynthStarted() {
   if (!synthInitializationPromise) {
     console.log("Starting final synth initialization (Wasm load, connect, initial state send)...");
     // Resume context again just before sending Wasm, belt-and-suspenders
-     if (audioContext && audioContext.state === 'suspended') {
-         console.log("Resuming potentially suspended AudioContext before final init...")
-         try { await audioContext.resume(); } catch (e) { /* handle error */ }
-     }
+    if (audioContext && audioContext.state === 'suspended') {
+      console.log("Resuming potentially suspended AudioContext before final init...")
+      try { await audioContext.resume(); } catch (e) { /* handle error */ }
+    }
     synthInitializationPromise = completeSynthInitialization(); // This now handles initial state send
   }
 
@@ -228,111 +228,132 @@ export async function ensureSynthStarted() {
 }
 
 // --- State Serialization/Deserialization ---
+async function compressData(data) {
+  const encoder = new TextEncoder();
+  const stream = new CompressionStream("gzip");
+  const writer = stream.writable.getWriter();
 
-function serializeState() {
-    const matrixState = getAlgorithmFromMatrix(matrixContainer);
-    const operatorStates = getOperatorStates(); // Get from operator-controls UI
+  writer.write(encoder.encode(data));
+  writer.close();
 
-    // Basic check if states were gathered correctly
-    if (!matrixState || !operatorStates || operatorStates.length !== NUM_OPERATORS) {
-         console.warn("Could not gather complete state for serialization.");
-         return null;
-    }
+  const compressed = await new Response(stream.readable).arrayBuffer();
+  return btoa(String.fromCharCode(...new Uint8Array(compressed)));
+}
+async function decompressData(encodedData) {
+  const compressed = Uint8Array.from(atob(encodedData), c => c.charCodeAt(0));
+  const stream = new DecompressionStream("gzip");
+  const writer = stream.writable.getWriter();
 
-    const state = {
-        version: 1, // Versioning for future format changes
-        matrix: matrixState,
-        operators: operatorStates
-    };
+  writer.write(compressed);
+  writer.close();
 
-    try {
-        const jsonString = JSON.stringify(state);
-        // Base64 encode to make it URL-safe without complex escaping
-        return btoa(jsonString);
-    } catch (e) {
-        console.error("Error serializing state:", e);
-        return null;
-    }
+  const decompressed = await new Response(stream.readable).text();
+  return decompressed;
+}
+async function serializeState() {
+  const matrixState = getAlgorithmFromMatrix(matrixContainer);
+  const operatorStates = getOperatorStates(); // Get from operator-controls UI
+
+  // Basic check if states were gathered correctly
+  if (!matrixState || !operatorStates || operatorStates.length !== NUM_OPERATORS) {
+    console.warn("Could not gather complete state for serialization.");
+    return null;
+  }
+
+  const state = {
+    version: 1, // Versioning for future format changes
+    matrix: matrixState,
+    operators: operatorStates
+  };
+
+  try {
+    const jsonString = JSON.stringify(state);
+    // Base64 encode to make it URL-safe without complex escaping
+    return await compressData(jsonString);
+  } catch (e) {
+    console.error("Error serializing state:", e);
+    return null;
+  }
 }
 
-function deserializeState(encodedString) {
-    if (!encodedString) return null;
-    try {
-        const jsonString = atob(encodedString); // Decode Base64
-        const state = JSON.parse(jsonString);
+async function deserializeState(encodedString) {
+  if (!encodedString) return null;
+  try {
+    const jsonString = await decompressData(encodedString);
+    const state = JSON.parse(jsonString);
 
-        // Basic validation: check version and presence of main keys
-        if (state && state.version === 1 && Array.isArray(state.matrix) && Array.isArray(state.operators)) {
-            // Add more validation if needed (e.g., check array lengths match NUM_OPERATORS)
-            if (state.matrix.length !== NUM_OPERATORS || state.operators.length !== NUM_OPERATORS) {
-                 console.warn(`Deserialized state operator count mismatch (Matrix: ${state.matrix.length}, Ops: ${state.operators.length}). Expected ${NUM_OPERATORS}. Applying may be partial.`);
-                 // Allow partial application for now
-            }
-             return state;
-        } else {
-             console.warn("Deserialized state is invalid, missing keys, or wrong version:", state);
-             return null;
-        }
-    } catch (e) {
-        // Errors can happen with invalid Base64 or JSON
-        console.error("Error deserializing state:", e);
-        return null;
+    // Basic validation: check version and presence of main keys
+    if (state && state.version === 1 && Array.isArray(state.matrix) && Array.isArray(state.operators)) {
+      // Add more validation if needed (e.g., check array lengths match NUM_OPERATORS)
+      if (state.matrix.length !== NUM_OPERATORS || state.operators.length !== NUM_OPERATORS) {
+        console.warn(`Deserialized state operator count mismatch (Matrix: ${state.matrix.length}, Ops: ${state.operators.length}). Expected ${NUM_OPERATORS}. Applying may be partial.`);
+        // Allow partial application for now
+      }
+      return state;
+    } else {
+      console.warn("Deserialized state is invalid, missing keys, or wrong version:", state);
+      return null;
     }
+  } catch (e) {
+    // Errors can happen with invalid Base64 or JSON
+    console.error("Error deserializing state:", e);
+    return null;
+  }
 }
 
 // --- Update URL Fragment ---
-function updateUrlFragment() {
-    if (isApplyingState) {
-        // console.log("Skipping URL update while applying state."); // Debug log
-        return; // Prevent feedback loop
-    }
+async function updateUrlFragment() {
+  if (isApplyingState) {
+    // console.log("Skipping URL update while applying state."); // Debug log
+    return; // Prevent feedback loop
+  }
 
-    const serializedState = serializeState();
-    if (serializedState) {
-        // Use replaceState to update hash without adding to browser history
-        history.replaceState(null, '', '#' + serializedState);
-        // console.log("URL Fragment updated."); // Debug log
-    } else {
-        // Optionally clear the hash if state is invalid or empty
-        // history.replaceState(null, '', window.location.pathname + window.location.search);
-        console.warn("Serialization failed, URL fragment not updated.");
-    }
+  const serializedState = await serializeState();
+  if (serializedState) {
+    // Use replaceState to update hash without adding to browser history
+    history.replaceState(null, '', '#' + serializedState);
+    // console.log("URL Fragment updated."); // Debug log
+  } else {
+    // Optionally clear the hash if state is invalid or empty
+    // history.replaceState(null, '', window.location.pathname + window.location.search);
+    console.warn("Serialization failed, URL fragment not updated.");
+  }
 }
 
 // --- Apply State Function (Simplified: UI Only for initial load) ---
 // This function NOW ONLY updates the UI elements directly.
 // Sending state to the worklet happens later via ensureSynthStarted/completeSynthInitialization.
 function applyStateUIOnly(state, matrixContainerElement, operatorControlsContainerElement) {
-    if (!state || !state.matrix || !state.operators) {
-        console.warn("Cannot apply invalid or incomplete state to UI:", state);
-        return;
+  if (!state || !state.matrix || !state.operators) {
+    console.warn("Cannot apply invalid or incomplete state to UI:", state);
+    return;
+  }
+
+  console.log("Applying state to UI elements:", state);
+  isApplyingState = true; // Block URL updates during this process
+
+  try {
+    // 1. Update Matrix UI
+    if (matrixContainerElement) {
+      displayAlgorithm(matrixContainerElement, state.matrix);
+    } else {
+      console.error("Matrix container element not provided during UI state application.");
     }
 
-    console.log("Applying state to UI elements:", state);
-    isApplyingState = true; // Block URL updates during this process
-
-    try {
-        // 1. Update Matrix UI
-        if (matrixContainerElement) {
-            displayAlgorithm(matrixContainerElement, state.matrix);
-        } else {
-             console.error("Matrix container element not provided during UI state application.");
-        }
-
-        // 2. Update Operator Controls UI
-        if (operatorControlsContainerElement) {
-            applyOperatorStatesUI(state.operators); // Use the UI-only function
-        } else {
-            console.error("Operator controls container element not provided during UI state application.")
-        }
-        console.log("Successfully applied state to UI.");
-
-    } catch (error) {
-        console.error("Failed during UI state application process:", error);
-    } finally {
-         isApplyingState = false;
-         console.log("Finished applying UI state, isApplyingState is now false.");
+    // 2. Update Operator Controls UI
+    if (operatorControlsContainerElement) {
+      applyOperatorStatesUI(state.operators); // Use the UI-only function
+    } else {
+      console.error("Operator controls container element not provided during UI state application.")
     }
+    console.log("Successfully applied state to UI.");
+
+  } catch (error) {
+    console.error("Failed during UI state application process:", error);
+  } finally {
+    isApplyingState = false;
+    console.log("Finished applying UI state, isApplyingState is now false.");
+  }
 }
 
 // --- Callback function to handle matrix updates ---
@@ -342,8 +363,8 @@ function handleMatrixUpdate(combinedMatrix, processorNodeInstance) {
   ensureSynthStarted()
     .then(() => {
       if (!processorNode) {
-         console.error("processorNode is null in handleMatrixUpdate after ensureSynthStarted");
-         return;
+        console.error("processorNode is null in handleMatrixUpdate after ensureSynthStarted");
+        return;
       }
       processorNode.port.postMessage({
         type: 'set-algorithm',
@@ -367,63 +388,63 @@ async function initializeApp() {
 
   // --- Generate UI Shells ---
   if (currentMatrixContainer) {
-      createAlgorithmMatrixUI(NUM_OPERATORS, currentMatrixContainer);
+    createAlgorithmMatrixUI(NUM_OPERATORS, currentMatrixContainer);
   } else {
-      console.error("Algorithm matrix container not found.");
+    console.error("Algorithm matrix container not found.");
   }
   // Check the locally found container element
   if (!currentOperatorControlsContainer) {
-      console.error("Operator controls container (#operator-controls) NOT FOUND in DOM.");
+    console.error("Operator controls container (#operator-controls) NOT FOUND in DOM.");
   }
   try { generateKeyboard(); } catch (e) { console.error("Error generating keyboard UI:", e); }
   console.log("Base UI structure generated.");
 
 
-   // --- Initialize Operator Controls (Generates DOM, attaches internal listeners) ---
-   // Pass updateUrlFragment callback. Must happen *before* applying UI state.
-   // Use the locally found container element
-   if (currentOperatorControlsContainer) {
-       console.log("Attempting to initialize operator controls in container:", currentOperatorControlsContainer);
-       initializeOperatorControls(currentOperatorControlsContainer, updateUrlFragment); // Pass the found container
-       console.log("Finished calling initializeOperatorControls.");
-   } else {
-       // Logged the error above already
-       console.warn("Skipping operator controls initialization because container was not found.");
-   }
+  // --- Initialize Operator Controls (Generates DOM, attaches internal listeners) ---
+  // Pass updateUrlFragment callback. Must happen *before* applying UI state.
+  // Use the locally found container element
+  if (currentOperatorControlsContainer) {
+    console.log("Attempting to initialize operator controls in container:", currentOperatorControlsContainer);
+    initializeOperatorControls(currentOperatorControlsContainer, updateUrlFragment); // Pass the found container
+    console.log("Finished calling initializeOperatorControls.");
+  } else {
+    // Logged the error above already
+    console.warn("Skipping operator controls initialization because container was not found.");
+  }
 
-   // --- Load State from URL Fragment ---
-   initialStateLoaded = null;
-   initialStateSentToWorklet = false;
-   if (window.location.hash && window.location.hash.length > 1) {
-     const encodedState = window.location.hash.substring(1);
-     console.log("Attempting to deserialize state from URL fragment...");
-     initialStateLoaded = deserializeState(encodedState);
-     if (initialStateLoaded) {
-         console.log("Deserialized initial state successfully.");
-         // --- Apply Initial State to UI ONLY ---
-         // Use the locally found container for consistency when applying state
-         applyStateUIOnly(initialStateLoaded, currentMatrixContainer, currentOperatorControlsContainer);
-         updateUrlFragment();
-     } else {
-         console.warn("Failed to deserialize state from URL fragment, using defaults.");
-         history.replaceState(null, '', window.location.pathname + window.location.search); // Clear invalid hash
-         // initialStateLoaded remains null, defaults will be used in worklet
-         initialStateSentToWorklet = true; // Mark defaults as "sent" (accepted) since we won't send anything specific
-     }
-   } else {
-        console.log("No initial state in URL fragment, using defaults.");
-        // Worklet will use its internal defaults. Mark as "sent".
-        initialStateSentToWorklet = true;
-   }
+  // --- Load State from URL Fragment ---
+  initialStateLoaded = null;
+  initialStateSentToWorklet = false;
+  if (window.location.hash && window.location.hash.length > 1) {
+    const encodedState = window.location.hash.substring(1);
+    console.log("Attempting to deserialize state from URL fragment...");
+    initialStateLoaded = await deserializeState(encodedState);
+    if (initialStateLoaded) {
+      console.log("Deserialized initial state successfully.");
+      // --- Apply Initial State to UI ONLY ---
+      // Use the locally found container for consistency when applying state
+      applyStateUIOnly(initialStateLoaded, currentMatrixContainer, currentOperatorControlsContainer);
+      updateUrlFragment();
+    } else {
+      console.warn("Failed to deserialize state from URL fragment, using defaults.");
+      history.replaceState(null, '', window.location.pathname + window.location.search); // Clear invalid hash
+      // initialStateLoaded remains null, defaults will be used in worklet
+      initialStateSentToWorklet = true; // Mark defaults as "sent" (accepted) since we won't send anything specific
+    }
+  } else {
+    console.log("No initial state in URL fragment, using defaults.");
+    // Worklet will use its internal defaults. Mark as "sent".
+    initialStateSentToWorklet = true;
+  }
 
   // --- Setup Matrix Event Listeners ---
   // Pass the specific container instance
   if (currentMatrixContainer) {
-      setupMatrixEventListeners(currentMatrixContainer, (matrix) => {
-          // Need access to the worklet node for handleMatrixUpdate
-          handleMatrixUpdate(matrix, processorNode); // Assuming handleMatrixUpdate needs the node
-          updateUrlFragment();
-      });
+    setupMatrixEventListeners(currentMatrixContainer, (matrix) => {
+      // Need access to the worklet node for handleMatrixUpdate
+      handleMatrixUpdate(matrix, processorNode); // Assuming handleMatrixUpdate needs the node
+      updateUrlFragment();
+    });
   }
 
   // Attach global keyboard listeners
@@ -433,68 +454,68 @@ async function initializeApp() {
 
   // --- Add Reset Button Listener ---
   if (resetButton && currentMatrixContainer && currentOperatorControlsContainer) {
-      resetButton.addEventListener('click', async () => {
-          console.log("Reset button clicked.");
-          resumeAudioContext(); // Good practice before sending messages
+    resetButton.addEventListener('click', async () => {
+      console.log("Reset button clicked.");
+      resumeAudioContext(); // Good practice before sending messages
 
-          // 1. Reset UI Elements
-          resetAlgorithmMatrixUI(currentMatrixContainer);
-          resetOperatorControlsUI(); // Uses internal default logic
+      // 1. Reset UI Elements
+      resetAlgorithmMatrixUI(currentMatrixContainer);
+      resetOperatorControlsUI(); // Uses internal default logic
 
-          try {
-               // 2. Ensure synth is ready (might start it if not already)
-               await ensureSynthStarted();
-               if (!processorNode) throw new Error("Processor node is unavailable after ensureSynthStarted");
+      try {
+        // 2. Ensure synth is ready (might start it if not already)
+        await ensureSynthStarted();
+        if (!processorNode) throw new Error("Processor node is unavailable after ensureSynthStarted");
 
-               // 3. Get the state FROM the now-reset UI
-               const defaultMatrix = getAlgorithmFromMatrix(currentMatrixContainer);
-               const defaultOperators = getOperatorStates(); // Gets current (default) values
+        // 3. Get the state FROM the now-reset UI
+        const defaultMatrix = getAlgorithmFromMatrix(currentMatrixContainer);
+        const defaultOperators = getOperatorStates(); // Gets current (default) values
 
-               if (!defaultMatrix || !defaultOperators) {
-                   console.error("Failed to get default state from UI after reset.");
-                   return;
-               }
+        if (!defaultMatrix || !defaultOperators) {
+          console.error("Failed to get default state from UI after reset.");
+          return;
+        }
 
-               console.log("Sending default state to worklet after reset...");
+        console.log("Sending default state to worklet after reset...");
 
-               // 4. Send Reset State to Worklet
-               // Send Algorithm
-               processorNode.port.postMessage({
-                   type: 'set-algorithm',
-                   payload: defaultMatrix
-               });
-               console.log("Sent default algorithm to worklet.");
+        // 4. Send Reset State to Worklet
+        // Send Algorithm
+        processorNode.port.postMessage({
+          type: 'set-algorithm',
+          payload: defaultMatrix
+        });
+        console.log("Sent default algorithm to worklet.");
 
-               // Send Operator States
-               for (let i = 0; i < defaultOperators.length; i++) {
-                   const opState = defaultOperators[i];
-                   if (opState) {
-                        // Send all params for each operator to ensure reset
-                        processorNode.port.postMessage({ type: 'set_operator_ratio', operator_index: i, ratio: opState.ratio });
-                        processorNode.port.postMessage({ type: 'set_operator_modulation_index', operator_index: i, modulation_index: opState.modIndex });
-                        processorNode.port.postMessage({ type: 'set_operator_waveform', operator_index: i, waveform_value: opState.waveform });
-                        processorNode.port.postMessage({ type: 'set_operator_envelope', operator_index: i, attack: opState.attack, decay: opState.decay, sustain: opState.sustain, release: opState.release });
-                   }
-               }
-               console.log(`Sent default state for ${defaultOperators.length} operators to worklet.`);
-
-               // 5. Update URL Fragment (Reflects the new default state)
-               // Block updates temporarily just to be safe, though it shouldn't loop here
-               isApplyingState = true;
-               updateUrlFragment();
-               isApplyingState = false;
-               console.log("Reset complete, URL fragment updated.");
-
-          } catch (error) {
-               console.error("Error during patch reset process:", error);
-               // Potentially notify the user here
+        // Send Operator States
+        for (let i = 0; i < defaultOperators.length; i++) {
+          const opState = defaultOperators[i];
+          if (opState) {
+            // Send all params for each operator to ensure reset
+            processorNode.port.postMessage({ type: 'set_operator_ratio', operator_index: i, ratio: opState.ratio });
+            processorNode.port.postMessage({ type: 'set_operator_modulation_index', operator_index: i, modulation_index: opState.modIndex });
+            processorNode.port.postMessage({ type: 'set_operator_waveform', operator_index: i, waveform_value: opState.waveform });
+            processorNode.port.postMessage({ type: 'set_operator_envelope', operator_index: i, attack: opState.attack, decay: opState.decay, sustain: opState.sustain, release: opState.release });
           }
-      });
-      console.log("Reset button event listener attached.");
+        }
+        console.log(`Sent default state for ${defaultOperators.length} operators to worklet.`);
+
+        // 5. Update URL Fragment (Reflects the new default state)
+        // Block updates temporarily just to be safe, though it shouldn't loop here
+        isApplyingState = true;
+        updateUrlFragment();
+        isApplyingState = false;
+        console.log("Reset complete, URL fragment updated.");
+
+      } catch (error) {
+        console.error("Error during patch reset process:", error);
+        // Potentially notify the user here
+      }
+    });
+    console.log("Reset button event listener attached.");
   } else {
-      if (!resetButton) console.warn("Reset button not found.");
-      if (!currentMatrixContainer) console.warn("Matrix container not found for reset listener.");
-      if (!currentOperatorControlsContainer) console.warn("Operator controls container not found for reset listener.");
+    if (!resetButton) console.warn("Reset button not found.");
+    if (!currentMatrixContainer) console.warn("Matrix container not found for reset listener.");
+    if (!currentOperatorControlsContainer) console.warn("Operator controls container not found for reset listener.");
   }
 
   console.log("Application ready. Interact with controls or keyboard to start audio.");
