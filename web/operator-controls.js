@@ -123,6 +123,20 @@ export function applyOperatorStatesUI(operatorStates) {
 }
 
 /**
+ * Resets all operator UI controls to their default values.
+ */
+export function resetOperatorControlsUI() {
+    console.log("Resetting operator controls UI to defaults...");
+    const defaultState = {
+        ratio: 1.0, modIndex: 1.0, waveform: DEFAULT_WAVEFORM_VALUE, // Default mod index might be 0 or 1 depending on preference
+        attack: DEFAULT_ATTACK, decay: DEFAULT_DECAY, sustain: DEFAULT_SUSTAIN, release: DEFAULT_RELEASE
+    };
+    const defaultStatesArray = Array(NUM_OPERATORS).fill(defaultState);
+    applyOperatorStatesUI(defaultStatesArray); // Reuse the apply function with default data
+    console.log("Operator controls UI reset complete.");
+}
+
+/**
  * Creates the HTML elements (label, dial, number input, waveform select, ADSR) for a single operator
  * and adds the necessary event listeners for synchronization and updates.
  * @param {number} index - The 0-based index of the operator.

@@ -1,13 +1,14 @@
 import init from "./pkg/rustfmsynth.js"; // Import init here
 import { setupKeyboardInput, removeKeyboardInput, handleKeyDown, handleKeyUp } from './keyboard-input.js'; // Import keyboard handler + handlers
 import { generateKeyboard, connectKeyboardUIPort } from './keyboard-ui.js'; // Import keyboard UI functions
-import { initializeOperatorControls, getOperatorStates, applyOperatorStatesUI, NUM_OPERATORS as OP_CONTROL_NUM } from './operator-controls.js'; // Import the new setup function and NUM_OPERATORS
+import { initializeOperatorControls, getOperatorStates, applyOperatorStatesUI, NUM_OPERATORS as OP_CONTROL_NUM, resetOperatorControlsUI } from './operator-controls.js'; // Import the new setup function and NUM_OPERATORS
 // Import the new matrix functions
 import {
   createAlgorithmMatrixUI,
   getAlgorithmFromMatrix,
   setupMatrixEventListeners,
-  displayAlgorithm
+  displayAlgorithm,
+  resetAlgorithmMatrixUI
 } from './algorithm-matrix.js';
 
 let audioContext;
@@ -362,6 +363,7 @@ async function initializeApp() {
   // It's generally safer to get elements within the DOMContentLoaded handler
   const currentMatrixContainer = document.getElementById('algorithm-matrix'); // Re-check or use module var if preferred
   const currentOperatorControlsContainer = document.getElementById('operator-controls'); // <-- Get element HERE
+  const resetButton = document.getElementById('reset-button'); // <-- Get reset button HERE
 
   // --- Generate UI Shells ---
   if (currentMatrixContainer) {
@@ -428,6 +430,72 @@ async function initializeApp() {
   window.addEventListener('keydown', handleKeyDown);
   window.addEventListener('keyup', handleKeyUp);
   console.log("Keyboard listeners attached.");
+
+  // --- Add Reset Button Listener ---
+  if (resetButton && currentMatrixContainer && currentOperatorControlsContainer) {
+      resetButton.addEventListener('click', async () => {
+          console.log("Reset button clicked.");
+          resumeAudioContext(); // Good practice before sending messages
+
+          // 1. Reset UI Elements
+          resetAlgorithmMatrixUI(currentMatrixContainer);
+          resetOperatorControlsUI(); // Uses internal default logic
+
+          try {
+               // 2. Ensure synth is ready (might start it if not already)
+               await ensureSynthStarted();
+               if (!processorNode) throw new Error("Processor node is unavailable after ensureSynthStarted");
+
+               // 3. Get the state FROM the now-reset UI
+               const defaultMatrix = getAlgorithmFromMatrix(currentMatrixContainer);
+               const defaultOperators = getOperatorStates(); // Gets current (default) values
+
+               if (!defaultMatrix || !defaultOperators) {
+                   console.error("Failed to get default state from UI after reset.");
+                   return;
+               }
+
+               console.log("Sending default state to worklet after reset...");
+
+               // 4. Send Reset State to Worklet
+               // Send Algorithm
+               processorNode.port.postMessage({
+                   type: 'set-algorithm',
+                   payload: defaultMatrix
+               });
+               console.log("Sent default algorithm to worklet.");
+
+               // Send Operator States
+               for (let i = 0; i < defaultOperators.length; i++) {
+                   const opState = defaultOperators[i];
+                   if (opState) {
+                        // Send all params for each operator to ensure reset
+                        processorNode.port.postMessage({ type: 'set_operator_ratio', operator_index: i, ratio: opState.ratio });
+                        processorNode.port.postMessage({ type: 'set_operator_modulation_index', operator_index: i, modulation_index: opState.modIndex });
+                        processorNode.port.postMessage({ type: 'set_operator_waveform', operator_index: i, waveform_value: opState.waveform });
+                        processorNode.port.postMessage({ type: 'set_operator_envelope', operator_index: i, attack: opState.attack, decay: opState.decay, sustain: opState.sustain, release: opState.release });
+                   }
+               }
+               console.log(`Sent default state for ${defaultOperators.length} operators to worklet.`);
+
+               // 5. Update URL Fragment (Reflects the new default state)
+               // Block updates temporarily just to be safe, though it shouldn't loop here
+               isApplyingState = true;
+               updateUrlFragment();
+               isApplyingState = false;
+               console.log("Reset complete, URL fragment updated.");
+
+          } catch (error) {
+               console.error("Error during patch reset process:", error);
+               // Potentially notify the user here
+          }
+      });
+      console.log("Reset button event listener attached.");
+  } else {
+      if (!resetButton) console.warn("Reset button not found.");
+      if (!currentMatrixContainer) console.warn("Matrix container not found for reset listener.");
+      if (!currentOperatorControlsContainer) console.warn("Operator controls container not found for reset listener.");
+  }
 
   console.log("Application ready. Interact with controls or keyboard to start audio.");
 }
