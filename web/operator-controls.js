@@ -2,7 +2,7 @@
 import { tryEnsureSynthAndSendMessage } from './keyboard-input.js';
 import { resumeAudioContext } from './app.js';
 
-export const NUM_OPERATORS = 4; // Example: Define and export
+export const NUM_OPERATORS = 6; // Example: Define and export
 const containerId = 'operator-controls'; // ID of the container div in index.html
 
 // Define the available waveforms and their corresponding integer values
@@ -20,6 +20,18 @@ const DEFAULT_WAVEFORM_VALUE = 0; // Default to Sine (value 0)
 // Define the sticky points for the ratio slider
 const STICKY_RATIO_POINTS = [0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0];
 const STICKY_THRESHOLD = 0.05; // How close the slider needs to be to snap
+
+// --- ADSR Envelope Defaults and Limits ---
+const DEFAULT_ATTACK = 0.01;
+const DEFAULT_DECAY = 0.1;
+const DEFAULT_SUSTAIN = 0.8; // Sustain level (0.0 - 1.0)
+const DEFAULT_RELEASE = 0.5;
+const MIN_TIME = 0.0;
+const MAX_TIME = 10.0; // Max seconds for A, D, R
+const MIN_SUSTAIN = 0.0;
+const MAX_SUSTAIN = 1.0;
+const TIME_STEP = 0.01;
+const SUSTAIN_STEP = 0.01;
 
 /**
  * Creates the HTML elements (label, dial, number input, waveform select) for a single operator
@@ -119,6 +131,61 @@ function createOperatorControl(index, container) {
     });
     controlWrapper.appendChild(waveformSelect);
 
+    // --- ADSR Envelope Controls ---
+    const adsrWrapper = document.createElement('div');
+    adsrWrapper.classList.add('adsr-controls');
+    adsrWrapper.style.marginTop = '15px'; // Add space before envelope controls
+    adsrWrapper.style.borderTop = '1px solid #ccc'; // Separator line
+    adsrWrapper.style.paddingTop = '10px';
+
+    const adsrTitle = document.createElement('div');
+    adsrTitle.textContent = 'Amplitude Envelope:';
+    adsrTitle.style.fontWeight = 'bold';
+    adsrTitle.style.marginBottom = '5px';
+    adsrWrapper.appendChild(adsrTitle);
+
+    // Helper to create Label + Number Input pairs
+    const createAdsrInput = (paramName, defaultValue, min, max, step) => {
+        const paramWrapper = document.createElement('div');
+        paramWrapper.classList.add('adsr-param');
+
+        const label = document.createElement('label');
+        label.htmlFor = `op-${index}-adsr-${paramName.toLowerCase()}`;
+        label.textContent = `${paramName}:`;
+        label.style.display = 'inline-block';
+        label.style.width = '50px'; // Align labels
+
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.id = `op-${index}-adsr-${paramName.toLowerCase()}`;
+        input.value = defaultValue.toFixed(paramName === 'Sustain' ? 2 : 3); // Adjust precision
+        input.min = min.toString();
+        input.max = max.toString();
+        input.step = step.toString();
+        input.style.width = '60px'; // Control input width
+        input.dataset.operatorIndex = index; // Store index
+
+        paramWrapper.appendChild(label);
+        paramWrapper.appendChild(input);
+        return paramWrapper;
+    };
+
+    // Create A, D, S, R inputs
+    adsrWrapper.appendChild(createAdsrInput('Attack', DEFAULT_ATTACK, MIN_TIME, MAX_TIME, TIME_STEP));
+    adsrWrapper.appendChild(createAdsrInput('Decay', DEFAULT_DECAY, MIN_TIME, MAX_TIME, TIME_STEP));
+    adsrWrapper.appendChild(createAdsrInput('Sustain', DEFAULT_SUSTAIN, MIN_SUSTAIN, MAX_SUSTAIN, SUSTAIN_STEP));
+    adsrWrapper.appendChild(createAdsrInput('Release', DEFAULT_RELEASE, MIN_TIME, MAX_TIME, TIME_STEP));
+
+    // Create Set Button
+    const setButton = document.createElement('button');
+    setButton.textContent = 'Set Envelope';
+    setButton.id = `op-${index}-adsr-set`;
+    setButton.dataset.operatorIndex = index;
+    setButton.style.marginTop = '8px';
+    adsrWrapper.appendChild(setButton);
+
+    controlWrapper.appendChild(adsrWrapper); // Add ADSR section to the main wrapper
+
     // --- Function to Send Update ---
     // Avoid duplicating message sending logic
     const sendUpdate = async (opIndex, ratioValue) => {
@@ -150,6 +217,30 @@ function createOperatorControl(index, container) {
         if (!success) {
             console.warn(`Operator Controls: Failed to send set_operator_modulation_index for operator ${opIndex}`);
         }
+    };
+
+    // --- Function to Send Envelope Update ---
+    const sendEnvelopeUpdate = async (opIndex, attack, decay, sustain, release) => {
+        resumeAudioContext(); // Ensure context is running
+
+        const message = {
+            type: 'set_operator_envelope',
+            operator_index: opIndex,
+            attack: attack,
+            decay: decay,
+            sustain: sustain,
+            release: release
+        };
+        const messageId = `set-envelope-op-${opIndex}`; // Unique ID for throttling/logging
+        const success = await tryEnsureSynthAndSendMessage(messageId, message);
+        if (!success) {
+            console.warn(`Operator Controls: Failed to send set_operator_envelope for operator ${opIndex}`);
+            // You could add UI feedback here if needed (e.g., make button red temporarily)
+        } else {
+            console.log(`Sent envelope update for Op ${opIndex + 1}: A=${attack} D=${decay} S=${sustain} R=${release}`);
+             // Optional: Add success feedback (e.g., temporary style change)
+        }
+        return success;
     };
 
     // --- Event Listener for Slider ('input' for real-time) ---
@@ -269,6 +360,45 @@ function createOperatorControl(index, container) {
             console.warn(`Operator Controls: Failed to send set_operator_waveform for operator ${operatorIndex}`);
             // Optional: Revert dropdown if send fails? Might be complex.
         }
+    });
+
+    // --- Event Listener for ADSR Set Button ---
+    setButton.addEventListener('click', async (event) => {
+        const targetButton = event.currentTarget;
+        const operatorIndex = parseInt(targetButton.dataset.operatorIndex);
+
+        // Find the input elements associated with this operator's ADSR section
+        // Using IDs is reliable here
+        const attackInput = document.getElementById(`op-${operatorIndex}-adsr-attack`);
+        const decayInput = document.getElementById(`op-${operatorIndex}-adsr-decay`);
+        const sustainInput = document.getElementById(`op-${operatorIndex}-adsr-sustain`);
+        const releaseInput = document.getElementById(`op-${operatorIndex}-adsr-release`);
+
+        if (!attackInput || !decayInput || !sustainInput || !releaseInput) {
+            console.error(`Could not find all ADSR input elements for operator ${operatorIndex}`);
+            return; // Stop if elements aren't found
+        }
+
+        // Get and parse values, providing defaults if parsing fails
+        let attack = parseFloat(attackInput.value) || DEFAULT_ATTACK;
+        let decay = parseFloat(decayInput.value) || DEFAULT_DECAY;
+        let sustain = parseFloat(sustainInput.value) || DEFAULT_SUSTAIN;
+        let release = parseFloat(releaseInput.value) || DEFAULT_RELEASE;
+
+        // Clamp values to their defined ranges
+        attack = Math.max(MIN_TIME, Math.min(MAX_TIME, attack));
+        decay = Math.max(MIN_TIME, Math.min(MAX_TIME, decay));
+        sustain = Math.max(MIN_SUSTAIN, Math.min(MAX_SUSTAIN, sustain));
+        release = Math.max(MIN_TIME, Math.min(MAX_TIME, release));
+
+        // Optional: Update the input fields visually with the clamped values
+        attackInput.value = attack.toFixed(3);
+        decayInput.value = decay.toFixed(3);
+        sustainInput.value = sustain.toFixed(2);
+        releaseInput.value = release.toFixed(3);
+
+        // Send the update to the synth processor
+        await sendEnvelopeUpdate(operatorIndex, attack, decay, sustain, release);
     });
 
     // Append the whole control to the main container

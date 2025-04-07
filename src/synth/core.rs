@@ -54,8 +54,8 @@ impl Synth {
     }
     pub fn set_algorithm(&mut self, combined_matrix: &[Vec<u32>]) {
         if let Err(e) = self.algorithm.set_matrix(combined_matrix) {
-             eprintln!("Synth Error: Failed to set algorithm matrix: {}", e);
-             // Depending on the error, maybe log more or take other action
+            eprintln!("Synth Error: Failed to set algorithm matrix: {}", e);
+            // Depending on the error, maybe log more or take other action
         } else {
             // Only update voices if setting the algorithm structure succeeded
             self.update_voice_algorithm();
@@ -80,6 +80,12 @@ impl Synth {
             self.operators[op_index].set_modulation_index(modulation_index);
         } else {
             eprintln!("Operator index out of bounds");
+        }
+    }
+
+    pub fn set_operator_envelope(&mut self, op_index: usize, a: f32, d: f32, s: f32, r: f32) {
+        if op_index < self.operators.len() {
+            self.operators[op_index].set_envelope(a, d, s, r);
         }
     }
 
@@ -273,35 +279,35 @@ impl Default for Synth {
 
         // Carrier A
         operators[0].set_waveform(Waveform::Sine);
-        operators[0].set_envelope(0.01, 1.0, 0.7, 0.5);
-        operators[0].set_gain(0.5);
-        operators[0].set_ratio(1.0);
+        // operators[0].set_envelope(0.01, 1.0, 0.7, 0.5);
+        // operators[0].set_gain(0.5);
+        // operators[0].set_ratio(1.0);
 
         // Carrier B (slightly detuned)
-        operators[1].set_waveform(Waveform::Sine);
-        operators[1].set_envelope(0.01, 1.0, 0.7, 0.5);
-        operators[1].set_gain(0.5);
-        operators[1].set_ratio(1.01);
-        operators[1].set_modulation_index(2.0);
+        // operators[1].set_waveform(Waveform::Sine);
+        // operators[1].set_envelope(0.01, 1.0, 0.7, 0.5);
+        // operators[1].set_gain(0.5);
+        // operators[1].set_ratio(1.01);
+        // operators[1].set_modulation_index(2.0);
 
         // Modulator A
-        operators[2].set_waveform(Waveform::Sine);
-        operators[2].set_envelope(0.005, 0.3, 0.0, 0.2);
-        operators[2].set_gain(1.0);
-        operators[2].set_ratio(2.0);
-        operators[2].set_modulation_index(3.0);
+        // operators[2].set_waveform(Waveform::Sine);
+        // operators[2].set_envelope(0.005, 0.3, 0.0, 0.2);
+        // operators[2].set_gain(1.0);
+        // operators[2].set_ratio(2.0);
+        // operators[2].set_modulation_index(3.0);
 
         // Modulator B
-        operators[3].set_waveform(Waveform::Sine);
-        operators[3].set_envelope(0.005, 0.3, 0.0, 0.2);
-        operators[3].set_gain(1.0);
-        operators[3].set_ratio(2.02);
-        operators[3].set_modulation_index(3.0);
+        // operators[3].set_waveform(Waveform::Sine);
+        // operators[3].set_envelope(0.005, 0.3, 0.0, 0.2);
+        // operators[3].set_gain(1.0);
+        // operators[3].set_ratio(2.02);
+        // operators[3].set_modulation_index(3.0);
 
         // Initialize with a default algorithm (e.g., a simple 2-operator stack)
-        let default_algorithm = Algorithm::default_fanout_feedback(operators.len()).unwrap();
+        // let default_algorithm = Algorithm::default_fanout_feedback(operators.len()).unwrap();
         // let default_algorithm = Algorithm::default_feedback_1(operators.len()).unwrap();
-        // let default_algorithm = Algorithm::default_simple(operators.len()).unwrap();
+        let default_algorithm = Algorithm::default_simple(operators.len()).unwrap();
         // let default_algorithm = Algorithm::default_stack_2(operators.len()).unwrap();
         default_algorithm.print_evaluation_chains();
         default_algorithm.print_structure();
@@ -309,7 +315,7 @@ impl Default for Synth {
         let mut voices: Vec<Voice> = (0..config.max_voices)
             .map(|_| Voice::new(operators.len()))
             .collect();
-        
+
         for voice in voices.iter_mut() {
             voice.update_algorithm(&default_algorithm);
         }

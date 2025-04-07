@@ -56,6 +56,10 @@ impl WasmSynth {
         self.synth.set_operator_ratio(operator_index, ratio);
     }
 
+    #[wasm_bindgen]
+    pub fn set_operator_envelope(&mut self, operator_index: usize, a: f32, d: f32, s: f32, r: f32) {
+        self.synth.set_operator_envelope(operator_index, a, d, s, r);
+    }
     /// Set the waveform for a specific operator using an integer code from JS.
     /// Mapping: 0: Sine, 1: Triangle, 2: Square, 3: Sawtooth, 4: Noise
     #[wasm_bindgen]
