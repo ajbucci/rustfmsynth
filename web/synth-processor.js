@@ -34,86 +34,68 @@ class SynthProcessor extends AudioWorkletProcessor {
           console.error("SynthProcessor: Error initializing Wasm or creating WasmSynth instance:", e);
           ready = false;
         }
+      }
 
-      } else if (data.type === "note_on") {
-        if (synth && ready) {
-          synth.note_on(data.note, data.velocity);
-        } else {
-          console.warn("SynthProcessor: Note_on ignored - synth not ready.");
-        }
+      if (!synth || !ready) {
+        console.warn(`SynthProcessor: Received message but synth is not ready or does not exist. Message not sent.`, data);
+      }
+      if (data.type === "note_on") {
+        synth.note_on(data.note, data.velocity);
       } else if (data.type === "note_off") {
-        if (synth && ready) {
-          synth.note_off(data.note);
-        } else {
-          console.warn("SynthProcessor: Note_off ignored - synth not ready.");
-        }
+        synth.note_off(data.note);
       } else if (data.type === "set_operator_ratio") {
-        if (synth && ready) {
-          // Validate inputs slightly before sending to Wasm? (Optional)
-          const opIndex = parseInt(payload?.operator_index ?? data.operator_index);
-          const ratio = parseFloat(payload?.ratio ?? data.ratio);
-          if (!isNaN(opIndex) && isFinite(ratio) && opIndex >= 0 && opIndex < 6) { // Basic check
-            console.log(`SynthProcessor: Setting operator ${opIndex} ratio to ${ratio}`);
-            synth.set_operator_ratio(opIndex, ratio);
-          } else {
-            console.warn(`SynthProcessor: Invalid set_operator_ratio data received:`, data);
-          }
+        // Validate inputs slightly before sending to Wasm? (Optional)
+        const opIndex = parseInt(payload?.operator_index ?? data.operator_index);
+        const ratio = parseFloat(payload?.ratio ?? data.ratio);
+        if (!isNaN(opIndex) && isFinite(ratio) && opIndex >= 0 && opIndex < 6) { // Basic check
+          console.log(`SynthProcessor: Setting operator ${opIndex} ratio to ${ratio}`);
+          synth.set_operator_ratio(opIndex, ratio);
         } else {
-          console.warn("SynthProcessor: Received set_operator_ratio but synth not ready.");
+          console.warn(`SynthProcessor: Invalid set_operator_ratio data received:`, data);
         }
       } else if (data.type === "set_operator_waveform") {
-        if (synth && ready) {
-          const opIndex = parseInt(payload?.operator_index ?? data.operator_index);
-          const waveformInt = parseInt(payload?.waveform_value ?? data.waveform_value);
+        const opIndex = parseInt(payload?.operator_index ?? data.operator_index);
+        const waveformInt = parseInt(payload?.waveform_value ?? data.waveform_value);
 
-          if (!isNaN(opIndex) && !isNaN(waveformInt) && opIndex >= 0 && opIndex < 6 && waveformInt >= 0 && waveformInt <= 4) {
-            console.log(`SynthProcessor: Setting operator ${opIndex} waveform to ${waveformInt}`);
-            try {
-              synth.set_operator_waveform(opIndex, waveformInt);
-            } catch (e) {
-              console.error(`SynthProcessor: Error calling synth.set_operator_waveform(${opIndex}, ${waveformInt})`, e);
-            }
-          } else {
-            console.warn(`SynthProcessor: Invalid set_operator_waveform data received:`, data);
+        if (!isNaN(opIndex) && !isNaN(waveformInt) && opIndex >= 0 && opIndex < 6 && waveformInt >= 0 && waveformInt <= 4) {
+          console.log(`SynthProcessor: Setting operator ${opIndex} waveform to ${waveformInt}`);
+          try {
+            synth.set_operator_waveform(opIndex, waveformInt);
+          } catch (e) {
+            console.error(`SynthProcessor: Error calling synth.set_operator_waveform(${opIndex}, ${waveformInt})`, e);
           }
         } else {
-          console.warn("SynthProcessor: Received set_operator_waveform but synth not ready.");
+          console.warn(`SynthProcessor: Invalid set_operator_waveform data received:`, data);
         }
       } else if (data.type === "set_operator_modulation_index") {
-        if (synth && ready) {
-          const opIndex = parseInt(payload?.operator_index ?? data.operator_index);
-          const modIndex = parseFloat(payload?.modulation_index ?? data.modulation_index);
+        const opIndex = parseInt(payload?.operator_index ?? data.operator_index);
+        const modIndex = parseFloat(payload?.modulation_index ?? data.modulation_index);
 
-          // Basic validation
-          if (!isNaN(opIndex) && isFinite(modIndex) && opIndex >= 0 && opIndex < 6) { // Assuming 4 operators
-            console.log(`SynthProcessor: Setting operator ${opIndex} modulation index to ${modIndex}`);
-            try {
-              synth.set_operator_modulation_index(opIndex, modIndex);
-            } catch (e) {
-              console.error(`SynthProcessor: Error calling synth.set_operator_modulation_index(${opIndex}, ${modIndex})`, e);
-            }
-          } else {
-            console.warn(`SynthProcessor: Invalid set_operator_modulation_index data received:`, data);
+        // Basic validation
+        if (!isNaN(opIndex) && isFinite(modIndex) && opIndex >= 0 && opIndex < 6) { // Assuming 4 operators
+          console.log(`SynthProcessor: Setting operator ${opIndex} modulation index to ${modIndex}`);
+          try {
+            synth.set_operator_modulation_index(opIndex, modIndex);
+          } catch (e) {
+            console.error(`SynthProcessor: Error calling synth.set_operator_modulation_index(${opIndex}, ${modIndex})`, e);
           }
         } else {
-          console.warn("SynthProcessor: Received set_operator_modulation_index but synth not ready.");
+          console.warn(`SynthProcessor: Invalid set_operator_modulation_index data received:`, data);
         }
       } else if (data.type === "set_operator_envelope") {
-        if (synth && ready) {
-          const opIndex = parseInt(payload?.operator_index ?? data.operator_index);
-          const a = parseFloat(payload?.attack ?? data.attack);
-          const d = parseFloat(payload?.decay ?? data.decay);
-          const s = parseFloat(payload?.sustain ?? data.sustain);
-          const r = parseFloat(payload?.release ?? data.release);
-          try {
-            synth.set_operator_envelope(opIndex, a, d, s, r);
-          } catch (e) {
-            console.error(`SynthProcessor: Error calling synth.set_operator_envelope`)
-          }
+        const opIndex = parseInt(payload?.operator_index ?? data.operator_index);
+        const a = parseFloat(payload?.attack ?? data.attack);
+        const d = parseFloat(payload?.decay ?? data.decay);
+        const s = parseFloat(payload?.sustain ?? data.sustain);
+        const r = parseFloat(payload?.release ?? data.release);
+        try {
+          synth.set_operator_envelope(opIndex, a, d, s, r);
+        } catch (e) {
+          console.error(`SynthProcessor: Error calling synth.set_operator_envelope`)
         }
       } else if (data.type === "set-algorithm") {
         const combinedMatrix = data.payload; // Payload is the combined matrix
-        if (synth && ready && Array.isArray(combinedMatrix)) {
+        if (Array.isArray(combinedMatrix)) {
           console.log("SynthProcessor: Received set-algorithm combined matrix:", combinedMatrix);
           try {
             // Pass the combined matrix directly to the Wasm function

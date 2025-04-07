@@ -41,6 +41,13 @@ impl EnvelopeGenerator {
             }
         }
     }
+    pub fn finished(&self, time_since_off: Option<f32>) -> bool {
+        if let Some(time_since_off) = time_since_off {
+            time_since_off >= self.release
+        } else {
+            false
+        }
+    }
 }
 impl Default for EnvelopeGenerator {
     fn default() -> Self {

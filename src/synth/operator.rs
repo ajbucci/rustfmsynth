@@ -1,5 +1,5 @@
-use super::envelope::EnvelopeGenerator;
 use super::context::ProcessContext;
+use super::envelope::EnvelopeGenerator;
 use super::filter::{self, FilterType};
 use super::waveform::{Waveform, WaveformGenerator};
 use crate::synth::prelude::TAU;
@@ -74,10 +74,14 @@ impl Operator {
         let sample_rate = context.sample_rate;
         // --- State Initialization ---
         state.current_ratio.get_or_insert(self.frequency_ratio);
-        state.current_modulation_index.get_or_insert(self.modulation_index);
+        state
+            .current_modulation_index
+            .get_or_insert(self.modulation_index);
 
         let mut current_smoothed_ratio = state.current_ratio.unwrap_or(self.frequency_ratio);
-        let mut current_smoothed_modulation_index = state.current_modulation_index.unwrap_or(self.modulation_index); // Get current smoothed mod index
+        let mut current_smoothed_modulation_index = state
+            .current_modulation_index
+            .unwrap_or(self.modulation_index); // Get current smoothed mod index
 
         // Define a default Q factor for filters (e.g., Butterworth)
         // You might want to make this configurable per operator later
@@ -89,8 +93,9 @@ impl Operator {
             current_smoothed_ratio +=
                 (self.frequency_ratio - current_smoothed_ratio) * RATIO_SMOOTHING_FACTOR;
             // --- Smooth Modulation Index ---
-            current_smoothed_modulation_index +=
-                (self.modulation_index - current_smoothed_modulation_index) * MODULATION_INDEX_SMOOTHING_FACTOR;
+            current_smoothed_modulation_index += (self.modulation_index
+                - current_smoothed_modulation_index)
+                * MODULATION_INDEX_SMOOTHING_FACTOR;
 
             // Determine the actual frequency for this operator
             let actual_frequency = match self.fixed_frequency {
@@ -192,6 +197,13 @@ impl Operator {
         } else {
             self.modulation_index = modulation_index;
         }
+    }
+    pub fn finished(&self, context: &ProcessContext) -> bool {
+        let time_since_off = context
+            .note_off_sample_index
+            .map(|off| (context.samples_elapsed_since_trigger - off) as f32 / context.sample_rate);
+
+        self.envelope.finished(time_since_off)
     }
 }
 

@@ -1,6 +1,6 @@
 use super::algorithm::Algorithm;
 use super::context::ProcessContext;
-use super::envelope::EnvelopeGenerator;
+// use super::envelope::EnvelopeGenerator;
 use super::note::{NoteEvent, NoteSource};
 use super::operator::{Operator, OperatorState};
 use super::voice_config::VoiceConfig;
@@ -9,17 +9,17 @@ use super::voice_config::VoiceConfig;
 /// TODO: add VoiceState and NoteState to keep more organized?
 pub struct Voice {
     node_states: Vec<OperatorState>, // State for the operator (e.g., phase, frequency ratio)
-    pub active: bool,                    // Is the voice currently playing a note?
-    pub releasing: bool, // If the voice is playing a note, has it been released yet?
-    pub note_number: u8, // MIDI note number (0-127)
-    pub note_frequency: f32, // Frequency derived from note_number
-    pub note_velocity: u8, // MIDI velocity (0-127)
+    pub active: bool,                // Is the voice currently playing a note?
+    pub releasing: bool,             // If the voice is playing a note, has it been released yet?
+    pub note_number: u8,             // MIDI note number (0-127)
+    pub note_frequency: f32,         // Frequency derived from note_number
+    pub note_velocity: u8,           // MIDI velocity (0-127)
     pub note_source: Option<NoteSource>, // Where the note came from (keyboard, sequencer)
-    velocity_scale: f32, // Relative velocity of the note (0.0-1.0)
-    envelope: EnvelopeGenerator, // Main amplitude envelope for the voice
+    velocity_scale: f32,             // Relative velocity of the note (0.0-1.0)
+    // envelope: EnvelopeGenerator, // Main amplitude envelope for the voice
     samples_elapsed_since_trigger: u64, // Counter for phase calculation
     note_off_sample_index: Option<u64>, // Sample index when the note was released
-    config: VoiceConfig, // Configuration for the voice
+    config: VoiceConfig,                // Configuration for the voice
 }
 
 impl Voice {
@@ -34,7 +34,7 @@ impl Voice {
             note_source: None,
             note_velocity: 0,
             velocity_scale: 0.0,
-            envelope: EnvelopeGenerator::new(),
+            // envelope: EnvelopeGenerator::new(),
             samples_elapsed_since_trigger: 0,
             note_off_sample_index: None,
             config: VoiceConfig::default(),
@@ -67,9 +67,9 @@ impl Voice {
         self.velocity_scale = config.velocity_to_scale(self.note_velocity);
         self.config = config.clone();
 
-        self.envelope
-            .set_params(config.attack, config.decay, config.sustain, config.release);
-
+        // self.envelope
+        //     .set_params(config.attack, config.decay, config.sustain, config.release);
+        //
         println!(
             "Voice activated note {}, sample counter reset",
             self.note_number
@@ -93,7 +93,8 @@ impl Voice {
         // Or, you could try to intelligently preserve state if nodes match,
         // but that adds significant complexity. Resetting is simpler.
         self.node_states.clear(); // Clear existing state
-        self.node_states.resize_with(new_len, OperatorState::default); // Resize and fill with defaults
+        self.node_states
+            .resize_with(new_len, OperatorState::default); // Resize and fill with defaults
     }
     /// Processes a buffer of audio for this voice using the provided algorithm and operators.
     /// `algorithm`: The FM algorithm defining operator connections.
@@ -107,12 +108,6 @@ impl Voice {
         output: &mut [f32],
         sample_rate: f32,
     ) {
-        // If the voice is fully finished (inactive AND envelope done), skip processing.
-        if self.is_finished(sample_rate) {
-            self.reset();
-            return;
-        }
-
         let context = ProcessContext {
             sample_rate,
             base_frequency: self.note_frequency,
@@ -122,37 +117,36 @@ impl Voice {
             velocity_scale: self.velocity_scale,
         };
 
+        // If the voice is fully finished (inactive AND envelope done), skip processing.
+        if self.is_finished(algorithm, &context) {
+            self.reset();
+            return;
+        }
         algorithm.process(&context, &mut self.node_states, output);
 
         let buffer_len = output.len();
         for i in 0..buffer_len {
-            let samples_at_this_point = self.samples_elapsed_since_trigger + i as u64;
-            let time_on = samples_at_this_point as f32 / sample_rate;
-            let time_off = self
-                .note_off_sample_index
-                .map(|off| samples_at_this_point.saturating_sub(off) as f32 / sample_rate);
+            // let samples_at_this_point = self.samples_elapsed_since_trigger + i as u64;
+            // let time_on = samples_at_this_point as f32 / sample_rate;
+            // let time_off = self
+            //     .note_off_sample_index
+            //     .map(|off| samples_at_this_point.saturating_sub(off) as f32 / sample_rate);
 
-            let env_value = self.envelope.evaluate(time_on, time_off);
-            output[i] *= env_value * self.velocity_scale;
+            // let env_value = self.envelope.evaluate(time_on, time_off);
+            // output[i] *= env_value * self.velocity_scale;
+            output[i] *= self.velocity_scale;
         }
 
         self.samples_elapsed_since_trigger += buffer_len as u64;
 
-        if self.releasing && self.is_finished(sample_rate) {
+        if self.releasing && self.is_finished(algorithm, &context) {
             println!("Voice fully inactive (note {} released)", self.note_number);
             self.reset();
         }
     }
 
     /// Checks if the voice is completely finished (inactive and envelope has finished).
-    pub fn is_finished(&self, sample_rate: f32) -> bool {
-        if let Some(note_off_sample_index) = self.note_off_sample_index {
-            let time_since_on = self.samples_elapsed_since_trigger as f32 / sample_rate;
-            let time_since_off =
-                (self.samples_elapsed_since_trigger - note_off_sample_index) as f32 / sample_rate;
-            self.envelope.evaluate(time_since_on, Some(time_since_off)) == 0.0
-        } else {
-            false
-        }
+    pub fn is_finished(&self, algorithm: &Algorithm, context: &ProcessContext) -> bool {
+        algorithm.finished(context)
     }
 }

@@ -1,7 +1,7 @@
 use super::context::ProcessContext;
 use super::envelope::EnvelopeGenerator;
 use super::operator::OperatorState;
-use crate::synth::prelude::{HashMap,HashSet};
+use crate::synth::prelude::{HashMap, HashSet};
 
 // --- Internal Node ---
 
@@ -77,6 +77,11 @@ impl Algorithm {
             count,
         });
         self.rebuild_unrolled_graph();
+    }
+    pub fn finished(&self, context: &ProcessContext) -> bool {
+        self.carriers
+            .iter()
+            .all(|&carrier| context.operators[carrier].finished(context))
     }
     /// Sets the algorithm structure based on a combined matrix from the UI,
     /// defining connections/carriers for the first `ui_op_count` operators
@@ -492,7 +497,7 @@ impl Algorithm {
                         // Hitting the depth limit immediately for a carrier.
                         // This could happen if MAX_CYCLE_DEPTH <= 1 and the carrier feeds itself.
                         // Log a warning but don't treat as error - might result in empty path for this carrier.
-                         eprintln!(
+                        eprintln!(
                             "Warning: Build for carrier {} stopped immediately due to cycle depth limit. No nodes generated for this root.",
                              op_idx
                         );
@@ -702,20 +707,21 @@ impl Algorithm {
 
 #[cfg(test)]
 mod tests {
-    use super::*; 
+    use super::*;
 
     #[test]
     fn test_simple_self_feedback() {
         println!("\n--- Running test_simple_self_feedback (in-module) ---");
         let num_ops = 1;
-        let mut algorithm = Algorithm::default_simple(num_ops).expect("Failed to create simple algorithm");
+        let mut algorithm =
+            Algorithm::default_simple(num_ops).expect("Failed to create simple algorithm");
 
         println!("Initial Structure (1 op, no connections):");
         algorithm.print_structure();
 
         let ui_matrix: Vec<Vec<u32>> = vec![
             // Mod Targets-> 0   OUT
-            /* From Op 0 */ vec![1,  1],
+            /* From Op 0 */ vec![1, 1],
         ];
 
         println!("\nCalling set_matrix with self-feedback [1, 1]...");
@@ -731,25 +737,45 @@ mod tests {
         algorithm.print_structure();
 
         let unrolled_nodes = &algorithm.unrolled_nodes; // Direct access ok!
-        assert_eq!(unrolled_nodes.len(), 2, "Expected 2 unrolled nodes for A->A feedback (depth limit 2)");
+        assert_eq!(
+            unrolled_nodes.len(),
+            2,
+            "Expected 2 unrolled nodes for A->A feedback (depth limit 2)"
+        );
 
         if unrolled_nodes.len() == 2 {
             // Check Node 0
-            assert_eq!(unrolled_nodes[0].original_op_index, 0, "Node 0 should be Operator 0");
-            assert_eq!(unrolled_nodes[0].input_node_indices, vec![1], "Node 0 should have Node 1 as input");
+            assert_eq!(
+                unrolled_nodes[0].original_op_index, 0,
+                "Node 0 should be Operator 0"
+            );
+            assert_eq!(
+                unrolled_nodes[0].input_node_indices,
+                vec![1],
+                "Node 0 should have Node 1 as input"
+            );
 
             // Check Node 1
-            assert_eq!(unrolled_nodes[1].original_op_index, 0, "Node 1 should be Operator 0");
-            assert!(unrolled_nodes[1].input_node_indices.is_empty(), "Node 1 should have no inputs (end of feedback unroll)");
+            assert_eq!(
+                unrolled_nodes[1].original_op_index, 0,
+                "Node 1 should be Operator 0"
+            );
+            assert!(
+                unrolled_nodes[1].input_node_indices.is_empty(),
+                "Node 1 should have no inputs (end of feedback unroll)"
+            );
         } else {
-             // If the length check failed, provide more info if possible
-             panic!("Node count assertion failed, cannot check node details.");
+            // If the length check failed, provide more info if possible
+            panic!("Node count assertion failed, cannot check node details.");
         }
 
         assert_eq!(algorithm.carriers, vec![0], "Carrier should still be Op 0"); // Direct access ok!
-        assert!(algorithm.repeat_rules.is_empty(), "set_matrix should clear repeat rules"); // Direct access ok!
+        assert!(
+            algorithm.repeat_rules.is_empty(),
+            "set_matrix should clear repeat rules"
+        ); // Direct access ok!
 
         println!("--- Test Finished: test_simple_self_feedback (in-module) ---");
     }
-
 }
+
