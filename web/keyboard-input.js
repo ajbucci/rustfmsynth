@@ -1,25 +1,38 @@
 import { pressKey, releaseKey, keyboardLayout } from './keyboard-ui.js'; // Import UI functions
-import { ensureSynthStarted } from './app.js'; // Import synth starter
+import { resumeAudioContext } from './app.js'; // Import synth starter
 
 // Keep track of currently pressed keys to prevent repeats from OS auto-repeat
 const pressedKeys = new Set();
 
 let processorPort = null; // Will be set by setupKeyboardInput
-
-// Helper function to ensure synth is ready and send a message - Exported
+/**
+ * Allows the app to assign the processor port when it's ready.
+ * @param {MessagePort} port
+ */
+export function setKeyboardProcessorPort(port) {
+  if (!port) {
+    console.error("setKeyboardProcessorPort called without a valid port.");
+    return;
+  }
+  processorPort = port;
+  console.log("Processor port assigned to keyboard-input.");
+}
+/**
+ * Attempt to send a message via the processor port after resuming context.
+ */
 export async function tryEnsureSynthAndSendMessage(eventCode, message) {
   try {
-    await ensureSynthStarted();
+    resumeAudioContext();
     if (!processorPort) {
-      console.error(`tryEnsureSynthAndSendMessage (${eventCode}): processorPort not available after ensureSynthStarted.`);
-      return false; // Indicate failure
+      console.warn(`tryEnsureSynthAndSendMessage (${eventCode}): processorPort is not yet assigned.`);
+      return false;
     }
     processorPort.postMessage(message);
-    console.log(`Sent message for ${eventCode}:`, message); // Log message on success
-    return true; // Indicate success
+    console.log(`Sent message for ${eventCode}:`, message);
+    return true;
   } catch (error) {
-    console.error(`Error during ensureSynthStarted or postMessage for ${eventCode}:`, error);
-    return false; // Indicate failure
+    console.error(`Error sending message for ${eventCode}:`, error);
+    return false;
   }
 }
 
@@ -30,7 +43,6 @@ export async function handleKeyDown(event) {
   }
 
   const eventCode = event.code;
-
   const note = keyboardLayout[eventCode].note;
 
   if (note !== undefined) {
@@ -77,19 +89,6 @@ export async function handleKeyUp(event) {
     }
     return; // Don't process as control key if it was a note key
   }
-}
-
-/**
- * Sets up the keyboard event listeners and stores the processor port.
- * @param {MessagePort} port - The MessagePort of the AudioWorkletNode.
- */
-export function setupKeyboardInput(port) {
-  if (!port) {
-    console.error("Keyboard Input: Processor port is required for setup.");
-    return;
-  }
-  processorPort = port;
-  console.log("Keyboard input port stored.");
 }
 
 /**

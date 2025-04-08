@@ -1,4 +1,4 @@
-import { ensureSynthStarted, resumeAudioContext } from './app.js'; // Import synth starter and resumeAudioContext
+import { resumeAudioContext } from './app.js'; // Import synth starter and resumeAudioContext
 // Import the shared helper function
 import { tryEnsureSynthAndSendMessage } from './keyboard-input.js';
 
