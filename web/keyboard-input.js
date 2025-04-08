@@ -1,28 +1,5 @@
-import { pressKey, releaseKey } from './keyboard-ui.js'; // Import UI functions
+import { pressKey, releaseKey, keyboardLayout } from './keyboard-ui.js'; // Import UI functions
 import { ensureSynthStarted } from './app.js'; // Import synth starter
-
-// Map JavaScript event.code to MIDI note numbers (similar to Rust key_to_note)
-const keyToNoteMap = new Map([
-  // Bottom row - natural notes (A3 to C5)
-  ['KeyA', 57], // A3
-  ['KeyS', 59], // B3
-  ['KeyD', 60], // C4
-  ['KeyF', 62], // D4
-  ['KeyG', 64], // E4
-  ['KeyH', 65], // F4
-  ['KeyJ', 67], // G4
-  ['KeyK', 69], // A4
-  ['KeyL', 71], // B4
-  ['Semicolon', 72], // C5
-  // Top row - sharp/flat notes (A#3/Bb3 to C#5/Db5)
-  ['KeyW', 58], // A#3/Bb3
-  ['KeyR', 61], // C#4/Db4
-  ['KeyT', 63], // D#4/Eb4
-  ['KeyU', 66], // F#4/Gb4
-  ['KeyI', 68], // G#4/Ab4
-  ['KeyO', 70], // A#4/Bb4
-  ['BracketLeft', 73], // C#5/Db5 - Note: Rust uses LeftBracket, JS maps this too
-]);
 
 // Keep track of currently pressed keys to prevent repeats from OS auto-repeat
 const pressedKeys = new Set();
@@ -30,7 +7,7 @@ const pressedKeys = new Set();
 let processorPort = null; // Will be set by setupKeyboardInput
 
 // Helper function to ensure synth is ready and send a message - Exported
-export async function tryEnsureSynthAndSendMessage(eventCode, message) { 
+export async function tryEnsureSynthAndSendMessage(eventCode, message) {
   try {
     await ensureSynthStarted();
     if (!processorPort) {
@@ -54,20 +31,21 @@ export async function handleKeyDown(event) {
 
   const eventCode = event.code;
 
-  const note = keyToNoteMap.get(eventCode);
+  const note = keyboardLayout[eventCode].note;
+
   if (note !== undefined) {
     event.preventDefault(); // Prevent default immediately for mapped note keys
     if (!pressedKeys.has(eventCode)) {
-        pressedKeys.add(eventCode);
-        pressKey(eventCode); // Apply visual feedback immediately
-        const message = { type: 'note_on', note: note, velocity: 100 };
-        const success = await tryEnsureSynthAndSendMessage(eventCode, message);
-        if (!success) {
-          // If sending failed, revert state
-          pressedKeys.delete(eventCode);
-          releaseKey(eventCode);
-          console.warn(`Failed to send note_on for ${eventCode}`);
-        }
+      pressedKeys.add(eventCode);
+      pressKey(eventCode); // Apply visual feedback immediately
+      const message = { type: 'note_on', note: note, velocity: 100 };
+      const success = await tryEnsureSynthAndSendMessage(eventCode, message);
+      if (!success) {
+        // If sending failed, revert state
+        pressedKeys.delete(eventCode);
+        releaseKey(eventCode);
+        console.warn(`Failed to send note_on for ${eventCode}`);
+      }
     }
     return; // Don't process as control key if it was a note key
   }
@@ -77,26 +55,25 @@ export async function handleKeyDown(event) {
 export async function handleKeyUp(event) {
   const eventCode = event.code;
 
-  // Handle Note Keys Release
-  const note = keyToNoteMap.get(eventCode);
+  const note = keyboardLayout[eventCode].note;
   if (note !== undefined) {
     event.preventDefault(); // Prevent default immediately for mapped note keys
     // Check if we were tracking this key as pressed
     if (pressedKeys.has(eventCode)) {
-        // Prepare the message first
-        const message = { type: 'note_off', note: note };
-        
-        // Attempt to ensure synth is ready and send the message
-        const success = await tryEnsureSynthAndSendMessage(eventCode, message);
+      // Prepare the message first
+      const message = { type: 'note_off', note: note };
 
-        // --- Update state and UI AFTER the async operation ---
-        pressedKeys.delete(eventCode); // Remove from tracking regardless of success
-        releaseKey(eventCode);      // Update UI regardless of success
+      // Attempt to ensure synth is ready and send the message
+      const success = await tryEnsureSynthAndSendMessage(eventCode, message);
 
-        if (!success) {
-            // Log error if ensureSynthStarted fails or sending fails
-            console.warn(`handleKeyUp ${eventCode}: Failed attempt to send note_off.`);
-        }
+      // --- Update state and UI AFTER the async operation ---
+      pressedKeys.delete(eventCode); // Remove from tracking regardless of success
+      releaseKey(eventCode);      // Update UI regardless of success
+
+      if (!success) {
+        // Log error if ensureSynthStarted fails or sending fails
+        console.warn(`handleKeyUp ${eventCode}: Failed attempt to send note_off.`);
+      }
     }
     return; // Don't process as control key if it was a note key
   }
@@ -119,7 +96,7 @@ export function setupKeyboardInput(port) {
  * Removes the keyboard event listeners.
  */
 export function removeKeyboardInput() {
-    processorPort = null; // Clear the port
-    pressedKeys.clear(); // Clear pressed keys state
-    console.log("Keyboard input port cleared and state reset.");
+  processorPort = null; // Clear the port
+  pressedKeys.clear(); // Clear pressed keys state
+  console.log("Keyboard input port cleared and state reset.");
 }

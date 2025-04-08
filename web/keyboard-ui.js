@@ -1,38 +1,56 @@
 import { ensureSynthStarted, resumeAudioContext } from './app.js'; // Import synth starter and resumeAudioContext
 // Import the shared helper function
-import { tryEnsureSynthAndSendMessage } from './keyboard-input.js'; 
+import { tryEnsureSynthAndSendMessage } from './keyboard-input.js';
 
 // Define the keyboard layout, notes, and key codes
 // Matches the mapping in keyboard-input.js
-const keyboardLayout = [
-  { code: 'KeyA', note: 57, noteName: 'A3', type: 'white' },
-  { code: 'KeyW', note: 58, noteName: 'A#3', type: 'black' },
-  { code: 'KeyS', note: 59, noteName: 'B3', type: 'white' },
-  { code: 'KeyD', note: 60, noteName: 'C4', type: 'white' },
-  { code: 'KeyR', note: 61, noteName: 'C#4', type: 'black' },
-  { code: 'KeyF', note: 62, noteName: 'D4', type: 'white' },
-  { code: 'KeyT', note: 63, noteName: 'D#4', type: 'black' },
-  { code: 'KeyG', note: 64, noteName: 'E4', type: 'white' },
-  { code: 'KeyH', note: 65, noteName: 'F4', type: 'white' },
-  { code: 'KeyU', note: 66, noteName: 'F#4', type: 'black' },
-  { code: 'KeyJ', note: 67, noteName: 'G4', type: 'white' },
-  { code: 'KeyI', note: 68, noteName: 'G#4', type: 'black' },
-  { code: 'KeyK', note: 69, noteName: 'A4', type: 'white' },
-  { code: 'KeyO', note: 70, noteName: 'A#4', type: 'black' },
-  { code: 'KeyL', note: 71, noteName: 'B4', type: 'white' },
-  { code: 'Semicolon', note: 72, noteName: 'C5', type: 'white' },
-  { code: 'BracketLeft', note: 73, noteName: 'C#5', type: 'black' },
-];
+function getNoteNameFromNote(noteNumber) {
+  if (noteNumber < 0 || noteNumber > 127) {
+    return ""
+  }
+  const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  return noteNames[noteNumber % 12] + (Math.floor(noteNumber / 12) - 1);
+}
+function getKeyboardLayout(noteNumberStart = 48) {
 
+  const keysSharps = ['KeyQ', 'KeyW', 'KeyE', 'KeyR', 'KeyT', 'KeyY', 'KeyU', 'KeyI', 'KeyO', 'KeyP', 'BracketLeft'];
+  const keysNatural = ['KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG', 'KeyH', 'KeyJ', 'KeyK', 'KeyL', 'Semicolon'];
+
+  let keyboardLayout = {};
+
+  let sharpIndex = 0;
+  let naturalIndex = 0;
+
+  while (
+    (!getNoteNameFromNote(noteNumberStart).includes("#") && naturalIndex < keysNatural.length) ||
+    (getNoteNameFromNote(noteNumberStart).includes("#") && sharpIndex < keysSharps.length)
+  ) {
+    const noteName = getNoteNameFromNote(noteNumberStart);
+    if (noteName.includes("#")) {
+      const keyCode = keysSharps[sharpIndex++];
+      const entry = { note: noteNumberStart, noteName, type: "black" };
+      keyboardLayout[keyCode] = entry;
+    } else {
+      const keyCode = keysNatural[naturalIndex++];
+      const entry = { note: noteNumberStart, noteName, type: "white" };
+      keyboardLayout[keyCode] = entry;
+      sharpIndex = naturalIndex;
+    }
+    noteNumberStart++;
+  }
+  return keyboardLayout;
+}
+
+export let keyboardLayout = getKeyboardLayout(); // Default layout
 const keyboardContainer = document.getElementById('keyboard-container');
 let processorPort = null; // Set by connectKeyboardUIPort
+let noteNumberStart = 48;
 const activeMouseKeys = new Set(); // Track keys pressed by mouse
-
 // Function to generate keyboard HTML - Export this
 export function generateKeyboard() {
   if (!keyboardContainer) {
-      console.error("Keyboard UI: Container element not found.");
-      return;
+    console.error("Keyboard UI: Container element not found.");
+    return;
   }
   keyboardContainer.innerHTML = ''; // Clear previous content
 
@@ -43,48 +61,78 @@ export function generateKeyboard() {
   let whiteKeyIndex = 0; // Track only the index of white keys
 
   // Piano Keys
-  keyboardLayout.forEach((keyData) => {
-    const keyElement = document.createElement('div');
-    keyElement.classList.add('key', keyData.type);
-    keyElement.dataset.code = keyData.code;
-    keyElement.dataset.note = keyData.note;
+  // clamp noteNumberStart to 0-127
+  noteNumberStart = Math.max(0, Math.min(127, noteNumberStart));
+  keyboardLayout = getKeyboardLayout(noteNumberStart);
+  // Must start on sharp if able:
+  // check if Q is in mapping, if it isn't check if (KeyA.note - 1) is sharp
+  // if it is, decrement noteNumberStart and call generateKeyboard again
+  if (keyboardLayout['KeyQ'] === undefined && getNoteNameFromNote(keyboardLayout['KeyA'].note - 1).includes("#")) {
+    noteNumberStart--;
+    noteNumberStart = Math.max(0, Math.min(127, noteNumberStart));
+    keyboardLayout = getKeyboardLayout(noteNumberStart);
+  }
 
-    // Add labels
-    const labelElement = document.createElement('div');
-    labelElement.classList.add('key-label');
-    labelElement.innerHTML = `<span class="note-name">${keyData.noteName}</span><span class="key-code">${keyData.code.replace('Key', '').replace('Digit', '')}</span>`;
-    keyElement.appendChild(labelElement);
-
-    // Positioning
-    if (keyData.type === 'white') {
-      // White keys are positioned by flexbox, track their index
-      keyboardContainer.appendChild(keyElement);
-      whiteKeyIndex++;
-    } else { // Black key
-      // Calculate left position directly based on the preceding white key's position
-      // Start position = (start of preceding white key) + (width of white key - overlap)
-      // Note: whiteKeyIndex is 1-based relative to the start here.
-      const precedingWhiteKeyStart = (whiteKeyIndex - 1) * whiteKeyWidth;
-      const leftPosition = precedingWhiteKeyStart + (whiteKeyWidth - blackKeyWidth / 2);
-      keyElement.style.left = `${leftPosition}px`;
-      keyboardContainer.appendChild(keyElement);
-      // DO NOT increment whiteKeyIndex here
-    }
-
-    // Mouse interaction listeners
-    keyElement.addEventListener('mousedown', handleMouseDown);
-    keyElement.addEventListener('mouseup', handleMouseUp);
-    keyElement.addEventListener('mouseleave', handleMouseLeave);
-
-    // Touch interaction listeners
-    keyElement.addEventListener('touchstart', handleMouseDown);
-    keyElement.addEventListener('touchend', handleMouseUp);
-    keyElement.addEventListener('touchcancel', handleMouseUp);
-    keyElement.addEventListener('touchleave', handleMouseUp);
+  const shiftKeysWidth = whiteKeyWidth;
+  const shiftKeysLeft = document.createElement('button');
+  shiftKeysLeft.classList.add('shift-keys');
+  shiftKeysLeft.innerText = '←';
+  shiftKeysLeft.addEventListener('click', () => {
+    noteNumberStart--;
+    generateKeyboard();
+  });
+  const shiftKeysRight = document.createElement('button');
+  shiftKeysRight.classList.add('shift-keys');
+  shiftKeysRight.innerText = '→';
+  shiftKeysRight.addEventListener('click', () => {
+    // when traveling up the keyboard increment by 2 to counteract the 'must start on sharp' rule
+    noteNumberStart = noteNumberStart + 2;
+    generateKeyboard();
   });
 
-  // REMOVED: Control Keys (Waveform Cycle) loop
-  // controlKeyLayout.forEach(keyData => { ... });
+  keyboardContainer.appendChild(shiftKeysLeft);
+  Object.entries(keyboardLayout)
+    .sort((a, b) => a[1].note - b[1].note)  // Sort by note number
+    .forEach(([keyCode, keyData]) => {
+      const keyElement = document.createElement('div');
+      keyElement.classList.add('key', keyData.type);
+      keyElement.dataset.code = keyCode;
+      keyElement.dataset.note = keyData.note;
+
+      // Add labels
+      const labelElement = document.createElement('div');
+      labelElement.classList.add('key-label');
+      labelElement.innerHTML = `<span class="note-name">${keyData.noteName}</span><span class="key-code">${keyCode.replace('Key', '').replace('Digit', '')}</span>`;
+      keyElement.appendChild(labelElement);
+
+      // Positioning
+      if (keyData.type === 'white') {
+        // White keys are positioned by flexbox, track their index
+        keyboardContainer.appendChild(keyElement);
+        whiteKeyIndex++;
+      } else { // Black key
+        // Calculate left position directly based on the preceding white key's position
+        // Start position = (start of preceding white key) + (width of white key - overlap)
+        // Note: whiteKeyIndex is 1-based relative to the start here.
+        const precedingWhiteKeyStart = (whiteKeyIndex - 1) * whiteKeyWidth + shiftKeysWidth;
+        const leftPosition = precedingWhiteKeyStart + (whiteKeyWidth - blackKeyWidth / 2);
+        keyElement.style.left = `${leftPosition}px`;
+        keyboardContainer.appendChild(keyElement);
+        // DO NOT increment whiteKeyIndex here
+      }
+
+      // Mouse interaction listeners
+      keyElement.addEventListener('mousedown', handleMouseDown);
+      keyElement.addEventListener('mouseup', handleMouseUp);
+      keyElement.addEventListener('mouseleave', handleMouseLeave);
+
+      // Touch interaction listeners
+      keyElement.addEventListener('touchstart', handleMouseDown);
+      keyElement.addEventListener('touchend', handleMouseUp);
+      keyElement.addEventListener('touchcancel', handleMouseUp);
+      keyElement.addEventListener('touchleave', handleMouseUp);
+    });
+  keyboardContainer.appendChild(shiftKeysRight);
 
   console.log("Keyboard UI generated.");
 }
@@ -121,12 +169,12 @@ function handleMouseUp(event) {
   if (!isNaN(note) && activeMouseKeys.has(code)) {
     activeMouseKeys.delete(code);
     if (processorPort) { // Only send if port exists
-        processorPort.postMessage({ type: 'note_off', note: note });
+      processorPort.postMessage({ type: 'note_off', note: note });
     }
-    
+
     // Handle visual state removal
     if (!keyElement.classList.contains('physical-press')) {
-      keyElement.classList.remove('active'); 
+      keyElement.classList.remove('active');
     }
   }
 }
@@ -135,9 +183,9 @@ function handleMouseUp(event) {
 function handleMouseLeave(event) {
   const keyElement = event.currentTarget;
   const code = keyElement.dataset.code;
-  
+
   if (activeMouseKeys.has(code)) {
-      handleMouseUp(event);
+    handleMouseUp(event);
   }
 }
 
