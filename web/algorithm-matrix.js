@@ -3,10 +3,19 @@
  * @param {number} numOperators - The number of operators.
  * @param {HTMLElement} container - The container element to populate.
  */
-export function createAlgorithmMatrixUI(numOperators, container) {
+
+import { resumeAudioContext } from './app.js'; // Import synth starter
+import { tryEnsureSynthAndSendMessage } from './keyboard-input.js'; // Import message sending function
+
+export function createAlgorithmMatrixUI(numOperators, container, onStateChangeCallback) {
   if (!container) {
     console.error("Algorithm Matrix: Container element not provided.");
     return;
+  }
+  // Ensure callback is a function
+  if (typeof onStateChangeCallback !== 'function') {
+    console.warn("Algorithm Matrix: No valid onStateChangeCallback provided.");
+    onStateChangeCallback = () => { }; // Default no-op
   }
 
   let tableHtml = `
@@ -56,7 +65,28 @@ export function createAlgorithmMatrixUI(numOperators, container) {
 
   container.innerHTML = tableHtml;
   console.log(`Algorithm Matrix UI created for ${numOperators} operators including OUT column.`);
+
+  setupMatrixEventListeners(container, onStateChangeCallback); // Set up event listeners for the matrix
 }
+
+const sendMatrixUpdate = async (matrix, onStateChangeCallback) => {
+  resumeAudioContext(); // Ensure context is running
+
+  const message = {
+    type: 'set-algorithm',
+    matrix: matrix,
+  };
+  const messageId = `set-matrix`;
+  const success = await tryEnsureSynthAndSendMessage(messageId, message);
+  if (success) {
+    console.log(`Sent matrix update`);
+    onStateChangeCallback(); // Call callback on success
+  } else {
+    console.warn(`Matrix Controls: Failed to send set-algorithm for connection matrix`);
+  }
+  // Return success status (optional, but can be useful)
+  return success;
+};
 
 /**
  * Reads the current state of the matrix UI and returns the combined algorithm configuration
@@ -109,14 +139,8 @@ export function getAlgorithmFromMatrix(container) {
 /**
  * Sets up event listeners for the matrix UI (including OUT column clicks).
  * @param {HTMLElement} container - The container element holding the matrix UI.
- * @param {function(object): void} onUpdateCallback - Callback function receiving the combined matrix.
  */
-export function setupMatrixEventListeners(container, onUpdateCallback) {
-  if (!container || typeof onUpdateCallback !== 'function') {
-    console.error("Algorithm Matrix: Invalid arguments for setupMatrixEventListeners.");
-    return;
-  }
-
+function setupMatrixEventListeners(container, onStateChangeCallback) {
   const hoverInfoBox = container.querySelector('#matrix-hover-info');
   const defaultHoverText = "Hover over a cell...";
 
@@ -125,17 +149,13 @@ export function setupMatrixEventListeners(container, onUpdateCallback) {
     const target = event.target.closest('td'); // Get the TD element clicked
     if (!target || !(target.dataset.modulator || target.dataset.outputOp)) return;
 
-    let needsUpdate = false;
     target.classList.toggle('active');
-    needsUpdate = true;
 
-    if (needsUpdate) {
-      const currentCombinedMatrix = getAlgorithmFromMatrix(container);
-      if (currentCombinedMatrix) {
-        onUpdateCallback(currentCombinedMatrix); // Send the combined matrix only if valid
-      } else {
-        console.warn("Matrix click occurred, but getAlgorithmFromMatrix returned nullish value. Update not sent.");
-      }
+    const currentCombinedMatrix = getAlgorithmFromMatrix(container);
+    if (currentCombinedMatrix) {
+      sendMatrixUpdate(currentCombinedMatrix, onStateChangeCallback); // Send the combined matrix only if valid
+    } else {
+      console.warn("Matrix click occurred, but getAlgorithmFromMatrix returned nullish value. Update not sent.");
     }
   });
 

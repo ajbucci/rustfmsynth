@@ -292,7 +292,7 @@ function createOperatorControl(index, container, onStateChangeCallback) {
   controlWrapper.appendChild(adsrWrapper); // Add ADSR section to the main wrapper
 
   // --- Function to Send Update ---
-  const sendUpdate = async (opIndex, ratioValue) => {
+  const sendRatioUpdate = async (opIndex, ratioValue) => {
     resumeAudioContext(); // Ensure context is running
 
     const message = {
@@ -404,7 +404,7 @@ function createOperatorControl(index, container, onStateChangeCallback) {
     numberInput.value = ratio.toFixed(2);
 
     // Send the update to the synth processor (don't await, let it run)
-    sendUpdate(operatorIndex, ratio);
+    sendRatioUpdate(operatorIndex, ratio);
   });
 
   // --- Event Listener for Number Input ('change' fires on blur/enter) ---
@@ -429,7 +429,7 @@ function createOperatorControl(index, container, onStateChangeCallback) {
     delete dial.dataset.previousValue;
 
     // Send the update to the synth processor (don't await)
-    sendUpdate(operatorIndex, ratio);
+    sendRatioUpdate(operatorIndex, ratio);
   });
 
   // --- Event Listener for Modulation Index Slider ---

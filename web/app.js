@@ -6,7 +6,6 @@ import { initializeOperatorControls, getOperatorStates, applyOperatorStatesUI, N
 import {
   createAlgorithmMatrixUI,
   getAlgorithmFromMatrix,
-  setupMatrixEventListeners,
   displayAlgorithm,
   resetAlgorithmMatrixUI
 } from './algorithm-matrix.js';
@@ -77,7 +76,7 @@ function createBaseUI() {
 
     // Generate static UI parts
     generateKeyboard(); // Assumes this finds its container or appends globally
-    createAlgorithmMatrixUI(NUM_OPERATORS, matrixContainer);
+    createAlgorithmMatrixUI(NUM_OPERATORS, matrixContainer, handleUIChange);
 
     // Initialize Operator Controls (creates dynamic elements inside the container)
     // Pass the update callback *now*
@@ -225,7 +224,7 @@ function sendStateToSynth(state) {
     // Send Algorithm Matrix update
     processorNode.port.postMessage({
       type: 'set-algorithm',
-      payload: state.matrix
+      matrix: state.matrix
     });
 
     // Send Operator States updates
@@ -260,21 +259,21 @@ async function handleUIChange() {
   // rather than figuring out exactly what changed.
   // If performance becomes an issue, optimize later.
   console.log("UI Change detected, updating synth and URL.");
-  resumeAudioContext(); // Good practice before sending messages
-
-  if (!processorNode || !processorNode.port) {
-    console.warn("Processor node not ready, cannot send UI changes yet.");
-    return;
-  }
-
+  // resumeAudioContext(); // Good practice before sending messages
+  //
+  // if (!processorNode || !processorNode.port) {
+  //   console.warn("Processor node not ready, cannot send UI changes yet.");
+  //   return;
+  // }
+  //
   const currentState = {
     matrix: getAlgorithmFromMatrix(matrixContainer),
     operators: getOperatorStates()
   };
-
+  //
   if (currentState.matrix && currentState.operators) {
     // Send the complete current state to the synth
-    sendStateToSynth(currentState);
+    // sendStateToSynth(currentState);
     // Update the URL fragment
     await updateUrlFragment();
   } else {
@@ -528,15 +527,6 @@ async function initializeApp() {
     // Display error to user
     // Optionally disable UI controls here
     return; // Stop further setup if synth fails critically
-  }
-
-
-  // 4. Setup Event Listeners for UI interaction (after base UI and synth init started)
-
-  // Matrix listeners - use the handleUIChange callback directly
-  if (matrixContainer) {
-    // The callback now handles synth update + URL update
-    setupMatrixEventListeners(matrixContainer, handleUIChange);
   }
 
   // Global Keyboard listeners

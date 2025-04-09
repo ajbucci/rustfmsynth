@@ -34,6 +34,7 @@ class SynthProcessor extends AudioWorkletProcessor {
           console.error("SynthProcessor: Error initializing Wasm or creating WasmSynth instance:", e);
           ready = false;
         }
+        return
       }
 
       if (!synth || !ready) {
@@ -94,7 +95,7 @@ class SynthProcessor extends AudioWorkletProcessor {
           console.error(`SynthProcessor: Error calling synth.set_operator_envelope`)
         }
       } else if (data.type === "set-algorithm") {
-        const combinedMatrix = data.payload; // Payload is the combined matrix
+        const combinedMatrix = data.matrix; // Payload is the combined matrix
         if (Array.isArray(combinedMatrix)) {
           console.log("SynthProcessor: Received set-algorithm combined matrix:", combinedMatrix);
           try {

@@ -43,6 +43,10 @@ export async function handleKeyDown(event) {
   }
 
   const eventCode = event.code;
+
+  if (!(eventCode in keyboardLayout)) {
+    return; // Ignore if not in keyboard layout
+  }
   const note = keyboardLayout[eventCode].note;
 
   if (note !== undefined) {
@@ -67,6 +71,9 @@ export async function handleKeyDown(event) {
 export async function handleKeyUp(event) {
   const eventCode = event.code;
 
+  if (!(eventCode in keyboardLayout)) {
+    return; // Ignore if not in keyboard layout
+  }
   const note = keyboardLayout[eventCode].note;
   if (note !== undefined) {
     event.preventDefault(); // Prevent default immediately for mapped note keys

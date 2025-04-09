@@ -127,7 +127,7 @@ export function generateKeyboard() {
       keyElement.addEventListener('mouseleave', handleMouseLeave);
 
       // Touch interaction listeners
-      keyElement.addEventListener('touchstart', handleMouseDown);
+      keyElement.addEventListener('touchstart', handleMouseDown, { passive: true });
       keyElement.addEventListener('touchend', handleMouseUp);
       keyElement.addEventListener('touchcancel', handleMouseUp);
       keyElement.addEventListener('touchleave', handleMouseUp);
