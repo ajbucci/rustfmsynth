@@ -7,6 +7,24 @@ pub enum FilterType {
     BandPass(f32, f32), // center frequency, bandwidth
 }
 
+#[derive(Clone, Debug)]
+pub struct IirContext {
+    x1: f32, // Previous input sample x[n-1]
+    x2: f32, // Input sample before previous x[n-2]
+    y1: f32, // Previous output sample y[n-1]
+    y2: f32, // Output sample before previous y[n-2]
+}
+impl Default for IirContext {
+    fn default() -> Self {
+        Self {
+            x1: 0.0,
+            x2: 0.0,
+            y1: 0.0,
+            y2: 0.0,
+        }
+    }
+}
+
 pub fn apply_filter(output: &mut [f32], filter_type: FilterType, sample_rate: f32) {
     match filter_type {
         FilterType::LowPass(cutoff) => apply_low_pass(output, cutoff, sample_rate),
@@ -60,11 +78,8 @@ pub fn process_biquad_lpf(
     input: f32,
     cutoff: f32,
     sample_rate: f32,
-    q: f32, // Quality factor (resonance)
-    x1: &mut f32, // State: previous input x[n-1]
-    x2: &mut f32, // State: input before previous x[n-2]
-    y1: &mut f32, // State: previous output y[n-1]
-    y2: &mut f32, // State: output before previous y[n-2]
+    q: f32,                 // Quality factor (resonance)
+    state: &mut IirContext, // Mutable state for filter
 ) -> f32 {
     // Clamp cutoff to avoid issues, ensure it's below Nyquist
     let cutoff = cutoff.max(1.0).min(sample_rate * 0.49);
@@ -94,15 +109,15 @@ pub fn process_biquad_lpf(
 
     // Apply the Biquad difference equation (Direct Form I)
     // y[n] = b0*x[n] + b1*x[n-1] + b2*x[n-2] - a1*y[n-1] - a2*y[n-2]
-    let output = b0 * input + b1 * *x1 + b2 * *x2 - a1 * *y1 - a2 * *y2;
+    let output = b0 * input + b1 * state.x1 + b2 * state.x2 - a1 * state.y1 - a2 * state.y2;
 
     // --- Update state variables ---
     // Input history
-    *x2 = *x1;
-    *x1 = input;
+    state.x2 = state.x1;
+    state.x1 = input;
     // Output history
-    *y2 = *y1;
-    *y1 = output;
+    state.y2 = state.y1;
+    state.y1 = output;
 
     output
 }

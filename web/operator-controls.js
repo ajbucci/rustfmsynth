@@ -126,14 +126,14 @@ export function applyOperatorStatesUI(operatorStates) {
  * Resets all operator UI controls to their default values.
  */
 export function resetOperatorControlsUI() {
-    console.log("Resetting operator controls UI to defaults...");
-    const defaultState = {
-        ratio: 1.0, modIndex: 1.0, waveform: DEFAULT_WAVEFORM_VALUE, // Default mod index might be 0 or 1 depending on preference
-        attack: DEFAULT_ATTACK, decay: DEFAULT_DECAY, sustain: DEFAULT_SUSTAIN, release: DEFAULT_RELEASE
-    };
-    const defaultStatesArray = Array(NUM_OPERATORS).fill(defaultState);
-    applyOperatorStatesUI(defaultStatesArray); // Reuse the apply function with default data
-    console.log("Operator controls UI reset complete.");
+  console.log("Resetting operator controls UI to defaults...");
+  const defaultState = {
+    ratio: 1.0, modIndex: 1.0, waveform: DEFAULT_WAVEFORM_VALUE, // Default mod index might be 0 or 1 depending on preference
+    attack: DEFAULT_ATTACK, decay: DEFAULT_DECAY, sustain: DEFAULT_SUSTAIN, release: DEFAULT_RELEASE
+  };
+  const defaultStatesArray = Array(NUM_OPERATORS).fill(defaultState);
+  applyOperatorStatesUI(defaultStatesArray); // Reuse the apply function with default data
+  console.log("Operator controls UI reset complete.");
 }
 
 /**
@@ -244,7 +244,7 @@ function createOperatorControl(index, container, onStateChangeCallback) {
   adsrWrapper.style.paddingTop = '10px';
 
   const adsrTitle = document.createElement('div');
-  adsrTitle.textContent = 'Amplitude Envelope:';
+  adsrTitle.textContent = 'Envelope:';
   adsrTitle.style.fontWeight = 'bold';
   adsrTitle.style.marginBottom = '5px';
   adsrWrapper.appendChild(adsrTitle);

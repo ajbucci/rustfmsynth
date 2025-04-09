@@ -1,6 +1,6 @@
 use super::context::ProcessContext;
 use super::envelope::EnvelopeGenerator;
-use super::filter::{self, FilterType};
+use super::filter::{self, FilterType, IirContext};
 use super::waveform::{Waveform, WaveformGenerator};
 use crate::synth::prelude::TAU;
 
@@ -24,11 +24,7 @@ pub struct OperatorState {
     current_phase: f32,
     current_ratio: Option<f32>,
     current_modulation_index: Option<f32>, // Add field for smoothed mod index
-    // --- Biquad Filter State ---
-    filter_x1: f32, // Previous input sample x[n-1]
-    filter_x2: f32, // Input sample before previous x[n-2]
-    filter_y1: f32, // Previous output sample y[n-1]
-    filter_y2: f32, // Output sample before previous y[n-2]
+    iir_context: IirContext,
 }
 impl Default for OperatorState {
     fn default() -> Self {
@@ -36,14 +32,11 @@ impl Default for OperatorState {
             current_phase: 0.0,
             current_ratio: None,
             current_modulation_index: None, // Initialize as None
-            // Initialize filter state to zero
-            filter_x1: 0.0,
-            filter_x2: 0.0,
-            filter_y1: 0.0,
-            filter_y2: 0.0,
+            iir_context: IirContext::default(),
         }
     }
 }
+
 pub struct Operator {
     pub waveform_generator: WaveformGenerator,
     frequency_ratio: f32, // Ratio relative to the voice's base frequency
@@ -124,10 +117,7 @@ impl Operator {
                     cutoff,
                     sample_rate,
                     DEFAULT_Q, // Use default Q for now
-                    &mut state.filter_x1,
-                    &mut state.filter_x2,
-                    &mut state.filter_y1,
-                    &mut state.filter_y2,
+                    &mut state.iir_context,
                 ),
                 // TODO: Implement other filter types using biquad state if needed
                 // FilterType::HighPass(cutoff) => filter::process_biquad_hpf(...),
