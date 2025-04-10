@@ -1,5 +1,3 @@
-// Import necessary modules
-import init from "./pkg/rustfmsynth.js"; // Keep init import if used directly, though it seems unused now
 import { removeKeyboardInput, handleKeyDown, handleKeyUp, setKeyboardProcessorPort } from './keyboard-input.js';
 import { generateKeyboard, connectKeyboardUIPort } from './keyboard-ui.js';
 import { initializeOperatorControls, getOperatorStates, applyOperatorStatesUI, NUM_OPERATORS as OP_CONTROL_NUM, resetOperatorControlsUI } from './operator-controls.js';
@@ -10,6 +8,7 @@ import {
   resetAlgorithmMatrixUI
 } from './algorithm-matrix.js';
 import { compressData, decompressData } from './compression.js'; // Assume compression helpers moved to a separate file
+import { MidiInputHandler } from './midi.js'; // MIDI input handling
 
 // --- Global State Variables ---
 let audioContext = null;
@@ -28,6 +27,9 @@ let resetButton = null;
 // State Management Flags
 let isApplyingInitialState = false; // Flag specific to initial load state application
 let isUpdatingFromUI = true; // Flag to control URL updates (true allows updates, false blocks)
+
+// Midi Handler
+let midiHandler = null;
 
 // --- Helper Functions ---
 
@@ -423,7 +425,9 @@ async function initializeSynth() {
 
     // 9. Connect Keyboard Input/UI
     setKeyboardProcessorPort(processorNode.port);
+    midiHandler = new MidiInputHandler(processorNode.port);
     connectKeyboardUIPort(processorNode.port); // Connects UI keyboard clicks
+
 
     console.log("Synth initialization sequence complete. Waiting for 'initialized' confirmation from worklet...");
 
