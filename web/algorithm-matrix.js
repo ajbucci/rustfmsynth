@@ -47,7 +47,7 @@ export function createAlgorithmMatrixUI(numOperators, container, onStateChangeCa
     }
     // Add the OUT cell for this operator row
     // data-output-op corresponds to the modulator operator index 'i' (the row)
-    tableHtml += `<td data-output-op="${i}" class="output-cell">`;
+    tableHtml += `<td data-output-op="${i}" class="output-cell ${i == 1 ? 'active' : ''}">`;
     tableHtml += `<span class="connection-point output-point"></span>`;
     tableHtml += `</td>`;
     tableHtml += `</tr>`;
@@ -56,7 +56,6 @@ export function createAlgorithmMatrixUI(numOperators, container, onStateChangeCa
                 </tbody>
             </table>`;
 
-  // REMOVED Carrier Selectors Div
 
   // Add Hover Info display area
   tableHtml += `<div id="matrix-hover-info" class="matrix-info-box">Hover over a cell...</div>`;
