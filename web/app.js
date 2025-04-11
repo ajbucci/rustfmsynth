@@ -9,6 +9,7 @@ import {
 } from './algorithm-matrix.js';
 import { compressData, decompressData } from './compression.js'; // Assume compression helpers moved to a separate file
 import { MidiInputHandler } from './midi.js'; // MIDI input handling
+import { createDial } from './dial.js';
 
 // --- Global State Variables ---
 let audioContext = null;
@@ -83,6 +84,7 @@ function createBaseUI() {
     // Initialize Operator Controls (creates dynamic elements inside the container)
     // Pass the update callback *now*
     initializeOperatorControls(operatorControlsContainer, handleUIChange);
+    createDial();
 
     console.log("Base UI elements created.");
   } catch (error) {

@@ -18,7 +18,16 @@ button {
     flex-direction: column;
     align-items: center;
 }
-
+.dial-indicator {
+  background-color: white;
+  position: absolute;
+}
+.dial {
+  border-radius: 50%;
+  background: radial-gradient(circle, #444, #000);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  position: relative;
+}
 #keyboard-container {
     display: flex; /* Arrange keys horizontally */
     position: relative; /* Needed for positioning black keys */
