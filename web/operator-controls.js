@@ -1,7 +1,7 @@
 // Import the shared message sending function and audio resume function
 import { tryEnsureSynthAndSendMessage } from './keyboard-input.js';
-import { resumeAudioContext } from './app.js';
-
+import { resumeAudioContext, handleUIChange } from './app.js';
+import { createDial } from './dial.js';
 export const NUM_OPERATORS = 6; // Example: Define and export
 const containerId = 'operator-controls'; // ID of the container div in index.html
 
@@ -33,11 +33,31 @@ const MAX_SUSTAIN = 1.0;
 const TIME_STEP = 0.01;
 const SUSTAIN_STEP = 0.01;
 
+// --- Function to Send Update ---
+export const sendRatioUpdate = async (opIndex, ratioValue) => {
+  resumeAudioContext(); // Ensure context is running
+
+  const message = {
+    type: 'set_operator_ratio',
+    operator_index: opIndex,
+    ratio: ratioValue
+  };
+  const messageId = `set-ratio-op-${opIndex}`; // Unique ID
+  const success = await tryEnsureSynthAndSendMessage(messageId, message);
+  if (success) {
+    console.log(`Sent ratio update for Op ${opIndex + 1}: ${ratioValue}`);
+    handleUIChange(); // Call callback on success
+  } else {
+    console.warn(`Operator Controls: Failed to send set_operator_ratio for operator ${opIndex}`);
+  }
+  // Return success status (optional, but can be useful)
+  return success;
+};
 // +++ NEW FUNCTION: Get current states from UI +++
 export function getOperatorStates() {
   const states = [];
   for (let i = 0; i < NUM_OPERATORS; i++) {
-    const ratioDial = document.getElementById(`op-${i}-ratio-dial`);
+    const ratioInput = document.getElementById(`op-${i}-ratio-input`);
     const modIndexDial = document.getElementById(`op-${i}-mod-index-dial`);
     const waveformSelect = document.getElementById(`op-${i}-waveform`);
     const attackInput = document.getElementById(`op-${i}-adsr-attack`);
@@ -51,9 +71,9 @@ export function getOperatorStates() {
       attack: DEFAULT_ATTACK, decay: DEFAULT_DECAY, sustain: DEFAULT_SUSTAIN, release: DEFAULT_RELEASE
     };
 
-    if (ratioDial && modIndexDial && waveformSelect && attackInput && decayInput && sustainInput && releaseInput) {
+    if (ratioInput && modIndexDial && waveformSelect && attackInput && decayInput && sustainInput && releaseInput) {
       states.push({
-        ratio: parseFloat(ratioDial.value) || defaultState.ratio,
+        ratio: parseFloat(ratioInput.value) || defaultState.ratio,
         modIndex: parseFloat(modIndexDial.value) || defaultState.modIndex, // Note: 0 is falsy, || might not be ideal if 0 is valid non-default. Use ?? in modern JS. Let's assume defaults are non-zero where applicable or check isNaN.
         waveform: parseInt(waveformSelect.value) ?? defaultState.waveform, // Use nullish coalescing
         attack: parseFloat(attackInput.value) ?? defaultState.attack,
@@ -95,8 +115,7 @@ export function applyOperatorStatesUI(operatorStates) {
     const release = state.release ?? defaultState.release;
 
 
-    const ratioDial = document.getElementById(`op-${i}-ratio-dial`);
-    const ratioNum = document.getElementById(`op-${i}-ratio-num`);
+    const ratioNum = document.getElementById(`op-${i}-ratio-input`);
     const modIndexDial = document.getElementById(`op-${i}-mod-index-dial`);
     const modIndexNum = document.getElementById(`op-${i}-mod-index-num`);
     const waveformSelect = document.getElementById(`op-${i}-waveform`);
@@ -106,18 +125,14 @@ export function applyOperatorStatesUI(operatorStates) {
     const releaseInput = document.getElementById(`op-${i}-adsr-release`);
 
     // Update UI elements, checking if they exist
-    if (ratioDial) ratioDial.value = ratio.toString();
-    if (ratioNum) ratioNum.value = ratio.toFixed(2);
+    if (ratioNum) ratioNum.value = ratio.toFixed(ratio >= 1 ? 3 : 4);
     if (modIndexDial) modIndexDial.value = modIndex.toString();
-    if (modIndexNum) modIndexNum.value = modIndex.toFixed(1);
+    if (modIndexNum) modIndexNum.value = modIndex.toFixed(2);
     if (waveformSelect) waveformSelect.value = waveform.toString();
     if (attackInput) attackInput.value = attack.toFixed(3);
     if (decayInput) decayInput.value = decay.toFixed(3);
     if (sustainInput) sustainInput.value = sustain.toFixed(2);
     if (releaseInput) releaseInput.value = release.toFixed(3);
-
-    // Clear previous ratio value tracker if it exists (important for sticky behaviour)
-    if (ratioDial) delete ratioDial.dataset.previousValue;
   }
   console.log("Applied operator states to UI controls.");
 }
@@ -156,29 +171,8 @@ function createOperatorControl(index, container, onStateChangeCallback) {
 
   // --- Range Input (Dial) ---
   // TODO: add initial value from operator state
-  const dial = document.createElement('input');
-  dial.type = 'range';
-  dial.id = `op-${index}-ratio-dial`; // Unique ID for the dial
-  const minRatio = 0.1;
-  const maxRatio = 8.0;
-  const stepRatio = 0.01;
-  dial.min = minRatio.toString();
-  dial.max = maxRatio.toString();
-  dial.step = stepRatio.toString();
-  dial.value = '1.0'; // Default ratio
-  dial.dataset.operatorIndex = index;
-  controlWrapper.appendChild(dial);
-
-  // --- Number Input ---
-  const numberInput = document.createElement('input');
-  numberInput.type = 'number';
-  numberInput.id = `op-${index}-ratio-num`; // Unique ID for the number input
-  numberInput.min = minRatio.toString();
-  numberInput.max = maxRatio.toString();
-  numberInput.step = stepRatio.toString();
-  numberInput.value = parseFloat(dial.value).toFixed(2); // Set initial value from dial
-  numberInput.dataset.operatorIndex = index; // Store index here too
-  controlWrapper.appendChild(numberInput);
+  const dialContainer = createDial(index);
+  controlWrapper.appendChild(dialContainer);
 
   // --- Modulation Index Label ---
   const modIndexLabel = document.createElement('label');
@@ -187,17 +181,18 @@ function createOperatorControl(index, container, onStateChangeCallback) {
   modIndexLabel.style.marginTop = '10px'; // Add some space
   controlWrapper.appendChild(modIndexLabel);
 
+  // TODO: this should go from 0.00 to 1.00 at increments of 0.01
   // --- Modulation Index Range Input (Dial) ---
   const modIndexDial = document.createElement('input');
   modIndexDial.type = 'range';
   modIndexDial.id = `op-${index}-mod-index-dial`;
-  const minModIndex = 0.0;
-  const maxModIndex = 10.0; // Example max value, adjust as needed
-  const stepModIndex = 0.1;
+  const minModIndex = 0.00;
+  const maxModIndex = 1.00; // Example max value, adjust as needed
+  const stepModIndex = 0.01;
   modIndexDial.min = minModIndex.toString();
   modIndexDial.max = maxModIndex.toString();
   modIndexDial.step = stepModIndex.toString();
-  modIndexDial.value = '1.0'; // Default modulation index
+  modIndexDial.value = '1.00'; // Default modulation index
   modIndexDial.dataset.operatorIndex = index;
   controlWrapper.appendChild(modIndexDial);
 
@@ -208,7 +203,7 @@ function createOperatorControl(index, container, onStateChangeCallback) {
   modIndexNumberInput.min = minModIndex.toString();
   modIndexNumberInput.max = maxModIndex.toString();
   modIndexNumberInput.step = stepModIndex.toString();
-  modIndexNumberInput.value = parseFloat(modIndexDial.value).toFixed(1); // Sync with dial
+  modIndexNumberInput.value = parseFloat(modIndexDial.value).toFixed(2); // Sync with dial
   modIndexNumberInput.dataset.operatorIndex = index;
   controlWrapper.appendChild(modIndexNumberInput);
 
@@ -291,26 +286,6 @@ function createOperatorControl(index, container, onStateChangeCallback) {
 
   controlWrapper.appendChild(adsrWrapper); // Add ADSR section to the main wrapper
 
-  // --- Function to Send Update ---
-  const sendRatioUpdate = async (opIndex, ratioValue) => {
-    resumeAudioContext(); // Ensure context is running
-
-    const message = {
-      type: 'set_operator_ratio',
-      operator_index: opIndex,
-      ratio: ratioValue
-    };
-    const messageId = `set-ratio-op-${opIndex}`; // Unique ID
-    const success = await tryEnsureSynthAndSendMessage(messageId, message);
-    if (success) {
-      console.log(`Sent ratio update for Op ${opIndex + 1}: ${ratioValue}`);
-      onStateChangeCallback(); // Call callback on success
-    } else {
-      console.warn(`Operator Controls: Failed to send set_operator_ratio for operator ${opIndex}`);
-    }
-    // Return success status (optional, but can be useful)
-    return success;
-  };
 
   // --- Function to Send Modulation Index Update ---
   const sendModulationIndexUpdate = async (opIndex, modIndexValue) => {
@@ -375,63 +350,6 @@ function createOperatorControl(index, container, onStateChangeCallback) {
     return success;
   };
 
-  // --- Event Listener for Slider ('input' for real-time) ---
-  dial.addEventListener('input', (event) => {
-    const targetDial = event.currentTarget;
-    const operatorIndex = parseInt(targetDial.dataset.operatorIndex);
-    let ratio = parseFloat(targetDial.value);
-
-    // --- Sticky Logic ---
-    let snapped = false;
-    for (const stickyPoint of STICKY_RATIO_POINTS) {
-      if (Math.abs(ratio - stickyPoint) < STICKY_THRESHOLD) {
-        // Check if the slider is actually moving *towards* the sticky point
-        // or if it just snapped on the previous event. This prevents getting stuck.
-        // We store the previous value temporarily for this check.
-        const previousValue = parseFloat(targetDial.dataset.previousValue || ratio.toString());
-        if (Math.abs(ratio - stickyPoint) < Math.abs(previousValue - stickyPoint)) {
-          ratio = stickyPoint;
-          targetDial.value = ratio.toString(); // Update the slider position itself
-          snapped = true;
-          break; // Snap to the first encountered sticky point
-        }
-      }
-    }
-    // Store the current value (snapped or not) for the next event's check
-    targetDial.dataset.previousValue = ratio.toString();
-
-    // Update the number input's value to match the slider (potentially snapped)
-    numberInput.value = ratio.toFixed(2);
-
-    // Send the update to the synth processor (don't await, let it run)
-    sendRatioUpdate(operatorIndex, ratio);
-  });
-
-  // --- Event Listener for Number Input ('change' fires on blur/enter) ---
-  numberInput.addEventListener('change', (event) => {
-    const targetInput = event.currentTarget;
-    const operatorIndex = parseInt(targetInput.dataset.operatorIndex);
-    let ratio = parseFloat(targetInput.value);
-
-    // Validate and clamp the input value
-    if (isNaN(ratio)) {
-      ratio = parseFloat(dial.value); // Revert to slider value if invalid
-    } else {
-      ratio = Math.max(minRatio, Math.min(maxRatio, ratio)); // Clamp to min/max
-    }
-
-    // Update the input field itself with the potentially clamped value (formatted)
-    targetInput.value = ratio.toFixed(2);
-
-    // Update the slider's value to match the number input
-    dial.value = ratio.toString();
-    // Clear previous value tracker when number input changes directly
-    delete dial.dataset.previousValue;
-
-    // Send the update to the synth processor (don't await)
-    sendRatioUpdate(operatorIndex, ratio);
-  });
-
   // --- Event Listener for Modulation Index Slider ---
   modIndexDial.addEventListener('input', (event) => {
     const targetDial = event.currentTarget;
@@ -439,7 +357,7 @@ function createOperatorControl(index, container, onStateChangeCallback) {
     const modIndex = parseFloat(targetDial.value);
 
     // Update the number input
-    modIndexNumberInput.value = modIndex.toFixed(1);
+    modIndexNumberInput.value = modIndex.toFixed(2);
 
     // Send the update (don't await)
     sendModulationIndexUpdate(operatorIndex, modIndex);

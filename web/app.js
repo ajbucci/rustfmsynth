@@ -9,6 +9,7 @@ import {
 } from './algorithm-matrix.js';
 import { compressData, decompressData } from './compression.js'; // Assume compression helpers moved to a separate file
 import { MidiInputHandler } from './midi.js'; // MIDI input handling
+import { createDial } from './dial.js';
 
 // --- Global State Variables ---
 let audioContext = null;
@@ -83,6 +84,7 @@ function createBaseUI() {
     // Initialize Operator Controls (creates dynamic elements inside the container)
     // Pass the update callback *now*
     initializeOperatorControls(operatorControlsContainer, handleUIChange);
+    createDial();
 
     console.log("Base UI elements created.");
   } catch (error) {
@@ -256,7 +258,7 @@ function sendStateToSynth(state) {
  * Callback function triggered by UI changes (matrix, operators).
  * Sends the updated part to the synth and updates the URL fragment.
  */
-async function handleUIChange() {
+export async function handleUIChange() {
   // It's often simpler to just get the full state and send it,
   // rather than figuring out exactly what changed.
   // If performance becomes an issue, optimize later.
@@ -336,6 +338,7 @@ async function onSynthInitialized() {
     applyStateToUI(initialState);
     sendStateToSynth(initialState);
     // Update URL only if we loaded state from it initially, otherwise the URL is already clean or reflects defaults implicitly
+    // TODO: debounce the hash update so that we can better track state for undo/redo using browser history
     if (hash && hash.length > 1 && initialState) {
       // We loaded from a hash, ensure it's updated/normalized after potential fixes
       await updateUrlFragment();
