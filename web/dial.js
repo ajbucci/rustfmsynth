@@ -188,8 +188,7 @@ export function createDial(index, initialValue = 1) {
   }
 
   // --- Event Listeners (mousedown, mousemove, mouseup, input change, cleanup) ---
-  dial.addEventListener("mousedown", (event) => {
-    event.preventDefault();
+  function dialStartInteraction(clientX, clientY) {
     isDragging = true;
     dial.classList.add('dragging');
     document.body.classList.add('dial-dragging-active');
@@ -202,8 +201,16 @@ export function createDial(index, initialValue = 1) {
     const rect = dial.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
-    const startAngleRaw = Math.atan2(event.clientY - centerY, event.clientX - centerX) * (180 / Math.PI) + 90;
+    const startAngleRaw = Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI) + 90;
     lastAngle = (startAngleRaw + 360) % 360;
+  }
+  dial.addEventListener("mousedown", (event) => {
+    event.preventDefault();
+    dialStartInteraction(event.clientX, event.clientY);
+  });
+  dial.addEventListener("touchstart", (event) => {
+    event.preventDefault();
+    dialStartInteraction(event.touches[0].clientX, event.touches[0].clientY);
   });
   const handleMouseMove = (event) => {
     if (!isDragging) return;
@@ -224,6 +231,11 @@ export function createDial(index, initialValue = 1) {
     updateInput();
     sendRatioUpdate(index, currentValue);
   };
+  const handleTouchMove = (event) => {
+    event.preventDefault();
+    let newEvent = { clientX: event.touches[0].clientX, clientY: event.touches[0].clientY };
+    handleMouseMove(newEvent);
+  }
   const handleMouseUp = () => {
     if (!isDragging) return;
     isDragging = false;
@@ -238,6 +250,8 @@ export function createDial(index, initialValue = 1) {
   };
   document.addEventListener("mousemove", handleMouseMove);
   document.addEventListener("mouseup", handleMouseUp);
+  document.addEventListener('touchmove', handleTouchMove);
+  document.addEventListener('touchend', handleMouseUp);
   dialInput.addEventListener('change', (event) => {
     let newValue = parseFloat(event.target.value);
     if (!isNaN(newValue)) {
@@ -254,6 +268,8 @@ export function createDial(index, initialValue = 1) {
   dial.cleanup = () => {
     document.removeEventListener("mousemove", handleMouseMove);
     document.removeEventListener("mouseup", handleMouseUp);
+    document.addEventListener('touchmove', handleTouchMove);
+    document.addEventListener('touchend', handleMouseUp);
   };
 
 
