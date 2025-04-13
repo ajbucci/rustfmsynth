@@ -2,6 +2,7 @@
 import { tryEnsureSynthAndSendMessage } from './keyboard-input.js';
 import { resumeAudioContext, handleUIChange } from './app.js';
 import { createDial } from './dial.js';
+import { createVerticalCrossfader } from './crossfader.js';
 export const NUM_OPERATORS = 6; // Example: Define and export
 const containerId = 'operator-controls'; // ID of the container div in index.html
 
@@ -53,12 +54,31 @@ export const sendRatioUpdate = async (opIndex, ratioValue) => {
   // Return success status (optional, but can be useful)
   return success;
 };
+// --- Function to Send Modulation Index Update ---
+export const sendModulationIndexUpdate = async (opIndex, modIndexValue) => {
+  resumeAudioContext(); // Ensure context is running
+
+  const message = {
+    type: 'set_operator_modulation_index',
+    operator_index: opIndex,
+    modulation_index: modIndexValue
+  };
+  const messageId = `set-mod-index-op-${opIndex}`; // Unique ID
+  const success = await tryEnsureSynthAndSendMessage(messageId, message);
+  if (success) {
+    console.log(`Sent mod index update for Op ${opIndex + 1}: ${modIndexValue}`);
+    handleUIChange(); // Call callback on success
+  } else {
+    console.warn(`Operator Controls: Failed to send set_operator_modulation_index for operator ${opIndex}`);
+  }
+  return success;
+};
 // +++ NEW FUNCTION: Get current states from UI +++
 export function getOperatorStates() {
   const states = [];
   for (let i = 0; i < NUM_OPERATORS; i++) {
     const ratioInput = document.getElementById(`op-${i}-ratio-input`);
-    const modIndexDial = document.getElementById(`op-${i}-mod-index-dial`);
+    const modIndexInput = document.getElementById(`op-${i}-mod-index-input`);
     const waveformSelect = document.getElementById(`op-${i}-waveform`);
     const attackInput = document.getElementById(`op-${i}-adsr-attack`);
     const decayInput = document.getElementById(`op-${i}-adsr-decay`);
@@ -71,10 +91,10 @@ export function getOperatorStates() {
       attack: DEFAULT_ATTACK, decay: DEFAULT_DECAY, sustain: DEFAULT_SUSTAIN, release: DEFAULT_RELEASE
     };
 
-    if (ratioInput && modIndexDial && waveformSelect && attackInput && decayInput && sustainInput && releaseInput) {
+    if (ratioInput && modIndexInput && waveformSelect && attackInput && decayInput && sustainInput && releaseInput) {
       states.push({
         ratio: parseFloat(ratioInput.value) || defaultState.ratio,
-        modIndex: parseFloat(modIndexDial.value) || defaultState.modIndex, // Note: 0 is falsy, || might not be ideal if 0 is valid non-default. Use ?? in modern JS. Let's assume defaults are non-zero where applicable or check isNaN.
+        modIndex: parseFloat(modIndexInput.value) || defaultState.modIndex, // Note: 0 is falsy, || might not be ideal if 0 is valid non-default. Use ?? in modern JS. Let's assume defaults are non-zero where applicable or check isNaN.
         waveform: parseInt(waveformSelect.value) ?? defaultState.waveform, // Use nullish coalescing
         attack: parseFloat(attackInput.value) ?? defaultState.attack,
         decay: parseFloat(decayInput.value) ?? defaultState.decay,
@@ -116,8 +136,7 @@ export function applyOperatorStatesUI(operatorStates) {
 
 
     const ratioNum = document.getElementById(`op-${i}-ratio-input`);
-    const modIndexDial = document.getElementById(`op-${i}-mod-index-dial`);
-    const modIndexNum = document.getElementById(`op-${i}-mod-index-num`);
+    const modIndexInput = document.getElementById(`op-${i}-mod-index-input`);
     const waveformSelect = document.getElementById(`op-${i}-waveform`);
     const attackInput = document.getElementById(`op-${i}-adsr-attack`);
     const decayInput = document.getElementById(`op-${i}-adsr-decay`);
@@ -126,8 +145,7 @@ export function applyOperatorStatesUI(operatorStates) {
 
     // Update UI elements, checking if they exist
     if (ratioNum) ratioNum.value = ratio.toFixed(ratio >= 1 ? 3 : 4);
-    if (modIndexDial) modIndexDial.value = modIndex.toString();
-    if (modIndexNum) modIndexNum.value = modIndex.toFixed(2);
+    if (modIndexInput) modIndexInput.value = modIndex.toFixed(2);
     if (waveformSelect) waveformSelect.value = waveform.toString();
     if (attackInput) attackInput.value = attack.toFixed(3);
     if (decayInput) decayInput.value = decay.toFixed(3);
@@ -174,38 +192,8 @@ function createOperatorControl(index, container, onStateChangeCallback) {
   const dialContainer = createDial(index);
   controlWrapper.appendChild(dialContainer);
 
-  // --- Modulation Index Label ---
-  const modIndexLabel = document.createElement('label');
-  modIndexLabel.htmlFor = `op-${index}-mod-index-dial`;
-  modIndexLabel.textContent = `Mod Index:`;
-  modIndexLabel.style.marginTop = '10px'; // Add some space
-  controlWrapper.appendChild(modIndexLabel);
-
-  // TODO: this should go from 0.00 to 1.00 at increments of 0.01
-  // --- Modulation Index Range Input (Dial) ---
-  const modIndexDial = document.createElement('input');
-  modIndexDial.type = 'range';
-  modIndexDial.id = `op-${index}-mod-index-dial`;
-  const minModIndex = 0.00;
-  const maxModIndex = 1.00; // Example max value, adjust as needed
-  const stepModIndex = 0.01;
-  modIndexDial.min = minModIndex.toString();
-  modIndexDial.max = maxModIndex.toString();
-  modIndexDial.step = stepModIndex.toString();
-  modIndexDial.value = '1.00'; // Default modulation index
-  modIndexDial.dataset.operatorIndex = index;
-  controlWrapper.appendChild(modIndexDial);
-
-  // --- Modulation Index Number Input ---
-  const modIndexNumberInput = document.createElement('input');
-  modIndexNumberInput.type = 'number';
-  modIndexNumberInput.id = `op-${index}-mod-index-num`;
-  modIndexNumberInput.min = minModIndex.toString();
-  modIndexNumberInput.max = maxModIndex.toString();
-  modIndexNumberInput.step = stepModIndex.toString();
-  modIndexNumberInput.value = parseFloat(modIndexDial.value).toFixed(2); // Sync with dial
-  modIndexNumberInput.dataset.operatorIndex = index;
-  controlWrapper.appendChild(modIndexNumberInput);
+  const crossfaderContainer = createVerticalCrossfader(index, 1.00);
+  controlWrapper.appendChild(crossfaderContainer);
 
   // --- Waveform Label ---
   const waveformLabel = document.createElement('label');
@@ -252,8 +240,6 @@ function createOperatorControl(index, container, onStateChangeCallback) {
     const label = document.createElement('label');
     label.htmlFor = `op-${index}-adsr-${paramName.toLowerCase()}`;
     label.textContent = `${paramName}:`;
-    label.style.display = 'inline-block';
-    label.style.width = '50px'; // Align labels
 
     const input = document.createElement('input');
     input.type = 'number';
@@ -262,7 +248,6 @@ function createOperatorControl(index, container, onStateChangeCallback) {
     input.min = min.toString();
     input.max = max.toString();
     input.step = step.toString();
-    input.style.width = '60px'; // Control input width
     input.dataset.operatorIndex = index; // Store index
 
     paramWrapper.appendChild(label);
@@ -285,27 +270,6 @@ function createOperatorControl(index, container, onStateChangeCallback) {
   adsrWrapper.appendChild(setButton);
 
   controlWrapper.appendChild(adsrWrapper); // Add ADSR section to the main wrapper
-
-
-  // --- Function to Send Modulation Index Update ---
-  const sendModulationIndexUpdate = async (opIndex, modIndexValue) => {
-    resumeAudioContext(); // Ensure context is running
-
-    const message = {
-      type: 'set_operator_modulation_index',
-      operator_index: opIndex,
-      modulation_index: modIndexValue
-    };
-    const messageId = `set-mod-index-op-${opIndex}`; // Unique ID
-    const success = await tryEnsureSynthAndSendMessage(messageId, message);
-    if (success) {
-      console.log(`Sent mod index update for Op ${opIndex + 1}: ${modIndexValue}`);
-      onStateChangeCallback(); // Call callback on success
-    } else {
-      console.warn(`Operator Controls: Failed to send set_operator_modulation_index for operator ${opIndex}`);
-    }
-    return success;
-  };
 
   // --- Function to Send Waveform Update ---
   const sendWaveformUpdate = async (opIndex, waveformValue) => {
@@ -349,42 +313,6 @@ function createOperatorControl(index, container, onStateChangeCallback) {
     }
     return success;
   };
-
-  // --- Event Listener for Modulation Index Slider ---
-  modIndexDial.addEventListener('input', (event) => {
-    const targetDial = event.currentTarget;
-    const operatorIndex = parseInt(targetDial.dataset.operatorIndex);
-    const modIndex = parseFloat(targetDial.value);
-
-    // Update the number input
-    modIndexNumberInput.value = modIndex.toFixed(2);
-
-    // Send the update (don't await)
-    sendModulationIndexUpdate(operatorIndex, modIndex);
-  });
-
-  // --- Event Listener for Modulation Index Number Input ---
-  modIndexNumberInput.addEventListener('change', (event) => {
-    const targetInput = event.currentTarget;
-    const operatorIndex = parseInt(targetInput.dataset.operatorIndex);
-    let modIndex = parseFloat(targetInput.value);
-
-    // Validate and clamp
-    if (isNaN(modIndex)) {
-      modIndex = parseFloat(modIndexDial.value); // Revert
-    } else {
-      modIndex = Math.max(minModIndex, Math.min(maxModIndex, modIndex)); // Clamp
-    }
-
-    // Update the input field
-    targetInput.value = modIndex.toFixed(1);
-
-    // Update the slider
-    modIndexDial.value = modIndex.toString();
-
-    // Send the update (don't await)
-    sendModulationIndexUpdate(operatorIndex, modIndex);
-  });
 
   // --- Event Listener for Waveform Select ---
   waveformSelect.addEventListener('change', (event) => { // No need for async on the listener itself

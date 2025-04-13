@@ -176,7 +176,7 @@ export function createDial(index, initialValue = 1) {
     return Math.max(coarseValues[0], Math.min(coarseValues[numCoarseIntervals], targetValue));
   }
   function updateIndicator() {
-    indicator.style.transform = `rotate(${visualRotation}deg)`;
+    dial.style.transform = `rotate(${visualRotation}deg)`;
   }
   function updateInput() {
     const numDecimalPlaces = currentValue < 2 ? 4 : 3;
