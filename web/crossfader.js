@@ -16,14 +16,23 @@ export function createVerticalCrossfader(index, initialValue = 1.00) {
   faderContainer.classList.add('crossfader-container');
   faderContainer.id = `op-${index}-mod-index-fader-container`;
 
-  const track = document.createElement('div');
-  track.classList.add('crossfader-track');
-  track.id = `op-${index}-mod-index-track`;
-  // No fine mode tooltip needed
-
+  // TODO: add css variables to the stylesheet and pull the dimensions from there
   const thumbWidth = 60;
   const thumbHeight = 30;
   const thumbStripeHeight = 5;
+  const thumbStripeWidthPercent = 0.88;
+  let thumbStripeWidth = thumbWidth * thumbStripeWidthPercent;
+
+  const trackContainer = document.createElement('div');
+  trackContainer.classList.add('crossfader-track-container');
+  trackContainer.id = `op-${index}-mod-index-track-container`;
+  trackContainer.style.width = `${thumbWidth}px`;
+
+  const track = document.createElement('div');
+  track.classList.add('crossfader-track');
+  track.id = `op-${index}-mod-index-track`;
+  track.style.width = `${thumbWidth / 5}px`;
+
   const thumb = document.createElement('div');
   thumb.classList.add('crossfader-thumb');
   thumb.id = `op-${index}-mod-index-thumb`;
@@ -31,15 +40,16 @@ export function createVerticalCrossfader(index, initialValue = 1.00) {
   thumb.style.height = `${thumbHeight}px`;
   const thumbStripe = document.createElement('div');
   thumbStripe.classList.add('crossfader-thumb-stripe');
-  thumbStripe.style.width = `${thumbWidth - 4}px`;
+  thumbStripe.style.width = `${thumbStripeWidth}px`;
   thumbStripe.style.height = `${thumbStripeHeight}px`;
   thumbStripe.style.position = "absolute";
   thumbStripe.style.top = `${(thumbHeight - thumbStripeHeight) / 2}px`;
-  thumbStripe.style.left = '2px';
+  thumbStripe.style.left = `${(thumbWidth - thumbStripeWidth) / 2}px`;
   thumb.appendChild(thumbStripe);
   track.appendChild(thumb);
+  trackContainer.appendChild(track);
 
-  faderContainer.appendChild(track);
+  faderContainer.appendChild(trackContainer);
 
   const faderInput = document.createElement("input");
   faderInput.id = `op-${index}-mod-index-input`;

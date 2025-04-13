@@ -162,9 +162,10 @@ button {
   flex-wrap: wrap; /* Allow wrapping if space is tight */
   gap: 20px;      /* Spacing between controls */
   padding: 15px;
-  border: 3px solid #555;
+  border: 3px solid #111;
   border-radius: 5px;
-  background-color: #333;
+  background: #333;
+  background: linear-gradient(35deg, rgba(51, 51, 51, 1) 0%, rgba(56, 56, 56, 1) 50%, rgba(52, 52, 52, 1) 100%);
   color: aliceblue;
   margin-top: 15px; /* Space below keyboard */
 }
@@ -383,14 +384,26 @@ button {
   margin: 5px 10px; /* Add some spacing */
 }
 
+.crossfader-track-container {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  background: repeating-linear-gradient(
+    0deg,
+    #222,
+    #222 5px,
+    #191919 5px,
+    #191919 10px
+  );
+  box-shadow: 0px 0px 0px 1px black;
+  margin-bottom: 5px;
+}
 .crossfader-track {
   position: relative; /* Needed for absolute positioning of the thumb */
-  width: 8px; /* Thin track */
-  height: 100px; /* Adjust height as needed */
-  background-color: #555; /* Darker track background */
-  border-radius: 4px;
-  cursor: pointer; /* Indicate clickability for jumping */
-  margin-bottom: 5px; /* Space between slider and input */
+  height: 100px;
+  background-color: #000;
+  border-radius: 5%;
+  cursor: pointer;
 }
 
 .crossfader-thumb {
@@ -398,7 +411,7 @@ button {
   width: 16px; /* Thumb wider than track */
   height: 8px; /* Short thumb */
   background-color: #333; /* Lighter thumb color */
-  box-shadow: inset 0 0 2px 2px #111, 0 0px 6px rgba(0,0,0,0.5);
+  box-shadow: inset 0 0 3px 2px #191919, 0 0px 3px 0px rgba(0,0,0,0.5);
   border-radius: 5%;
   cursor: grab; /* Indicate draggable */
   left: 50%; /* Start positioning from the center */
@@ -407,7 +420,7 @@ button {
 }
 .crossfader-thumb-stripe {
   background-color: #fff;
-  box-shadow: 0px 1px 2px 0px black;
+  box-shadow: 0px 0px 0px 2px #222;
 }
 .crossfader-input {
   width: 3em;
