@@ -144,8 +144,11 @@ export function applyOperatorStatesUI(operatorStates) {
     const releaseInput = document.getElementById(`op-${i}-adsr-release`);
 
     // Update UI elements, checking if they exist
+    var changeEvent = new Event('change');
     if (ratioNum) ratioNum.value = ratio.toFixed(ratio >= 1 ? 3 : 4);
+    ratioNum.dispatchEvent(changeEvent); // Trigger change event
     if (modIndexInput) modIndexInput.value = modIndex.toFixed(2);
+    modIndexInput.dispatchEvent(changeEvent); // Trigger change event
     if (waveformSelect) waveformSelect.value = waveform.toString();
     if (attackInput) attackInput.value = attack.toFixed(3);
     if (decayInput) decayInput.value = decay.toFixed(3);
