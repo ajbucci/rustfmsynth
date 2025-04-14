@@ -7,48 +7,62 @@ body {
     font-family: sans-serif;
     text-align: center;
     margin-top: 50px;
+    background-color: #222;
+    color: aliceblue;
 }
 button {
     margin: 10px;
     padding: 10px;
+    color: aliceblue;
+    background-color: #444;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+}
+button:hover {
+    background-color: #555;
 }
 
 #synth-container {
     display: flex;
+    font-family: "Inter", sans-serif;
     flex-direction: column;
     align-items: center;
-}
-#fine-mode-toggle {
-  padding: 5px 10px;
-  border: 1px solid #888;
-  border-radius: 4px;
-  cursor: pointer;
-  background-color: #eee;
 }
 
 /* Style for when fine mode is active */
 #fine-mode-toggle.active {
   background-color: #d0e8ff; /* Light blue background */
-  border-color: #007bff;
+  color: #111;
   font-weight: bold;
 }
-.global-controls {
-  margin-bottom: 15px;
-  text-align: center;
-}
-.asdr-controls {
+
+#controls-top-row {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
 }
 .adsr-param {
   display: flex;
   flex-direction: row;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 0.2rem;
+  width: 90%;
 }
 .adsr-param input {
   width: 3em;
+}
+.parameter-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.parameter-title {
+  margin-bottom: 5px;
+}
+.adsr-param label {
+  font-weight: normal !important;
+  font-size: 0.8rem !important;
 }
 .dial-container {
   display: flex;
@@ -158,7 +172,6 @@ button {
 }
 
 /* --- Operator Controls Styling --- */
-
 #operator-controls {
   display: flex; /* Arrange controls horizontally */
   position: relative; /* Needed for absolute positioning of background */
@@ -208,9 +221,12 @@ button {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
+  gap: 20px;
   min-width: 120px;
   margin-bottom: 10px;
+  background: rgba(0,0,0,0.1);
+  border-radius: 1rem;
+  padding: 1rem 0.5rem;
 }
 
 .operator-control label {
@@ -225,21 +241,6 @@ button {
   -moz-appearance: textfield; /* Remove default spinner */
   margin: 0;
 }
-/* Style the waveform dropdown */
-.operator-control select {
-    width: 100%; /* Make dropdown take available width within the control */
-    max-width: 110px; /* Or set a specific max-width */
-    padding: 5px;
-    /* border: 1px solid #ccc; */
-    border-radius: 3px;
-    border: solid 1px aliceblue;
-    color: inherit;
-    /* background-color: white; */
-    background-color: inherit;
-    cursor: pointer;
-    font-size: 0.9em;
-    margin-top: 2px; /* Small space below label */
-  }
 
 /* --- Style Specific Controls --- */
 
@@ -249,6 +250,17 @@ button {
   height: auto; /* Default */
   writing-mode: horizontal-tb; /* Explicitly horizontal */
   appearance: auto;
+}
+.global-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-left: 1rem;
+  width: 100%;
+}
+.global-controls button {
+  width: 50%;
 }
 
 /* Style Modulation Index Slider as Vertical */
@@ -264,42 +276,35 @@ button {
 }
 
 /* --- Algorithm Matrix Styling --- */
-
 .algorithm-matrix {
-    /* Add position relative if info box is absolutely positioned relative to it */
-     position: relative;
-     padding-bottom: 30px; /* Add space at bottom for info box */
+  display: grid;
+  grid-template-columns: min-content;
+  flex-shrink: 1;
+  flex-grow: 0;
 }
 
 .algorithm-matrix table {
-    border-collapse: collapse;
-    margin-bottom: 10px;
+  border-collapse: collapse;
+  max-width: fit-content;
 }
 
 .algorithm-matrix th, .algorithm-matrix td {
-    border: 1px solid grey;
-    width: 35px;
-    height: 35px;
+    border: 1px solid #111;
+    padding: .7em .8em;
+    /* width: 40px; */
+    /* height: 40px; */
     text-align: center;
     vertical-align: middle;
-    position: relative;
     cursor: pointer; /* All cells clickable */
     box-sizing: border-box; /* Include border in width/height */
 }
-
-/* Style the added OUT header */
-.algorithm-matrix th.out-header {
-    background-color: #e0e0e0; /* Slightly different background */
-    font-weight: bold;
-    writing-mode: vertical-rl; /* Vertical text */
-    text-orientation: mixed;
-    padding: 2px 0; /* Adjust padding */
+.algorithm-matrix td:hover {
+  background-color: #333;
 }
 
 /* Style the added OUT cells */
-.algorithm-matrix td.output-cell {
-    background-color: #f5f5f5; /* Light background for the whole column */
-    border-left: 2px solid #aaa; /* Make column visually distinct */
+.algorithm-matrix td.output-cell, .algorithm-matrix th.out-header {
+    background-color: rgba(255,255,255,0.1); /* Light background for the whole column */
 }
 
 /* Style the connection point within OUT cells */
@@ -307,8 +312,8 @@ button {
     display: inline-block;
     width: 15px;
     height: 15px;
-    background-color: #ccc; /* Default off color */
-    border: 1px solid #aaa;
+    background-color: #333; /* Default off color */
+    border: 1px solid #111;
     border-radius: 3px; /* Square-ish */
     transition: background-color 0.1s ease;
 }
@@ -321,7 +326,7 @@ button {
 
 /* Style the feedback cells (diagonal) */
 .algorithm-matrix td.feedback-cell {
-    background-color: #f0e68c; /* Khaki */
+    background-color: rgba(130,130,100,0.5); /* Khaki */
 }
 /* Style the connection point INSIDE feedback cells (default state) */
 .algorithm-matrix td.feedback-cell .connection-point {
@@ -345,7 +350,7 @@ button {
     display: inline-block;
     width: 15px;
     height: 15px;
-    background-color: #ddd;
+    background-color: #666;
     border: 1px solid #bbb;
     border-radius: 50%; /* Circle */
     transition: background-color 0.1s ease;
@@ -371,20 +376,14 @@ button {
 
 /* --- Hover Info Box Styling --- */
 .matrix-info-box {
-    position: absolute; /* Position relative to .algorithm-matrix container */
-    bottom: 0;          /* Place at the bottom */
-    left: 0;
-    width: calc(100% - 10px); /* Adjust width as needed */
-    padding: 5px;
-    margin-top: 10px; /* Space above it */
+    padding: 0.5em;
     font-size: 0.9em;
-    color: #555;
-    background-color: #f0f0f0;
-    border: 1px solid #ddd;
-    border-radius: 3px;
+    color: #eee;
+    background-color: #444;
+    border: 1px solid #000;
+    border-top: none;
+    border-radius: 0 0 3px 3px;
     text-align: center;
-    min-height: 1.2em; /* Ensure it doesn't collapse */
-    box-sizing: border-box;
 }
 
 .shift-keys {
@@ -445,7 +444,7 @@ button {
 }
 .crossfader-input {
   width: 3em;
-  margin-top: 0.5em;
+  margin-top: 5px;
   text-align: center;
 }
 

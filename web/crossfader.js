@@ -12,7 +12,7 @@ export function createVerticalCrossfader(index, initialValue = 1.00) {
 
   // --- DOM Elements ---
   const faderContainer = document.createElement('div');
-  faderContainer.classList.add('crossfader-container');
+  faderContainer.classList.add('parameter-container');
   faderContainer.id = `op-${index}-mod-index-fader-container`;
 
   // TODO: add css variables to the stylesheet and pull the dimensions from there
@@ -49,7 +49,7 @@ export function createVerticalCrossfader(index, initialValue = 1.00) {
   trackContainer.appendChild(track);
 
   const label = document.createElement('label');
-  label.classList.add('crossfader-label');
+  label.classList.add('parameter-title');
   label.id = `op-${index}-mod-index-label`;
   label.textContent = `Modulation:`;
   faderContainer.appendChild(label);

@@ -186,12 +186,14 @@ function createOperatorControl(index, container, onStateChangeCallback) {
   const crossfaderContainer = createVerticalCrossfader(index, 1.00);
   controlWrapper.appendChild(crossfaderContainer);
 
+  // --- Waveform Container ---
+  const waveformContainer = document.createElement('div');
+  waveformContainer.classList.add('parameter-container');
   // --- Waveform Label ---
   const waveformLabel = document.createElement('label');
   waveformLabel.htmlFor = `op-${index}-waveform`;
   waveformLabel.textContent = `Waveform:`;
-  waveformLabel.style.marginTop = '10px'; // Add some space above waveform selector
-  controlWrapper.appendChild(waveformLabel);
+  waveformLabel.classList.add('parameter-title');
 
   // --- Waveform Select (Dropdown) ---
   const waveformSelect = document.createElement('select');
@@ -208,19 +210,17 @@ function createOperatorControl(index, container, onStateChangeCallback) {
     }
     waveformSelect.appendChild(option);
   });
-  controlWrapper.appendChild(waveformSelect);
+  waveformContainer.appendChild(waveformLabel);
+  waveformContainer.appendChild(waveformSelect);
+  controlWrapper.appendChild(waveformContainer);
 
   // --- ADSR Envelope Controls ---
   const adsrWrapper = document.createElement('div');
-  adsrWrapper.classList.add('adsr-controls');
-  adsrWrapper.style.marginTop = '15px'; // Add space before envelope controls
-  adsrWrapper.style.borderTop = '1px solid #ccc'; // Separator line
-  adsrWrapper.style.paddingTop = '10px';
+  adsrWrapper.classList.add('parameter-container');
 
-  const adsrTitle = document.createElement('div');
+  const adsrTitle = document.createElement('label');
   adsrTitle.textContent = 'Envelope:';
-  adsrTitle.style.fontWeight = 'bold';
-  adsrTitle.style.marginBottom = '5px';
+  adsrTitle.classList.add('parameter-title');
   adsrWrapper.appendChild(adsrTitle);
 
   // Helper to create Label + Number Input pairs
@@ -257,7 +257,6 @@ function createOperatorControl(index, container, onStateChangeCallback) {
   setButton.textContent = 'Set Envelope';
   setButton.id = `op-${index}-adsr-set`;
   setButton.dataset.operatorIndex = index;
-  setButton.style.marginTop = '8px';
   adsrWrapper.appendChild(setButton);
 
   controlWrapper.appendChild(adsrWrapper); // Add ADSR section to the main wrapper

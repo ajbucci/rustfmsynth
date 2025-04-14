@@ -1,38 +1,47 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rust FM Synth</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rust FM Synth</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+  </style>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
-    <h1>Rust FM Synthesizer (WASM)</h1>
+  <h1>Rust FM Synthesizer (WASM)</h1>
 
-    <p>Play notes using your keyboard (A,S,D,F...) or click the keys below.</p>
-    <!-- Container for the visual keyboard -->
-    <div id="synth-container">
-        <div class="controls-container">
-            <div id="algorithm-matrix">
-                
-            </div>
-            <div class="global-controls">
-              <button id="fine-mode-toggle" title="Toggle fine detail adjustment for all dials (Shift key)">
-                Fine Mode: OFF
-              </button>
+  <p>Play notes using your keyboard (A,S,D,F...) or click the keys below.</p>
+  <!-- Container for the visual keyboard -->
+  <div id="synth-container">
+    <div class="controls-container">
+      <div id="controls-top-row">
+        <div id="algorithm-matrix">
 
-              <button id="reset-button" style="margin-bottom: 15px;">Reset Patch</button>
-            </div>
-            <div id="operator-controls">
-                
-            </div>
         </div>
-        <div id="keyboard-container">
-            <!-- Keyboard will be generated here by JS -->
+        <div class="global-controls">
+          <button id="fine-mode-toggle" title="Toggle fine detail adjustment for all dials (Shift key)">
+            Fine Mode: OFF
+          </button>
+
+          <button id="reset-button" style="margin-bottom: 15px;">Reset Patch</button>
         </div>
+      </div>
+      <div id="operator-controls">
+
+      </div>
     </div>
+    <div id="keyboard-container">
+      <!-- Keyboard will be generated here by JS -->
+    </div>
+  </div>
 
 
-    <script type="module" src="app.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
+
 </html>
