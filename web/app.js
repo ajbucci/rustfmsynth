@@ -3,6 +3,8 @@ import { generateKeyboard, connectKeyboardUIPort } from './keyboard-ui.js';
 import { initializeOperatorControls, getOperatorStates, applyOperatorStatesUI, NUM_OPERATORS as OP_CONTROL_NUM, resetOperatorControlsUI } from './operator-controls.js';
 import {
   createAlgorithmMatrixUI,
+  encodeAlgorithmMatrix,
+  decodeAlgorithmMatrix,
   getAlgorithmFromMatrix,
   displayAlgorithm,
   resetAlgorithmMatrixUI
@@ -79,11 +81,11 @@ function createBaseUI() {
 
     // Generate static UI parts
     generateKeyboard(); // Assumes this finds its container or appends globally
-    createAlgorithmMatrixUI(NUM_OPERATORS, matrixContainer, handleUIChange);
+    createAlgorithmMatrixUI(NUM_OPERATORS, matrixContainer, debounceHandleUIChange);
 
     // Initialize Operator Controls (creates dynamic elements inside the container)
     // Pass the update callback *now*
-    initializeOperatorControls(operatorControlsContainer, handleUIChange);
+    initializeOperatorControls(operatorControlsContainer, debounceHandleUIChange);
     createDial();
 
     console.log("Base UI elements created.");
@@ -104,6 +106,7 @@ async function serializeState() {
   }
   try {
     const matrixState = getAlgorithmFromMatrix(matrixContainer);
+    const encodedMatrixState = encodeAlgorithmMatrix(matrixState);
     const operatorStates = getOperatorStates(); // Get from operator-controls UI
 
     if (!matrixState || !operatorStates || operatorStates.length !== NUM_OPERATORS) {
@@ -112,9 +115,9 @@ async function serializeState() {
     }
 
     const state = {
-      version: 1,
-      matrix: matrixState,
-      operators: operatorStates
+      v: 1,
+      m: encodedMatrixState,
+      o: operatorStates
     };
     const jsonString = JSON.stringify(state);
     return await compressData(jsonString); // Assumes compressData handles base64 encoding
@@ -134,16 +137,18 @@ async function deserializeState(encodedString) {
   try {
     const jsonString = await decompressData(encodedString); // Assumes decompressData handles base64 decoding
     const state = JSON.parse(jsonString);
-
     // Basic validation
-    if (state && state.version === 1 && Array.isArray(state.matrix) && Array.isArray(state.operators)) {
-      if (state.matrix.length !== NUM_OPERATORS || state.operators.length !== NUM_OPERATORS) {
-        console.warn(`Deserialized state operator count mismatch (Matrix: ${state.matrix.length}, Ops: ${state.operators.length}). Expected ${NUM_OPERATORS}. Applying partial state.`);
+    if (state.m) {
+      state.m = decodeAlgorithmMatrix(state.m); // Decode the matrix
+    }
+    if (state && state.v === 1 && Array.isArray(state.m) && Array.isArray(state.o)) {
+      if (state.m.length !== NUM_OPERATORS || state.o.length !== NUM_OPERATORS) {
+        console.warn(`Deserialized state operator count mismatch (Matrix: ${state.m.length}, Ops: ${state.o.length}). Expected ${NUM_OPERATORS}. Applying partial state.`);
         // Truncate or pad if necessary, or just let applying functions handle it
-        state.matrix = state.matrix.slice(0, NUM_OPERATORS); // Example: truncate
-        state.operators = state.operators.slice(0, NUM_OPERATORS);
-        while (state.matrix.length < NUM_OPERATORS) state.matrix.push(Array(NUM_OPERATORS).fill(0)); // Pad matrix rows if needed
-        while (state.operators.length < NUM_OPERATORS) state.operators.push({}); // Pad operators if needed (or use defaults)
+        state.m = state.m.slice(0, NUM_OPERATORS); // Example: truncate
+        state.o = state.o.slice(0, NUM_OPERATORS);
+        while (state.m.length < NUM_OPERATORS) state.m.push(Array(NUM_OPERATORS).fill(0)); // Pad matrix rows if needed
+        while (state.o.length < NUM_OPERATORS) state.o.push({}); // Pad operators if needed (or use defaults)
       }
       return state;
     } else {
@@ -183,7 +188,7 @@ async function updateUrlFragment() {
  * @param {object} state The state object to apply.
  */
 function applyStateToUI(state) {
-  if (!state || !state.matrix || !state.operators) {
+  if (!state || !state.m || !state.o) {
     console.warn("Cannot apply invalid or incomplete state to UI:", state);
     return;
   }
@@ -197,8 +202,8 @@ function applyStateToUI(state) {
   isUpdatingFromUI = false; // Prevent URL updates while applying state
 
   try {
-    displayAlgorithm(matrixContainer, state.matrix);
-    applyOperatorStatesUI(state.operators); // Update operator controls UI
+    displayAlgorithm(matrixContainer, state.m);
+    applyOperatorStatesUI(state.o); // Update operator controls UI
     console.log("Successfully applied state to UI.");
   } catch (error) {
     console.error("Failed during UI state application process:", error);
@@ -218,7 +223,7 @@ function sendStateToSynth(state) {
     console.error("Cannot send state: processorNode not available.");
     return;
   }
-  if (!state || !state.matrix || !state.operators) {
+  if (!state || !state.m || !state.o) {
     console.warn("Cannot send invalid or incomplete state to synth:", state);
     return;
   }
@@ -228,21 +233,21 @@ function sendStateToSynth(state) {
     // Send Algorithm Matrix update
     processorNode.port.postMessage({
       type: 'set-algorithm',
-      matrix: state.matrix
+      matrix: state.m
     });
 
     // Send Operator States updates
-    const count = Math.min(state.operators.length, NUM_OPERATORS);
+    const count = Math.min(state.o.length, NUM_OPERATORS);
     for (let i = 0; i < count; i++) {
-      const opState = state.operators[i];
+      const opState = state.o[i];
       if (opState) {
         // Send all relevant parameters for each operator
-        if (opState.ratio !== undefined) processorNode.port.postMessage({ type: 'set_operator_ratio', operator_index: i, ratio: opState.ratio });
-        if (opState.modIndex !== undefined) processorNode.port.postMessage({ type: 'set_operator_modulation_index', operator_index: i, modulation_index: opState.modIndex });
-        if (opState.waveform !== undefined) processorNode.port.postMessage({ type: 'set_operator_waveform', operator_index: i, waveform_value: opState.waveform });
+        if (opState.r !== undefined) processorNode.port.postMessage({ type: 'set_operator_ratio', operator_index: i, ratio: opState.r });
+        if (opState.m !== undefined) processorNode.port.postMessage({ type: 'set_operator_modulation_index', operator_index: i, modulation_index: opState.m });
+        if (opState.w !== undefined) processorNode.port.postMessage({ type: 'set_operator_waveform', operator_index: i, waveform_value: opState.w });
         // Ensure all envelope parameters are present before sending
-        if (opState.attack !== undefined && opState.decay !== undefined && opState.sustain !== undefined && opState.release !== undefined) {
-          processorNode.port.postMessage({ type: 'set_operator_envelope', operator_index: i, attack: opState.attack, decay: opState.decay, sustain: opState.sustain, release: opState.release });
+        if (opState.e.a !== undefined && opState.e.d !== undefined && opState.e.s !== undefined && opState.e.r !== undefined) {
+          processorNode.port.postMessage({ type: 'set_operator_envelope', operator_index: i, attack: opState.e.a, decay: opState.e.d, sustain: opState.e.s, release: opState.e.r });
         } else {
           console.warn(`Operator ${i}: Incomplete envelope data in state, skipping envelope update.`);
         }
@@ -256,34 +261,29 @@ function sendStateToSynth(state) {
 
 /**
  * Callback function triggered by UI changes (matrix, operators).
- * Sends the updated part to the synth and updates the URL fragment.
+ * Updates the URL fragment.
  */
-export async function handleUIChange() {
-  // It's often simpler to just get the full state and send it,
-  // rather than figuring out exactly what changed.
-  // If performance becomes an issue, optimize later.
-  console.log("UI Change detected, updating synth and URL.");
-  // resumeAudioContext(); // Good practice before sending messages
-  //
-  // if (!processorNode || !processorNode.port) {
-  //   console.warn("Processor node not ready, cannot send UI changes yet.");
-  //   return;
-  // }
-  //
+const debounce = (fn, delay) => {
+  let timer;
+  return function (...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), delay);
+  }
+}
+async function handleUIChange() {
+  console.log("UI Change detected, updating URL.");
+
   const currentState = {
-    matrix: getAlgorithmFromMatrix(matrixContainer),
-    operators: getOperatorStates()
+    m: getAlgorithmFromMatrix(matrixContainer),
+    o: getOperatorStates()
   };
-  //
-  if (currentState.matrix && currentState.operators) {
-    // Send the complete current state to the synth
-    // sendStateToSynth(currentState);
-    // Update the URL fragment
+  if (currentState.m && currentState.o) {
     await updateUrlFragment();
   } else {
     console.error("Failed to get current state from UI on change.");
   }
 }
+export const debounceHandleUIChange = debounce(handleUIChange, 500); // 500ms debounce
 
 /**
  * Handles the 'initialized' message from the worklet.
@@ -466,11 +466,11 @@ async function resetSynthState() {
   console.log("Getting default state from reset UI...");
   // 2. Get the state *from* the now-reset UI
   const defaultState = {
-    matrix: getAlgorithmFromMatrix(matrixContainer),
-    operators: getOperatorStates()
+    m: getAlgorithmFromMatrix(matrixContainer),
+    o: getOperatorStates()
   };
 
-  if (!defaultState.matrix || !defaultState.operators) {
+  if (!defaultState.m || !defaultState.o) {
     console.error("Failed to get default state from UI after reset. Aborting reset.");
     isUpdatingFromUI = true; // Re-enable updates
     return;

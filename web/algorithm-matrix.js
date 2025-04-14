@@ -134,7 +134,211 @@ export function getAlgorithmFromMatrix(container) {
   // console.log("Generated Combined Algorithm Matrix (Carriers in Col):", JSON.stringify(resultMatrix));
   return resultMatrix; // Return the combined 2D array
 }
+/**
+ * Pre-calculated mapping from matrix dimension n (where 2 <= n <= 12)
+ * to information needed for Base64URL encoding.
+ * - bits: Total bits in the n x (n+1) matrix (B = n * (n+1))
+ * - length: Expected length of the Base64URL encoded string (L = ceil(B / 6))
+ * - padding: Number of zero bits needed for padding ((L * 6) - B)
+ */
+const n_to_info = {
+  2: { bits: 6, length: 1, padding: 0 },  // 2x3 matrix
+  3: { bits: 12, length: 2, padding: 0 },  // 3x4 matrix
+  4: { bits: 20, length: 4, padding: 4 },  // 4x5 matrix (needs 4 padding bits)
+  5: { bits: 30, length: 5, padding: 0 },  // 5x6 matrix
+  6: { bits: 42, length: 7, padding: 0 },  // 6x7 matrix
+  7: { bits: 56, length: 10, padding: 4 },  // 7x8 matrix (needs 4 padding bits)
+  8: { bits: 72, length: 12, padding: 0 },  // 8x9 matrix
+  9: { bits: 90, length: 15, padding: 0 },  // 9x10 matrix
+  10: { bits: 110, length: 19, padding: 4 }, // 10x11 matrix (needs 4 padding bits)
+  11: { bits: 132, length: 22, padding: 0 }, // 11x12 matrix
+  12: { bits: 156, length: 26, padding: 0 }  // 12x13 matrix
+};
+/**
+ * Pre-calculated mapping from Base64URL encoded string length (L)
+ * back to the original matrix dimension n (where 2 <= n <= 12).
+ * L = ceil(n * (n + 1) / 6)
+ */
+const length_to_n = {
+  1: 2,   // n=2 -> 6 bits -> L=1
+  2: 3,   // n=3 -> 12 bits -> L=2
+  4: 4,   // n=4 -> 20 bits -> L=4
+  5: 5,   // n=5 -> 30 bits -> L=5
+  7: 6,   // n=6 -> 42 bits -> L=7
+  10: 7,  // n=7 -> 56 bits -> L=10
+  12: 8,  // n=8 -> 72 bits -> L=12
+  15: 9,  // n=9 -> 90 bits -> L=15
+  19: 10, // n=10 -> 110 bits -> L=19
+  22: 11, // n=11 -> 132 bits -> L=22
+  26: 12  // n=12 -> 156 bits -> L=26
+};
+/**
+ * Encodes an n x (n+1) binary matrix (where 2 <= n <= 12)
+ * into a compact Base64URL string.
+ * @param {number[][]} matrix - The input matrix (e.g., [[1,0,1],[0,1,0]])
+ * @returns {string} The Base64URL encoded string.
+ * @throws {Error} if n is out of range [2, 12] or matrix dimensions are wrong.
+ */
+export function encodeAlgorithmMatrix(matrix) {
+  if (!matrix || !matrix.length) {
+    throw new Error("Invalid matrix input.");
+  }
+  const n = matrix.length;
 
+  if (!(n >= 2 && n <= 12)) {
+    throw new Error(`Matrix size n=${n} is out of the allowed range [2, 12].`);
+  }
+  if (!n_to_info[n]) {
+    // This should not happen if the range check passes, but belt-and-suspenders
+    throw new Error(`Internal error: No encoding info found for n=${n}.`);
+  }
+  const expectedCols = n + 1;
+  if (!matrix.every(row => row && row.length === expectedCols)) {
+    throw new Error(`Invalid matrix dimensions. Expected ${n}x${expectedCols}, check all rows.`);
+  }
+  if (!matrix.every(row => row.every(cell => cell === 0 || cell === 1))) {
+    throw new Error(`Matrix must contain only 0s and 1s.`);
+  }
+
+  const info = n_to_info[n];
+  const B = info.bits;
+  const L = info.length;
+  const padding_bits_count = info.padding;
+
+  // 1. Flatten (row-major) and create bit string
+  let bit_string = "";
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < expectedCols; c++) {
+      bit_string += matrix[r][c]; // Append '0' or '1'
+    }
+  }
+
+  if (bit_string.length !== B) {
+    throw new Error(`Internal error: Flattened bit string length ${bit_string.length} does not match expected ${B} for n=${n}.`);
+  }
+
+  // 2. Pad with trailing zeros
+  const padded_bit_string = bit_string + '0'.repeat(padding_bits_count);
+
+  if (padded_bit_string.length !== L * 6) {
+    throw new Error(`Internal error: Padded bit string length ${padded_bit_string.length} does not match expected ${L * 6}.`);
+  }
+
+  // 3. Convert padded bit string to bytes (Uint8Array)
+  const bytes = new Uint8Array(L * 6 / 8); // L*6 must be multiple of 8? NO. It's multiple of 6. Math.ceil(L*6/8)
+  // const bytes = new Uint8Array(Math.ceil(L * 6 / 8)); // Correct number of bytes needed
+  let byteIndex = 0;
+  for (let i = 0; i < padded_bit_string.length; i += 8) {
+    const chunk = padded_bit_string.substring(i, Math.min(i + 8, padded_bit_string.length));
+    // Pad the last chunk if needed to make it 8 bits before parsing
+    const paddedChunk = chunk.padEnd(8, '0');
+    bytes[byteIndex++] = parseInt(paddedChunk, 2);
+  }
+
+  // Workaround for btoa needing a binary *string*
+  let binaryString = '';
+  bytes.forEach(byte => {
+    binaryString += String.fromCharCode(byte);
+  });
+
+  // 4. Base64 Encode (standard)
+  let base64String = btoa(binaryString);
+
+  // 5. Convert to Base64URL
+  base64String = base64String
+    .replace(/\+/g, '-') // Replace + with -
+    .replace(/\//g, '_') // Replace / with _
+    .replace(/=/g, '');  // Remove padding '='
+
+  // Final check
+  if (base64String.length !== L) {
+    console.warn(`Warning: Expected encoded length ${L} for n=${n}, but got ${base64String.length}. Review byte conversion/padding.`);
+  }
+
+  return base64String;
+}
+
+/**
+ * Decodes a Base64URL string back into an n x (n+1) matrix.
+ * @param {string} encodedString - The Base64URL encoded string.
+ * @returns {{matrix: number[][], n: number}} An object containing the decoded matrix and its dimension n.
+ * @throws {Error} if the encoded string length is invalid or decoding fails.
+ */
+export function decodeAlgorithmMatrix(encodedString) {
+  if (typeof encodedString !== 'string' || encodedString.length === 0) {
+    throw new Error("Invalid or empty encoded string input.");
+  }
+
+  const L = encodedString.length;
+  const n = length_to_n[L];
+
+  if (n === undefined) {
+    throw new Error(`Invalid encoded string length: ${L}. No corresponding matrix size found.`);
+  }
+
+  const info = n_to_info[n];
+  const B = info.bits; // Expected number of *original* bits
+
+  // 1. Convert Base64URL back to standard Base64
+  let base64String = encodedString
+    .replace(/-/g, '+') // Replace - with +
+    .replace(/_/g, '/'); // Replace _ with /
+
+  // 2. Add standard Base64 padding '=' back
+  const paddingRequired = (4 - (base64String.length % 4)) % 4;
+  base64String += '='.repeat(paddingRequired);
+
+  // 3. Base64 Decode (standard) -> results in a "binary string"
+  let decodedBinaryString;
+  try {
+    decodedBinaryString = atob(base64String);
+  } catch (e) {
+    throw new Error(`Base64 decoding failed. Invalid input string. Original error: ${e.message}`);
+  }
+
+  // 4. Convert binary string to full bit string
+  let full_bit_string = '';
+  for (let i = 0; i < decodedBinaryString.length; i++) {
+    const byteValue = decodedBinaryString.charCodeAt(i);
+    full_bit_string += byteValue.toString(2).padStart(8, '0');
+  }
+
+  // 5. Trim to the expected number of bits after encoding (L*6)
+  // This accounts for potential extra bits from the byte conversion if L*6 wasn't a multiple of 8
+  const expectedTotalBits = L * 6;
+  if (full_bit_string.length < expectedTotalBits) {
+    // This might happen if atob truncates null bytes? Pad just in case.
+    full_bit_string = full_bit_string.padEnd(expectedTotalBits, '0');
+    // console.warn("Needed to pad decoded bit string");
+  }
+  full_bit_string = full_bit_string.substring(0, expectedTotalBits);
+
+
+  // 6. Extract the original B data bits (remove padding 0s added during encoding)
+  const original_bit_string = full_bit_string.substring(0, B);
+
+  if (original_bit_string.length !== B) {
+    throw new Error(`Internal error: Extracted bit length ${original_bit_string.length} does not match expected ${B} for n=${n}.`);
+  }
+
+  // 7. Reshape bits into the n x (n+1) matrix
+  const matrix = [];
+  let bitIndex = 0;
+  const expectedCols = n + 1;
+  for (let r = 0; r < n; r++) {
+    const row = [];
+    for (let c = 0; c < expectedCols; c++) {
+      if (bitIndex >= original_bit_string.length) {
+        throw new Error(`Internal error: Ran out of bits while reshaping matrix at row ${r}, col ${c}.`);
+      }
+      row.push(parseInt(original_bit_string[bitIndex], 10)); // Convert '0'/'1' char to number 0/1
+      bitIndex++;
+    }
+    matrix.push(row);
+  }
+
+  return matrix;
+}
 /**
  * Sets up event listeners for the matrix UI (including OUT column clicks).
  * @param {HTMLElement} container - The container element holding the matrix UI.

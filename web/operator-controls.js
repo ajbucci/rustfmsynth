@@ -1,6 +1,6 @@
 // Import the shared message sending function and audio resume function
 import { tryEnsureSynthAndSendMessage } from './keyboard-input.js';
-import { resumeAudioContext, handleUIChange } from './app.js';
+import { resumeAudioContext, debounceHandleUIChange } from './app.js';
 import { createDial } from './dial.js';
 import { createVerticalCrossfader } from './crossfader.js';
 export const NUM_OPERATORS = 6; // Example: Define and export
@@ -47,7 +47,7 @@ export const sendRatioUpdate = async (opIndex, ratioValue) => {
   const success = await tryEnsureSynthAndSendMessage(messageId, message);
   if (success) {
     console.log(`Sent ratio update for Op ${opIndex + 1}: ${ratioValue}`);
-    handleUIChange(); // Call callback on success
+    debounceHandleUIChange(); // Call callback on success
   } else {
     console.warn(`Operator Controls: Failed to send set_operator_ratio for operator ${opIndex}`);
   }
@@ -67,11 +67,15 @@ export const sendModulationIndexUpdate = async (opIndex, modIndexValue) => {
   const success = await tryEnsureSynthAndSendMessage(messageId, message);
   if (success) {
     console.log(`Sent mod index update for Op ${opIndex + 1}: ${modIndexValue}`);
-    handleUIChange(); // Call callback on success
+    debounceHandleUIChange(); // Call callback on success
   } else {
     console.warn(`Operator Controls: Failed to send set_operator_modulation_index for operator ${opIndex}`);
   }
   return success;
+};
+const defaultState = {
+  r: 1.0, m: 1.0, w: DEFAULT_WAVEFORM_VALUE, // Default mod index might be 0 or 1 depending on preference
+  e: { a: DEFAULT_ATTACK, d: DEFAULT_DECAY, s: DEFAULT_SUSTAIN, r: DEFAULT_RELEASE }
 };
 // +++ NEW FUNCTION: Get current states from UI +++
 export function getOperatorStates() {
@@ -85,21 +89,17 @@ export function getOperatorStates() {
     const sustainInput = document.getElementById(`op-${i}-adsr-sustain`);
     const releaseInput = document.getElementById(`op-${i}-adsr-release`);
 
-    // Define default values locally for robustness
-    const defaultState = {
-      ratio: 1.0, modIndex: 0.0, waveform: DEFAULT_WAVEFORM_VALUE,
-      attack: DEFAULT_ATTACK, decay: DEFAULT_DECAY, sustain: DEFAULT_SUSTAIN, release: DEFAULT_RELEASE
-    };
-
     if (ratioInput && modIndexInput && waveformSelect && attackInput && decayInput && sustainInput && releaseInput) {
       states.push({
-        ratio: parseFloat(ratioInput.value) || defaultState.ratio,
-        modIndex: parseFloat(modIndexInput.value) || defaultState.modIndex, // Note: 0 is falsy, || might not be ideal if 0 is valid non-default. Use ?? in modern JS. Let's assume defaults are non-zero where applicable or check isNaN.
-        waveform: parseInt(waveformSelect.value) ?? defaultState.waveform, // Use nullish coalescing
-        attack: parseFloat(attackInput.value) ?? defaultState.attack,
-        decay: parseFloat(decayInput.value) ?? defaultState.decay,
-        sustain: parseFloat(sustainInput.value) ?? defaultState.sustain,
-        release: parseFloat(releaseInput.value) ?? defaultState.release
+        r: parseFloat(ratioInput.value) || defaultState.r,
+        m: parseFloat(modIndexInput.value) || defaultState.m, // Note: 0 is falsy, || might not be ideal if 0 is valid non-default. Use ?? in modern JS. Let's assume defaults are non-zero where applicable or check isNaN.
+        w: parseInt(waveformSelect.value) ?? defaultState.w, // Use nullish coalescing
+        e: {
+          a: parseFloat(attackInput.value) ?? defaultState.e.a,
+          d: parseFloat(decayInput.value) ?? defaultState.e.d,
+          s: parseFloat(sustainInput.value) ?? defaultState.e.s,
+          r: parseFloat(releaseInput.value) ?? defaultState.e.r
+        }
       });
     } else {
       console.warn(`Could not find all controls for operator ${i + 1} when getting state. Using defaults.`);
@@ -116,23 +116,17 @@ export function applyOperatorStatesUI(operatorStates) {
     return;
   }
 
-  // Define default values locally for robustness when applying state
-  const defaultState = {
-    ratio: 1.0, modIndex: 0.0, waveform: DEFAULT_WAVEFORM_VALUE,
-    attack: DEFAULT_ATTACK, decay: DEFAULT_DECAY, sustain: DEFAULT_SUSTAIN, release: DEFAULT_RELEASE
-  };
-
   for (let i = 0; i < NUM_OPERATORS; i++) {
     // Use provided state or fallback to default if state for this index is missing/nullish
     const state = operatorStates[i] ?? defaultState;
     // Even if state exists, individual properties might be missing in older versions/malformed data
-    const ratio = state.ratio ?? defaultState.ratio;
-    const modIndex = state.modIndex ?? defaultState.modIndex;
-    const waveform = state.waveform ?? defaultState.waveform;
-    const attack = state.attack ?? defaultState.attack;
-    const decay = state.decay ?? defaultState.decay;
-    const sustain = state.sustain ?? defaultState.sustain;
-    const release = state.release ?? defaultState.release;
+    const ratio = state.r ?? defaultState.r;
+    const modIndex = state.m ?? defaultState.m;
+    const waveform = state.w ?? defaultState.w;
+    const attack = state.e.a ?? defaultState.e.a;
+    const decay = state.e.d ?? defaultState.d;
+    const sustain = state.e.s ?? defaultState.s;
+    const release = state.e.r ?? defaultState.r;
 
 
     const ratioNum = document.getElementById(`op-${i}-ratio-input`);
@@ -163,10 +157,6 @@ export function applyOperatorStatesUI(operatorStates) {
  */
 export function resetOperatorControlsUI() {
   console.log("Resetting operator controls UI to defaults...");
-  const defaultState = {
-    ratio: 1.0, modIndex: 1.0, waveform: DEFAULT_WAVEFORM_VALUE, // Default mod index might be 0 or 1 depending on preference
-    attack: DEFAULT_ATTACK, decay: DEFAULT_DECAY, sustain: DEFAULT_SUSTAIN, release: DEFAULT_RELEASE
-  };
   const defaultStatesArray = Array(NUM_OPERATORS).fill(defaultState);
   applyOperatorStatesUI(defaultStatesArray); // Reuse the apply function with default data
   console.log("Operator controls UI reset complete.");
