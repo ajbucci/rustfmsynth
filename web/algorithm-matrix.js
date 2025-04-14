@@ -6,7 +6,7 @@
 
 import { resumeAudioContext } from './app.js'; // Import synth starter
 import { tryEnsureSynthAndSendMessage } from './keyboard-input.js'; // Import message sending function
-
+import { dialToggleActive, dialSetActive } from './dial.js'
 export function createAlgorithmMatrixUI(numOperators, container, onStateChangeCallback) {
   if (!container) {
     console.error("Algorithm Matrix: Container element not provided.");
@@ -353,6 +353,10 @@ function setupMatrixEventListeners(container, onStateChangeCallback) {
     if (!target || !(target.dataset.modulator || target.dataset.outputOp)) return;
 
     target.classList.toggle('active');
+    if (target.dataset.outputOp) {
+      let internalIndex = parseInt(target.dataset.outputOp) - 1;
+      dialToggleActive(internalIndex); // Toggle the dial state
+    }
 
     const currentCombinedMatrix = getAlgorithmFromMatrix(container);
     if (currentCombinedMatrix) {
@@ -457,6 +461,7 @@ export function displayAlgorithm(container, combinedMatrix) {
 
         if (cell) {
           cell.classList.add('active');
+          dialSetActive(i);
         } else {
           // console.warn(`Algorithm Matrix display: Could not find UI cell for matrix[${i}][${j}]`);
         }

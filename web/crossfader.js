@@ -1,12 +1,11 @@
-// --- Imports ---
-// We only need the update function now
-import { sendModulationIndexUpdate } from './operator-controls.js'; // Adjust path if needed
-
+import { sendModulationIndexUpdate } from './operator-controls.js';
+import { isFineModeActive } from './dial.js';
 // Constants specific to the crossfader's value range
 const MIN_VALUE = 0.00;
-const MAX_VALUE = 1.00;
+const MAX_VALUE = 10.00;
 const STEP = 0.01;
 const VALUE_RANGE = MAX_VALUE - MIN_VALUE;
+const FINE_MODE_DAMPING = 5; // Adjust this value to change the sensitivity in fine mode
 
 // --- createVerticalCrossfader Function ---
 export function createVerticalCrossfader(index, initialValue = 1.00) {
@@ -49,6 +48,11 @@ export function createVerticalCrossfader(index, initialValue = 1.00) {
   track.appendChild(thumb);
   trackContainer.appendChild(track);
 
+  const label = document.createElement('label');
+  label.classList.add('crossfader-label');
+  label.id = `op-${index}-mod-index-label`;
+  label.textContent = `Modulation:`;
+  faderContainer.appendChild(label);
   faderContainer.appendChild(trackContainer);
 
   const faderInput = document.createElement("input");
@@ -154,7 +158,7 @@ export function createVerticalCrossfader(index, initialValue = 1.00) {
     const deltaY = clientY - lastClientY;
 
     // Update visual position directly, no sensitivity scaling
-    visualThumbTop += deltaY;
+    visualThumbTop += isFineModeActive ? deltaY / FINE_MODE_DAMPING : deltaY;
     visualThumbTop = Math.max(0, Math.min(effectiveHeight, visualThumbTop));
 
     currentValue = thumbTopToValue(visualThumbTop);

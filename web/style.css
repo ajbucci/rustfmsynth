@@ -71,6 +71,7 @@ button {
   cursor: grab;
 }
 .dial-input {
+  margin-top: 0.5em;
   width: 3em;
   background: none;
   border: none;
@@ -78,7 +79,8 @@ button {
   color: inherit;
 }
 .dial.active {
-  box-shadow: 0px 0px 2px 4px rgb(137 79 147 / 50%)
+  box-shadow: inset 0 0 2px 6px #111, 0 0px 6px rgba(0,0,0,0.5), 0px 0px 5px 2px rgba(135, 255, 176, 0.8);
+;
 }
 #keyboard-container {
     display: flex; /* Arrange keys horizontally */
@@ -384,25 +386,26 @@ button {
   margin: 5px 10px; /* Add some spacing */
 }
 
+.crossfader-label {
+  margin-top: 0.5em; /* Space above label */
+  margin-bottom: 0.5em; /* Space between label and slider */
+}
 .crossfader-track-container {
   display:flex;
   flex-direction:column;
   align-items:center;
   background: repeating-linear-gradient(
     0deg,
-    #222,
-    #222 5px,
-    #191919 5px,
-    #191919 10px
+    #222 4%,
+    #111 7%,
+    #222 10%
   );
   box-shadow: 0px 0px 0px 1px black;
-  margin-bottom: 5px;
 }
 .crossfader-track {
   position: relative; /* Needed for absolute positioning of the thumb */
   height: 100px;
-  background-color: #000;
-  border-radius: 5%;
+  background: linear-gradient(90deg, black, #111, black);
   cursor: pointer;
 }
 
@@ -410,7 +413,7 @@ button {
   position: absolute;
   width: 16px; /* Thumb wider than track */
   height: 8px; /* Short thumb */
-  background-color: #333; /* Lighter thumb color */
+  background-color: #393939; /* Lighter thumb color */
   box-shadow: inset 0 0 3px 2px #191919, 0 0px 3px 0px rgba(0,0,0,0.5);
   border-radius: 5%;
   cursor: grab; /* Indicate draggable */
@@ -420,10 +423,11 @@ button {
 }
 .crossfader-thumb-stripe {
   background-color: #fff;
-  box-shadow: 0px 0px 0px 2px #222;
+  box-shadow: 0px 0px 2px 2px #222, inset 0 0 1px 0px #111;
 }
 .crossfader-input {
   width: 3em;
+  margin-top: 0.5em;
   text-align: center;
 }
 

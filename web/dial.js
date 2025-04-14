@@ -1,7 +1,7 @@
 // --- Global State and Control ---
 import { sendRatioUpdate } from './operator-controls.js';
 
-let isFineModeActive = false;
+export let isFineModeActive = false;
 const coarseTooltip = "Drag to adjust (Hold Shift for fine detail)";
 const fineTooltip = "Drag for fine detail (Release Shift for coarse steps)";
 const FINE_MODE_SENSITIVITY = 0.3;
@@ -77,7 +77,12 @@ document.addEventListener("keyup", (e) => {
   }
 });
 
-
+export function dialToggleActive(index) {
+  document.querySelector('#op-' + index + '-ratio-dial').classList.toggle('active');
+}
+export function dialSetActive(index) {
+  document.querySelector('#op-' + index + '-ratio-dial').classList.add('active');
+}
 export function createDial(index, initialValue = 1) {
   const MIN_ROTATION = -135;
   const MAX_ROTATION = 135;
