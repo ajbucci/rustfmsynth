@@ -28,7 +28,7 @@ export async function tryEnsureSynthAndSendMessage(eventCode, message) {
       return false;
     }
     processorPort.postMessage(message);
-    console.log(`Sent message for ${eventCode}:`, message);
+    // console.log(`Sent message for ${eventCode}:`, message);
     return true;
   } catch (error) {
     console.error(`Error sending message for ${eventCode}:`, error);

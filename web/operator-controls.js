@@ -46,7 +46,6 @@ export const sendRatioUpdate = async (opIndex, ratioValue) => {
   const messageId = `set-ratio-op-${opIndex}`; // Unique ID
   const success = await tryEnsureSynthAndSendMessage(messageId, message);
   if (success) {
-    console.log(`Sent ratio update for Op ${opIndex + 1}: ${ratioValue}`);
     debounceHandleUIChange(); // Call callback on success
   } else {
     console.warn(`Operator Controls: Failed to send set_operator_ratio for operator ${opIndex}`);
@@ -66,7 +65,6 @@ export const sendModulationIndexUpdate = async (opIndex, modIndexValue) => {
   const messageId = `set-mod-index-op-${opIndex}`; // Unique ID
   const success = await tryEnsureSynthAndSendMessage(messageId, message);
   if (success) {
-    console.log(`Sent mod index update for Op ${opIndex + 1}: ${modIndexValue}`);
     debounceHandleUIChange(); // Call callback on success
   } else {
     console.warn(`Operator Controls: Failed to send set_operator_modulation_index for operator ${opIndex}`);
@@ -276,7 +274,6 @@ function createOperatorControl(index, container, onStateChangeCallback) {
     const success = await tryEnsureSynthAndSendMessage(messageId, message);
     if (success) {
       const waveformName = WAVEFORMS.find(wf => wf.value === waveformValue)?.name || 'Unknown';
-      console.log(`Sent waveform update for Op ${opIndex + 1}: ${waveformName} (${waveformValue})`);
       onStateChangeCallback(); // Call callback on success
     } else {
       console.warn(`Operator Controls: Failed to send set_operator_waveform for operator ${opIndex}`);
@@ -299,7 +296,6 @@ function createOperatorControl(index, container, onStateChangeCallback) {
     const messageId = `set-envelope-op-${opIndex}`; // Unique ID for throttling/logging
     const success = await tryEnsureSynthAndSendMessage(messageId, message);
     if (success) {
-      console.log(`Sent envelope update for Op ${opIndex + 1}: A=${attack.toFixed(3)} D=${decay.toFixed(3)} S=${sustain.toFixed(2)} R=${release.toFixed(3)}`);
       onStateChangeCallback(); // Call callback on success
     } else {
       console.warn(`Operator Controls: Failed to send set_operator_envelope for operator ${opIndex}`);

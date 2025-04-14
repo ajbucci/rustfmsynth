@@ -78,7 +78,6 @@ const sendMatrixUpdate = async (matrix, onStateChangeCallback) => {
   const messageId = `set-matrix`;
   const success = await tryEnsureSynthAndSendMessage(messageId, message);
   if (success) {
-    console.log(`Sent matrix update`);
     onStateChangeCallback(); // Call callback on success
   } else {
     console.warn(`Matrix Controls: Failed to send set-algorithm for connection matrix`);

@@ -42,7 +42,6 @@ let midiHandler = null;
  */
 export function resumeAudioContext() {
   if (audioContext && audioContext.state === 'suspended') {
-    console.log("Attempting to resume AudioContext due to user interaction...");
     audioContext.resume().then(() => {
       console.log("AudioContext resumed successfully.");
     }).catch(e => console.warn("AudioContext.resume() failed:", e));
@@ -271,8 +270,6 @@ const debounce = (fn, delay) => {
   }
 }
 async function handleUIChange() {
-  console.log("UI Change detected, updating URL.");
-
   const currentState = {
     m: getAlgorithmFromMatrix(matrixContainer),
     o: getOperatorStates()
