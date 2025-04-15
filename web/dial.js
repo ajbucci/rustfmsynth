@@ -237,7 +237,9 @@ export function createDial(index, initialValue = 1) {
     sendRatioUpdate(index, currentValue);
   };
   const handleTouchMove = (event) => {
-    event.preventDefault();
+    if (isDragging) {
+      event.preventDefault();
+    }
     let newEvent = { clientX: event.touches[0].clientX, clientY: event.touches[0].clientY };
     handleMouseMove(newEvent);
   }
@@ -255,7 +257,7 @@ export function createDial(index, initialValue = 1) {
   };
   document.addEventListener("mousemove", handleMouseMove);
   document.addEventListener("mouseup", handleMouseUp);
-  document.addEventListener('touchmove', handleTouchMove);
+  document.addEventListener('touchmove', handleTouchMove, { passive: false });
   document.addEventListener('touchend', handleMouseUp);
   dialInput.addEventListener('change', (event) => {
     let newValue = parseFloat(event.target.value);

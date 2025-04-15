@@ -1,6 +1,9 @@
 :root {
-    --white-key-width: 50px;
-    --black-key-width: 30px;
+    --white-key-width: 10%;
+    --black-key-width: 6%;
+    --gap-sm: 5px;
+    --gap-lg: 20px;
+    --breakpoint-lg: 1200px;
 }
 
 body {
@@ -96,21 +99,24 @@ button:hover {
   box-shadow: inset 0 0 2px 6px #111, 0 0px 6px rgba(0,0,0,0.5), 0px 0px 5px 2px rgba(135, 255, 176, 0.8);
 ;
 }
+#bottom-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  margin-top: 20px;
+  width: 100%;
+}
 #keyboard-container {
     display: flex; /* Arrange keys horizontally */
     position: relative; /* Needed for positioning black keys */
     background-color: #333;
-    padding: 10px;
     border-radius: 5px;
     box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-    margin-top: 20px;
     height: 180px; /* Adjust height as needed */
-    width: fit-content; /* Adjust width based on keys */
-    border: 3px solid #555;
+    width: 500px; /* Adjust width based on keys */
 }
 
 .key {
-    border: 1px solid #555;
     box-sizing: border-box;
     position: relative; /* For label positioning */
     cursor: pointer;
@@ -128,6 +134,7 @@ button:hover {
     width: var(--white-key-width); /* Width of white keys */
     height: 100%; /* Full height of container */
     background-color: #fff;
+    box-shadow: inset 0 0 0px 1px black;
     color: #333;
     border-bottom-left-radius: 3px;
     border-bottom-right-radius: 3px;
@@ -140,7 +147,6 @@ button:hover {
     background-color: #222;
     color: #eee;
     position: absolute; /* Position relative to container */
-    margin-left: 10px; /* Overlap previous white key -- this should be calculated not hardcoded. */
     z-index: 2; /* Black keys above white keys */
     border-radius: 0 0 3px 3px;
 }
@@ -176,12 +182,13 @@ button:hover {
   display: flex; /* Arrange controls horizontally */
   position: relative; /* Needed for absolute positioning of background */
   flex-wrap: wrap; /* Allow wrapping if space is tight */
-  gap: 20px;      /* Spacing between controls */
+  gap: var(--gap-sm);      /* Spacing between controls */
   border: 3px solid #111;
-  padding: 1em;
+  padding: var(--gap-sm);
   border-radius: 5px;
   background: linear-gradient(35deg, #252525 0%, #292929 50%, #252525 100%);
   color: aliceblue;
+  justify-content: center; /* Center controls */
   margin-top: 15px; /* Space below keyboard */
 }
 #operator-controls::before {
@@ -221,14 +228,12 @@ button:hover {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
-  min-width: 120px;
-  margin-bottom: 10px;
+  gap: var(--gap-lg);
+  min-width: 152px;
   background: rgba(0,0,0,0.1);
   border-radius: 1rem;
   padding: 1rem 0.5rem;
 }
-
 .operator-control label {
   font-weight: bold;
   font-size: 0.9em;
@@ -256,11 +261,11 @@ button:hover {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  margin-left: 1rem;
   width: 100%;
 }
 .global-controls button {
   width: 50%;
+  min-width: 120px;
 }
 
 /* Style Modulation Index Slider as Vertical */
@@ -387,8 +392,8 @@ button:hover {
 }
 
 .shift-keys {
-  height: 100%;
-  width: var(--white-key-width);
+  /* height: 100%; */
+  width: 5%;
   margin: 0;
   padding: 0;
   background-color: #777;
@@ -451,3 +456,22 @@ button:hover {
 .crossfader-thumb.dragging {
   cursor: grabbing;
 }
+
+@media (max-width: 600px) {
+  #controls-top-row {
+    flex-direction: column;
+    align-items: center;
+  }
+}
+/* @media (min-width: 1200px) { */
+/*   #operator-controls { */
+/*     flex-wrap: nowrap; */
+/*     width: auto; */
+/*     gap: var(--gap-lg); */
+/*     padding: var(--gap-lg); */
+/*   } */
+/*   .operator-control { */
+/*     flex-basis: auto; */
+/*     gap: var(--gap-lg); */
+/*   } */
+/* } */

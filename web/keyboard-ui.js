@@ -45,6 +45,7 @@ export let keyboardLayout = getKeyboardLayout(); // Default layout
 const keyboardContainer = document.getElementById('keyboard-container');
 let processorPort = null; // Set by connectKeyboardUIPort
 let noteNumberStart = 48;
+let shiftKeyListeners = false;
 const activeMouseKeys = new Set(); // Track keys pressed by mouse
 // Function to generate keyboard HTML - Export this
 export function generateKeyboard() {
@@ -55,8 +56,8 @@ export function generateKeyboard() {
   keyboardContainer.innerHTML = ''; // Clear previous content
 
   // Pull key widths directly from CSS
-  const whiteKeyWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--white-key-width')) || 50; // Fallback to 50 if not found
-  const blackKeyWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--black-key-width')) || 30; // Fallback to 30 if not found
+  const whiteKeyWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--white-key-width')) || 10; // Fallback to 50 if not found
+  const blackKeyWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--black-key-width')) || 6; // Fallback to 30 if not found
 
   let whiteKeyIndex = 0; // Track only the index of white keys
 
@@ -73,24 +74,23 @@ export function generateKeyboard() {
     keyboardLayout = getKeyboardLayout(noteNumberStart);
   }
 
-  const shiftKeysWidth = whiteKeyWidth;
-  const shiftKeysLeft = document.createElement('button');
-  shiftKeysLeft.classList.add('shift-keys');
-  shiftKeysLeft.innerText = '←';
-  shiftKeysLeft.addEventListener('click', () => {
-    noteNumberStart--;
-    generateKeyboard();
-  });
-  const shiftKeysRight = document.createElement('button');
-  shiftKeysRight.classList.add('shift-keys');
-  shiftKeysRight.innerText = '→';
-  shiftKeysRight.addEventListener('click', () => {
-    // when traveling up the keyboard increment by 2 to counteract the 'must start on sharp' rule
-    noteNumberStart = noteNumberStart + 2;
-    generateKeyboard();
-  });
+  const shiftKeysLeft = document.getElementById('shift-keys-left');
+  const shiftKeysRight = document.getElementById('shift-keys-right');
+  if (!shiftKeyListeners) {
+    shiftKeysLeft.addEventListener('click', () => {
+      noteNumberStart--;
+      generateKeyboard();
+    });
+    shiftKeysRight.addEventListener('click', () => {
+      // when traveling up the keyboard increment by 2 to counteract the 'must start on sharp' rule
+      noteNumberStart = noteNumberStart + 2;
+      generateKeyboard();
+    });
+    shiftKeyListeners = true;
+  }
 
-  keyboardContainer.appendChild(shiftKeysLeft);
+  const bottomRow = document.getElementById('bottom-row');
+  bottomRow.insertBefore(shiftKeysLeft, keyboardContainer);
   Object.entries(keyboardLayout)
     .sort((a, b) => a[1].note - b[1].note)  // Sort by note number
     .forEach(([keyCode, keyData]) => {
@@ -114,9 +114,9 @@ export function generateKeyboard() {
         // Calculate left position directly based on the preceding white key's position
         // Start position = (start of preceding white key) + (width of white key - overlap)
         // Note: whiteKeyIndex is 1-based relative to the start here.
-        const precedingWhiteKeyStart = (whiteKeyIndex - 1) * whiteKeyWidth + shiftKeysWidth;
+        const precedingWhiteKeyStart = (whiteKeyIndex - 1) * whiteKeyWidth;
         const leftPosition = precedingWhiteKeyStart + (whiteKeyWidth - blackKeyWidth / 2);
-        keyElement.style.left = `${leftPosition}px`;
+        keyElement.style.left = `${leftPosition}%`;
         keyboardContainer.appendChild(keyElement);
         // DO NOT increment whiteKeyIndex here
       }
@@ -127,12 +127,12 @@ export function generateKeyboard() {
       keyElement.addEventListener('mouseleave', handleMouseLeave);
 
       // Touch interaction listeners
-      keyElement.addEventListener('touchstart', handleMouseDown, { passive: true });
+      keyElement.addEventListener('touchstart', handleMouseDown);
       keyElement.addEventListener('touchend', handleMouseUp);
       keyElement.addEventListener('touchcancel', handleMouseUp);
       keyElement.addEventListener('touchleave', handleMouseUp);
     });
-  keyboardContainer.appendChild(shiftKeysRight);
+  bottomRow.appendChild(shiftKeysRight);
 
   console.log("Keyboard UI generated.");
 }

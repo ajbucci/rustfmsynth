@@ -174,7 +174,9 @@ export function createVerticalCrossfader(index, initialValue = 1.00) {
   };
 
   const handleTouchMove = (event) => {
-    event.preventDefault();
+    if (isDragging) {
+      event.preventDefault();
+    }
     if (event.touches.length > 0) {
       handleMove(event.touches[0].clientY);
     }
