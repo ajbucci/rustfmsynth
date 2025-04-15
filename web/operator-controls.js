@@ -89,8 +89,8 @@ export function getOperatorStates() {
 
     if (ratioInput && modIndexInput && waveformSelect && attackInput && decayInput && sustainInput && releaseInput) {
       states.push({
-        r: parseFloat(ratioInput.value) || defaultState.r,
-        m: parseFloat(modIndexInput.value) || defaultState.m, // Note: 0 is falsy, || might not be ideal if 0 is valid non-default. Use ?? in modern JS. Let's assume defaults are non-zero where applicable or check isNaN.
+        r: parseFloat(ratioInput.value) ?? defaultState.r,
+        m: parseFloat(modIndexInput.value) ?? defaultState.m, // Note: 0 is falsy, || might not be ideal if 0 is valid non-default. Use ?? in modern JS. Let's assume defaults are non-zero where applicable or check isNaN.
         w: parseInt(waveformSelect.value) ?? defaultState.w, // Use nullish coalescing
         e: {
           a: parseFloat(attackInput.value) ?? defaultState.e.a,
@@ -331,10 +331,10 @@ function createOperatorControl(index, container, onStateChangeCallback) {
     }
 
     // Get and parse values, providing defaults if parsing fails
-    let attack = parseFloat(attackInput.value) || DEFAULT_ATTACK;
-    let decay = parseFloat(decayInput.value) || DEFAULT_DECAY;
-    let sustain = parseFloat(sustainInput.value) || DEFAULT_SUSTAIN;
-    let release = parseFloat(releaseInput.value) || DEFAULT_RELEASE;
+    let attack = parseFloat(attackInput.value) ?? DEFAULT_ATTACK;
+    let decay = parseFloat(decayInput.value) ?? DEFAULT_DECAY;
+    let sustain = parseFloat(sustainInput.value) ?? DEFAULT_SUSTAIN;
+    let release = parseFloat(releaseInput.value) ?? DEFAULT_RELEASE;
 
     // Clamp values to their defined ranges
     attack = Math.max(MIN_TIME, Math.min(MAX_TIME, attack));
