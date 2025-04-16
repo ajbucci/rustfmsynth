@@ -1,12 +1,11 @@
+import { resumeAudioContext } from './app.js'; // Import synth starter
+import { tryEnsureSynthAndSendMessage } from './keyboard-input.js'; // Import message sending function
+import { dialToggleActive, dialSetActive } from './dial.js'
 /**
  * Generates the HTML structure for the algorithm matrix including an OUT column.
  * @param {number} numOperators - The number of operators.
  * @param {HTMLElement} container - The container element to populate.
  */
-
-import { resumeAudioContext } from './app.js'; // Import synth starter
-import { tryEnsureSynthAndSendMessage } from './keyboard-input.js'; // Import message sending function
-import { dialToggleActive, dialSetActive } from './dial.js'
 export function createAlgorithmMatrixUI(numOperators, container, onStateChangeCallback) {
   if (!container) {
     console.error("Algorithm Matrix: Container element not provided.");
@@ -482,10 +481,17 @@ export function resetAlgorithmMatrixUI(container) {
   console.log("Resetting algorithm matrix UI to default (Op 1 carrier)...");
 
   // Clear all active states first
-  container.querySelectorAll('td.active').forEach(cell => cell.classList.remove('active'));
+  container.querySelectorAll('td.active').forEach(cell => {
+    if (cell.dataset.outputOp) {
+      let internalIndex = parseInt(cell.dataset.outputOp) - 1;
+      dialToggleActive(internalIndex); // Toggle the dial state
+    }
+    cell.classList.remove('active')
+  })
 
   // Activate the output cell for Operator 1 (index 0)
   const op1OutputCell = container.querySelector(`td.output-cell[data-output-op="1"]`);
+  dialSetActive(0);
   if (op1OutputCell) {
     op1OutputCell.classList.add('active');
     console.log("Activated Op 1 output cell for default state.");

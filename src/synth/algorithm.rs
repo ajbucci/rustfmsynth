@@ -111,19 +111,6 @@ impl Algorithm {
             }
         }
 
-        // --- *** ADD CHECK FOR NO CARRIERS *** ---
-        if new_carriers.is_empty() {
-            let warning_msg = "Algorithm update ignored: The provided matrix configuration results in no carrier operators.";
-            // Log the warning to both terminals if possible
-            eprintln!("Warning: {}", warning_msg);
-            // Return Ok(()) to indicate the operation completed without error,
-            // even though no change was made.
-            return Ok(());
-        }
-        // --- *** END CHECK *** ---
-
-        // --- If carriers exist, proceed with updating the algorithm state ---
-
         // --- Update Internal Connection Matrix ---
         // ... (existing logic to update self.matrix based on UI matrix and zero out others) ...
         for i in 0..synth_op_count {
@@ -778,4 +765,3 @@ mod tests {
         println!("--- Test Finished: test_simple_self_feedback (in-module) ---");
     }
 }
-
