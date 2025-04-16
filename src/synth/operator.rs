@@ -1,6 +1,6 @@
 use super::context::ProcessContext;
 use super::envelope::EnvelopeGenerator;
-use super::filter::{self, FilterType, IirContext};
+use super::filter::{self, Filter};
 use super::waveform::{Waveform, WaveformGenerator};
 use crate::synth::prelude::TAU;
 
@@ -24,7 +24,7 @@ pub struct OperatorState {
     current_phase: f32,
     current_ratio: Option<f32>,
     current_modulation_index: Option<f32>, // Add field for smoothed mod index
-    iir_context: IirContext,
+    filters: Vec<Filter>,
 }
 impl Default for OperatorState {
     fn default() -> Self {
@@ -32,7 +32,7 @@ impl Default for OperatorState {
             current_phase: 0.0,
             current_ratio: None,
             current_modulation_index: None, // Initialize as None
-            iir_context: IirContext::default(),
+            filters: vec![Filter::biquad(20000.0, 44100.0)], // Default filter state
         }
     }
 }
@@ -43,8 +43,7 @@ pub struct Operator {
     pub fixed_frequency: Option<f32>, // Optional fixed frequency in Hz
     pub envelope: EnvelopeGenerator, // Operator-specific envelope (optional)
     pub modulation_index: f32,
-    pub gain: f32,          // Output gain of this operator
-    pub filter: FilterType, // Filter applied to this operator's output
+    pub gain: f32, // Output gain of this operator
 }
 
 impl Operator {
@@ -76,10 +75,6 @@ impl Operator {
             .current_modulation_index
             .unwrap_or(self.modulation_index); // Get current smoothed mod index
 
-        // Define a default Q factor for filters (e.g., Butterworth)
-        // You might want to make this configurable per operator later
-        const DEFAULT_Q: f32 = 0.70710678; // 1.0 / sqrt(2.0)
-
         // Generate the waveform using the WaveformGenerator
         for (i, sample) in output.iter_mut().enumerate() {
             // --- Smooth Ratio ---
@@ -110,21 +105,10 @@ impl Operator {
             let env = self.envelope.evaluate(time_since_on, time_since_off);
             let raw_output = wave * env * self.gain * current_smoothed_modulation_index;
 
-            // --- Apply Filter (Stateful Biquad, per-sample) ---
-            let filtered_output = match self.filter {
-                FilterType::LowPass(cutoff) => filter::process_biquad_lpf(
-                    raw_output,
-                    cutoff,
-                    sample_rate,
-                    DEFAULT_Q, // Use default Q for now
-                    &mut state.iir_context,
-                ),
-                // TODO: Implement other filter types using biquad state if needed
-                // FilterType::HighPass(cutoff) => filter::process_biquad_hpf(...),
-                // FilterType::BandPass(center, bw) => filter::process_biquad_bpf(...),
-                _ => raw_output, // Pass through if type not handled
-            };
-
+            let filtered_output = state
+                .filters
+                .iter_mut()
+                .fold(raw_output, |acc, filter| filter.process(acc));
             *sample = filtered_output; // Assign filtered output
         }
         // Store the final smoothed values back into the state
@@ -207,7 +191,6 @@ impl Default for Operator {
             modulation_index: 1.0,
             envelope: EnvelopeGenerator::new(),
             gain: 1.0,
-            filter: FilterType::LowPass(20000.0), // Default: wide open low-pass
         }
     }
 }

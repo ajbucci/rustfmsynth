@@ -17,12 +17,12 @@ pub use std::sync::OnceLock;
 pub use hashbrown::{HashMap, HashSet};
 
 #[cfg(not(target_arch = "wasm32"))]
-pub use std::collections::{ HashMap, HashSet };
+pub use std::collections::{HashMap, HashSet};
 
 // PI constant
+pub use core::f32::consts::FRAC_1_SQRT_2;
 pub use core::f32::consts::PI;
 pub use core::f32::consts::TAU;
-
 #[cfg(target_arch = "wasm32")]
 pub fn random_range(min: f32, max: f32) -> f32 {
     fastrand::f32() * (max - min) + min
