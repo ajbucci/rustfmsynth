@@ -31,6 +31,7 @@ button:hover {
     font-family: "Inter", sans-serif;
     flex-direction: column;
     align-items: center;
+    gap: 15px;
 }
 
 /* Style for when fine mode is active */
@@ -40,10 +41,6 @@ button:hover {
   font-weight: bold;
 }
 
-#controls-top-row {
-  display: flex;
-  flex-direction: row;
-}
 .adsr-param {
   display: flex;
   flex-direction: row;
@@ -103,7 +100,6 @@ button:hover {
   display: flex;
   flex-direction: row;
   justify-content: center;
-  margin-top: 20px;
   width: 100%;
 }
 #keyboard-container {
@@ -177,6 +173,9 @@ button:hover {
      color: #aaa;
 }
 
+.controls-container {
+  gap: 15px;
+}
 /* --- Operator Controls Styling --- */
 #operator-controls {
   display: flex; /* Arrange controls horizontally */
@@ -189,7 +188,6 @@ button:hover {
   background: linear-gradient(35deg, #252525 0%, #292929 50%, #252525 100%);
   color: aliceblue;
   justify-content: center; /* Center controls */
-  margin-top: 15px; /* Space below keyboard */
 }
 #operator-controls::before {
   content: '';
@@ -464,11 +462,56 @@ button:hover {
 .crossfader-thumb.dragging {
   cursor: grabbing;
 }
-
-@media (max-width: 600px) {
-  #controls-top-row {
-    flex-direction: column;
-    align-items: center;
+.d-flex {
+  display: flex !important;
+}
+.flex-col {
+  flex-direction: column !important;
+}
+.flex-row {
+  flex-direction: row !important;
+}
+.justify-content-center {
+  justify-content: center;
+}
+@media (min-width: 575px) {
+  .flex-sm-col {
+    flex-direction: column !important;
+  }
+  .flex-sm-row {
+    flex-direction: row !important;
+  }
+}
+@media (min-width: 768px) {
+  .flex-sm-col, .flex-md-col {
+    flex-direction: column !important;
+  }
+  .flex-sm-row, .flex-md-row {
+    flex-direction: row !important;
+  }
+}
+@media (min-width: 992px) {
+  .flex-sm-col, .flex-md-col, .flex-lg-col {
+    flex-direction: column !important;
+  }
+  .flex-sm-row, .flex-md-row, .flex-lg-row {
+    flex-direction: row !important;
+  }
+}
+@media (min-width: 1200px) {
+  .flex-sm-col, .flex-md-col, .flex-lg-col, .flex-xl-col {
+    flex-direction: column !important;
+  }
+  .flex-sm-row, .flex-md-row, .flex-lg-row, .flex-xl-row {
+    flex-direction: row !important;
+  }
+}
+@media (min-width: 1500px) {
+  .flex-sm-col, .flex-md-col, .flex-lg-col, .flex-xl-col, .flex-xxl-col {
+    flex-direction: column !important;
+  }
+  .flex-sm-row, .flex-md-row, .flex-lg-row, .flex-xl-row, .flex-xxl-row {
+    flex-direction: row !important;
   }
 }
 /* @media (min-width: 1200px) { */
