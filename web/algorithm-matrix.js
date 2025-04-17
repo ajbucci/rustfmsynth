@@ -41,13 +41,13 @@ export function createAlgorithmMatrixUI(numOperators, container, onStateChangeCa
       const isFeedbackCell = (i === j);
       // data-modulator = row index 'i', data-modulated = column index 'j'
       tableHtml += `<td data-modulator="${i}" data-modulated="${j}" class="${isFeedbackCell ? 'feedback-cell' : ''}">`;
-      tableHtml += `<span class="connection-point"></span>`;
+      tableHtml += `<div class="connection-point"></div>`;
       tableHtml += `</td>`;
     }
     // Add the OUT cell for this operator row
     // data-output-op corresponds to the modulator operator index 'i' (the row)
     tableHtml += `<td data-output-op="${i}" class="output-cell ${i == 1 ? 'active' : ''}">`;
-    tableHtml += `<span class="connection-point output-point"></span>`;
+    tableHtml += `<div class="connection-point output-point"></div>`;
     tableHtml += `</td>`;
     tableHtml += `</tr>`;
   }

@@ -289,19 +289,30 @@ button:hover {
 }
 
 .algorithm-matrix table {
-  border-collapse: collapse;
+  border-spacing: 0;
   max-width: fit-content;
-}
+  border: solid 3px #111;
+  border-bottom: none;
+  border-radius: 5px 5px 0 0;
 
+}
+.algorithm-matrix tr th:last-child,
+.algorithm-matrix tr td:last-child {
+  border-right: none;
+}
 .algorithm-matrix th, .algorithm-matrix td {
-    border: 1px solid #111;
-    padding: .7em .8em;
+    padding: .7em;
     /* width: 40px; */
     /* height: 40px; */
+    border-right: 1px solid #111;
+    border-bottom: 1px solid #111;
     text-align: center;
     vertical-align: middle;
     cursor: pointer; /* All cells clickable */
     box-sizing: border-box; /* Include border in width/height */
+}
+.algorithm-matrix td div{
+  margin: auto;
 }
 .algorithm-matrix td:hover {
   background-color: #333;
@@ -314,7 +325,6 @@ button:hover {
 
 /* Style the connection point within OUT cells */
 .algorithm-matrix td.output-cell .output-point {
-    display: inline-block;
     width: 15px;
     height: 15px;
     background-color: #333; /* Default off color */
@@ -335,7 +345,6 @@ button:hover {
 }
 /* Style the connection point INSIDE feedback cells (default state) */
 .algorithm-matrix td.feedback-cell .connection-point {
-     display: inline-block; /* Ensure it's displayed */
      width: 15px;
      height: 15px;
      border-radius: 20%; /* Slightly square-ish? */
@@ -352,7 +361,6 @@ button:hover {
 
 /* Connection points (non-feedback, non-output) */
 .algorithm-matrix td:not(.feedback-cell):not(.output-cell) .connection-point {
-    display: inline-block;
     width: 15px;
     height: 15px;
     background-color: #666;
@@ -385,7 +393,7 @@ button:hover {
     font-size: 0.9em;
     color: #eee;
     background-color: #444;
-    border: 1px solid #000;
+    border: 3px solid #111;
     border-top: none;
     border-radius: 0 0 3px 3px;
     text-align: center;
