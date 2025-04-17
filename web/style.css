@@ -315,7 +315,12 @@ button:hover {
 .algorithm-matrix td:hover {
   background-color: #333;
 }
-
+.algorithm-matrix td.feedback-cell:hover {
+  background-color: #444;
+}
+.algorithm-matrix td.output-cell:hover {
+  background-color: #444;
+}
 /* Style the added OUT cells */
 .algorithm-matrix td.output-cell, .algorithm-matrix th.out-header {
     background-color: rgba(255,255,255,0.1); /* Light background for the whole column */
@@ -327,7 +332,6 @@ button:hover {
     height: 15px;
     background-color: #333; /* Default off color */
     border: 1px solid #111;
-    border-radius: 3px; /* Square-ish */
     transition: background-color 0.1s ease;
 }
 
@@ -339,13 +343,15 @@ button:hover {
 
 /* Style the feedback cells (diagonal) */
 .algorithm-matrix td.feedback-cell {
-    background-color: rgba(130,130,100,0.5); /* Khaki */
+  background-color: #333;
+}
+.connection-point {
+  border-radius: 50%;
 }
 /* Style the connection point INSIDE feedback cells (default state) */
 .algorithm-matrix td.feedback-cell .connection-point {
      width: 15px;
      height: 15px;
-     border-radius: 20%; /* Slightly square-ish? */
      background-color: #b8a94e; /* Darker khaki */
      border: 1px solid #9e8f3e;
      transition: background-color 0.1s ease; /* Add transition */
@@ -363,7 +369,6 @@ button:hover {
     height: 15px;
     background-color: #666;
     border: 1px solid #bbb;
-    border-radius: 50%; /* Circle */
     transition: background-color 0.1s ease;
 }
 .algorithm-matrix td:not(.feedback-cell):not(.output-cell).active .connection-point {
