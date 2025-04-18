@@ -1,6 +1,6 @@
 use super::context::ProcessContext;
 use super::envelope::EnvelopeGenerator;
-use super::filter::{self, Filter};
+use super::filter::Filter;
 use super::waveform::{Waveform, WaveformGenerator};
 use crate::synth::prelude::TAU;
 
@@ -24,7 +24,7 @@ pub struct OperatorState {
     current_phase: f32,
     current_ratio: Option<f32>,
     current_modulation_index: Option<f32>, // Add field for smoothed mod index
-    filters: Vec<Filter>,
+    filters: Option<Vec<Filter>>,
 }
 impl Default for OperatorState {
     fn default() -> Self {
@@ -32,7 +32,7 @@ impl Default for OperatorState {
             current_phase: 0.0,
             current_ratio: None,
             current_modulation_index: None, // Initialize as None
-            filters: vec![Filter::biquad(20000.0, 44100.0)], // Default filter state
+            filters: None,
         }
     }
 }
@@ -44,6 +44,7 @@ pub struct Operator {
     pub envelope: EnvelopeGenerator, // Operator-specific envelope (optional)
     pub modulation_index: f32,
     pub gain: f32, // Output gain of this operator
+    pub filters: Option<Vec<Filter>>,
 }
 
 impl Operator {
@@ -75,6 +76,8 @@ impl Operator {
             .current_modulation_index
             .unwrap_or(self.modulation_index); // Get current smoothed mod index
 
+        self.manage_filter_states(state, context);
+
         // Generate the waveform using the WaveformGenerator
         for (i, sample) in output.iter_mut().enumerate() {
             // --- Smooth Ratio ---
@@ -94,7 +97,11 @@ impl Operator {
             state.current_phase += phase_increment;
             state.current_phase %= TAU;
             let modulated_phase = state.current_phase + modulation[i];
-            let wave = self.waveform_generator.evaluate(modulated_phase);
+            let wave = if self.waveform_generator.waveform == Waveform::Input {
+                modulation[i]
+            } else {
+                self.waveform_generator.evaluate(modulated_phase)
+            };
 
             // --- Envelope Calculation ---
             let current_sample_abs_idx = context.samples_elapsed_since_trigger + i as u64;
@@ -102,20 +109,37 @@ impl Operator {
             let time_since_off = context
                 .note_off_sample_index
                 .map(|off_idx| current_sample_abs_idx.saturating_sub(off_idx) as f32 / sample_rate);
+            let raw_output = wave * current_smoothed_modulation_index;
+            let mut filtered_output = raw_output;
+            if let Some(filter_chain) = state.filters.as_mut() {
+                filtered_output = filter_chain
+                    .iter_mut()
+                    .fold(raw_output, |acc, filter| filter.process(acc));
+            }
             let env = self.envelope.evaluate(time_since_on, time_since_off);
-            let raw_output = wave * env * self.gain * current_smoothed_modulation_index;
 
-            let filtered_output = state
-                .filters
-                .iter_mut()
-                .fold(raw_output, |acc, filter| filter.process(acc));
-            *sample = filtered_output; // Assign filtered output
+            *sample = filtered_output * env * self.gain;
         }
         // Store the final smoothed values back into the state
         state.current_ratio = Some(current_smoothed_ratio);
         state.current_modulation_index = Some(current_smoothed_modulation_index);
     }
 
+    fn manage_filter_states(&self, state: &mut OperatorState, context: &ProcessContext) {
+        if context.samples_elapsed_since_trigger == 0 {
+            state.filters = self.filters.clone();
+            if let Some(active_filters) = state.filters.as_mut() {
+                for filter in active_filters.iter_mut() {
+                    if let Filter::PitchedComb(s) = filter {
+                        s.update_k_frequency(
+                            context.sample_rate,
+                            context.base_frequency * state.current_ratio.unwrap_or(1.0),
+                        );
+                    }
+                }
+            }
+        }
+    }
     pub fn set_amplitude(&mut self, amp: f32) {
         println!("Setting amplitude: {}", amp);
         self.gain = amp;
@@ -153,6 +177,14 @@ impl Operator {
         self.gain = gain;
     }
 
+    pub fn set_filter(&mut self, filter: Filter) {
+        println!("Operator filter set to: {:?}", filter);
+        if let Some(filters) = &mut self.filters {
+            filters.push(filter);
+        } else {
+            self.filters = Some(vec![filter]);
+        }
+    }
     pub fn set_ratio(&mut self, ratio: f32) {
         println!("Operator frequency ratio set to: {}", ratio);
         if ratio < 0.0 {
@@ -191,6 +223,7 @@ impl Default for Operator {
             modulation_index: 1.0,
             envelope: EnvelopeGenerator::new(),
             gain: 1.0,
+            filters: None,
         }
     }
 }

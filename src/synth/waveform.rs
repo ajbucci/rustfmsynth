@@ -8,6 +8,7 @@ pub enum Waveform {
     SawtoothSmooth,
     Triangle,
     Noise,
+    Input,
 }
 
 #[derive(Debug, Clone)] // Added Debug and Clone
@@ -36,6 +37,7 @@ impl WaveformGenerator {
             Waveform::SawtoothSmooth => 0.75 * phase.sin() / (1.25 + phase.cos()),
             Waveform::Triangle => (2.0 / PI) * (phase.sin()).asin(),
             Waveform::Noise => random_range(-1.0, 1.0),
+            Waveform::Input => 0.0,
         }
     }
     pub fn generate(
@@ -59,6 +61,7 @@ impl WaveformGenerator {
             Waveform::SawtoothSmooth => |phase: f32| 0.75 * phase.sin() / (1.25 + phase.cos()),
             Waveform::Triangle => |phase: f32| (2.0 / PI) * (phase.sin()).asin(),
             Waveform::Noise => |_phase: f32| random_range(-1.0, 1.0),
+            Waveform::Input => |_phase: f32| 0.0,
         };
 
         let phase_increment = 2.0 * PI * frequency / sample_rate;
@@ -76,6 +79,8 @@ impl WaveformGenerator {
             Waveform::Sawtooth => Waveform::SawtoothSmooth,
             Waveform::SawtoothSmooth => Waveform::Triangle,
             Waveform::Triangle => Waveform::Noise,
+            // TODO: fix none
+            Waveform::Input => Waveform::Noise,
         };
     }
     pub fn get_previous_waveform(&mut self) {
@@ -86,6 +91,8 @@ impl WaveformGenerator {
             Waveform::Sawtooth => Waveform::Square,
             Waveform::SawtoothSmooth => Waveform::Sawtooth,
             Waveform::Triangle => Waveform::SawtoothSmooth,
+            //TODO:fix none
+            Waveform::Input => Waveform::Noise,
         };
     }
     pub fn set_waveform(&mut self, waveform: Waveform) {
