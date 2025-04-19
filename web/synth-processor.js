@@ -23,7 +23,7 @@ class SynthProcessor extends AudioWorkletProcessor {
           console.log("SynthProcessor: Wasm initialized successfully.");
 
           // Now create the synth instance
-          synth = new WasmSynth();
+          synth = new WasmSynth(sampleRate);
           ready = true;
           console.log("SynthProcessor: WasmSynth instance created.");
 
@@ -58,7 +58,7 @@ class SynthProcessor extends AudioWorkletProcessor {
         const opIndex = parseInt(payload?.operator_index ?? data.operator_index);
         const waveformInt = parseInt(payload?.waveform_value ?? data.waveform_value);
 
-        if (!isNaN(opIndex) && !isNaN(waveformInt) && opIndex >= 0 && opIndex < 6 && waveformInt >= 0 && waveformInt <= 4) {
+        if (!isNaN(opIndex) && !isNaN(waveformInt) && opIndex >= 0 && opIndex < 6 && waveformInt >= 0 && waveformInt <= 5) {
           console.log(`SynthProcessor: Setting operator ${opIndex} waveform to ${waveformInt}`);
           try {
             synth.set_operator_waveform(opIndex, waveformInt);
@@ -93,6 +93,16 @@ class SynthProcessor extends AudioWorkletProcessor {
           synth.set_operator_envelope(opIndex, a, d, s, r);
         } catch (e) {
           console.error(`SynthProcessor: Error calling synth.set_operator_envelope`)
+        }
+      } else if (data.type === "set_operator_filter") {
+        const opIndex = parseInt(data.operator_index);
+        const filterInt = parseInt(data.filterInt);
+        const filterParams = data.filterParams;
+        console.log(filterParams);
+        try {
+          synth.set_operator_filter(opIndex, filterInt, filterParams);
+        } catch (e) {
+          console.error("SynthProcessor: Error calling synth.set_operator_filter:", e, "with filter:", filterInt);
         }
       } else if (data.type === "set-algorithm") {
         const combinedMatrix = data.matrix; // Payload is the combined matrix

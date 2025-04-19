@@ -3,6 +3,7 @@ use super::envelope::EnvelopeGenerator;
 use super::filter::Filter;
 use super::waveform::{Waveform, WaveformGenerator};
 use crate::synth::prelude::TAU;
+use core::mem::discriminant;
 
 #[derive(Clone, Copy, Debug)]
 pub enum CycleDirection {
@@ -178,11 +179,26 @@ impl Operator {
     }
 
     pub fn set_filter(&mut self, filter: Filter) {
-        println!("Operator filter set to: {:?}", filter);
-        if let Some(filters) = &mut self.filters {
-            filters.push(filter);
-        } else {
-            self.filters = Some(vec![filter]);
+        // Get the type discriminant of the new filter
+        let new_filter_type = discriminant(&filter);
+
+        // Handle the Option - ensure the vector exists to work with
+        let filter_chain = self.filters.get_or_insert_with(Vec::new); // Get mut vec, create if None
+
+        // Check if a filter of the same type already exists
+        let mut replaced = false;
+        for existing_filter in filter_chain.iter_mut() {
+            if discriminant(existing_filter) == new_filter_type {
+                // Replace the existing filter with the new one
+                *existing_filter = filter.clone(); // Use clone if new_filter needed later
+                replaced = true;
+                break; // Found and replaced, no need to check further
+            }
+        }
+
+        // If no filter of the same type was found and replaced, append the new one
+        if !replaced {
+            filter_chain.push(filter);
         }
     }
     pub fn set_ratio(&mut self, ratio: f32) {

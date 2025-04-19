@@ -1,5 +1,6 @@
 use super::algorithm::Algorithm;
 use super::config::SynthConfig;
+use super::filter::Filter;
 use super::note::NoteEvent;
 use super::operator::Operator;
 use super::operator::OperatorEvent;
@@ -103,6 +104,13 @@ impl Synth {
                 op_index,
                 self.operators.len()
             );
+        }
+    }
+    pub fn set_operator_filter(&mut self, op_index: usize, filter: Filter) {
+        if op_index < self.operators.len() {
+            self.operators[op_index].set_filter(filter);
+        } else {
+            eprintln!("Operator index out of bounds");
         }
     }
 
@@ -282,6 +290,7 @@ impl Default for Synth {
         // operators[0].set_envelope(0.01, 1.0, 0.7, 0.5);
         // operators[0].set_gain(0.5);
         // operators[0].set_ratio(1.0);
+        // operators[0].set_filter(Filter::new_pitched_comb(0.99));
 
         // Carrier B (slightly detuned)
         // operators[1].set_waveform(Waveform::Sine);

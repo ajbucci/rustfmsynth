@@ -733,8 +733,10 @@ dependencies = [
  "midir",
  "once_cell",
  "rand",
+ "serde",
  "serde-wasm-bindgen",
  "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
