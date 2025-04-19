@@ -1,6 +1,12 @@
 use crate::synth::prelude::{FRAC_1_SQRT_2, PI};
 use core::fmt;
 
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum FilterType {
+    LowPassBiquad,
+    Comb,
+    PitchedComb,
+}
 pub trait FilterState: Clone + 'static + fmt::Debug {
     fn reset(&mut self);
     fn process(&mut self, input: f32) -> f32;
@@ -200,6 +206,13 @@ pub enum Filter {
     PitchedComb(PitchedCombState),
 }
 impl Filter {
+    pub fn get_type(&self) -> FilterType {
+        match self {
+            Filter::LowPassBiquad(_) => FilterType::LowPassBiquad,
+            Filter::Comb(_) => FilterType::Comb,
+            Filter::PitchedComb(_) => FilterType::PitchedComb,
+        }
+    }
     pub fn reset(&mut self) {
         match self {
             Filter::LowPassBiquad(s) => s.reset(),

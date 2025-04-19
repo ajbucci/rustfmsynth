@@ -23,7 +23,7 @@ class SynthProcessor extends AudioWorkletProcessor {
           console.log("SynthProcessor: Wasm initialized successfully.");
 
           // Now create the synth instance
-          synth = new WasmSynth();
+          synth = new WasmSynth(sampleRate);
           ready = true;
           console.log("SynthProcessor: WasmSynth instance created.");
 
@@ -58,7 +58,7 @@ class SynthProcessor extends AudioWorkletProcessor {
         const opIndex = parseInt(payload?.operator_index ?? data.operator_index);
         const waveformInt = parseInt(payload?.waveform_value ?? data.waveform_value);
 
-        if (!isNaN(opIndex) && !isNaN(waveformInt) && opIndex >= 0 && opIndex < 6 && waveformInt >= 0 && waveformInt <= 4) {
+        if (!isNaN(opIndex) && !isNaN(waveformInt) && opIndex >= 0 && opIndex < 6 && waveformInt >= 0 && waveformInt <= 5) {
           console.log(`SynthProcessor: Setting operator ${opIndex} waveform to ${waveformInt}`);
           try {
             synth.set_operator_waveform(opIndex, waveformInt);
@@ -94,6 +94,29 @@ class SynthProcessor extends AudioWorkletProcessor {
         } catch (e) {
           console.error(`SynthProcessor: Error calling synth.set_operator_envelope`)
         }
+      } else if (data.type === "set_operator_filter") {
+        const opIndex = parseInt(data.operator_index);
+        const filterValue = data.filterValue;
+        const filterParams = data.filterParams;
+        if (filterValue === "lowpass") {
+          synth.set_operator_filter_lowpass(opIndex, filterParams.cutoff, filterParams.q);
+        } else if (filterValue === "comb") {
+          synth.set_operator_filter_comb(opIndex, filterParams.alpha, filterParams.k);
+        } else if (filterValue === "pitched_comb") {
+          synth.set_operator_filter_pitched_comb(opIndex, filterParams.alpha);
+        }
+      } else if (data.type === "remove_operator_filter") {
+
+        const opIndex = parseInt(data.operator_index);
+        const filterValue = data.filterValue;
+        if (filterValue === "lowpass") {
+          synth.remove_operator_filter_lowpass(opIndex);
+        } else if (filterValue === "comb") {
+          synth.remove_operator_filter_comb(opIndex);
+        } else if (filterValue === "pitched_comb") {
+          synth.remove_operator_filter_pitched_comb(opIndex);
+        }
+
       } else if (data.type === "set-algorithm") {
         const combinedMatrix = data.matrix; // Payload is the combined matrix
         if (Array.isArray(combinedMatrix)) {

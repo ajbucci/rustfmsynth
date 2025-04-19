@@ -64,6 +64,25 @@ button:hover {
   font-weight: normal !important;
   font-size: 0.8rem !important;
 }
+.operator-filter-manager {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.filter-adder-params-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+.active-filters-display, .filter-adder-params-area, .active-filter-control {
+  font-size: 0.8rem;
+}
+.remove-filter-button {
+  padding: 3px 5px;
+  margin: 2px 5px;
+}
 .dial-container {
   display: flex;
   flex-direction: column;

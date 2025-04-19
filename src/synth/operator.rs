@@ -1,6 +1,6 @@
 use super::context::ProcessContext;
 use super::envelope::EnvelopeGenerator;
-use super::filter::Filter;
+use super::filter::{Filter, FilterType};
 use super::waveform::{Waveform, WaveformGenerator};
 use crate::synth::prelude::TAU;
 
@@ -178,11 +178,32 @@ impl Operator {
     }
 
     pub fn set_filter(&mut self, filter: Filter) {
-        println!("Operator filter set to: {:?}", filter);
-        if let Some(filters) = &mut self.filters {
-            filters.push(filter);
-        } else {
-            self.filters = Some(vec![filter]);
+        // Get the type discriminant of the new filter
+        let new_filter_type = filter.get_type();
+
+        // Handle the Option - ensure the vector exists to work with
+        let filter_chain = self.filters.get_or_insert_with(Vec::new); // Get mut vec, create if None
+
+        // Check if a filter of the same type already exists
+        let mut replaced = false;
+        for existing_filter in filter_chain.iter_mut() {
+            if existing_filter.get_type() == new_filter_type {
+                // Replace the existing filter with the new one
+                *existing_filter = filter.clone(); // Use clone if new_filter needed later
+                replaced = true;
+                break; // Found and replaced, no need to check further
+            }
+        }
+
+        // If no filter of the same type was found and replaced, append the new one
+        if !replaced {
+            filter_chain.push(filter);
+        }
+    }
+    pub fn remove_filter(&mut self, filter_type: FilterType) {
+        if let Some(filter_chain) = &mut self.filters {
+            // Remove the filter from the chain
+            filter_chain.retain(|f| f.get_type() != filter_type);
         }
     }
     pub fn set_ratio(&mut self, ratio: f32) {

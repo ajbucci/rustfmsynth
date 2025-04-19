@@ -2,6 +2,7 @@
 import { tryEnsureSynthAndSendMessage } from './keyboard-input.js';
 import { resumeAudioContext, debounceHandleUIChange } from './app.js';
 import { createDial } from './dial.js';
+import { createOperatorFilterManager } from './filters.js';
 import { createVerticalCrossfader } from './crossfader.js';
 export const NUM_OPERATORS = 6; // Example: Define and export
 const containerId = 'operator-controls'; // ID of the container div in index.html
@@ -15,6 +16,7 @@ const WAVEFORMS = [
   { name: "Square", value: 2 },
   { name: "Sawtooth", value: 3 },
   { name: "Noise", value: 4 },
+  { name: "Input", value: 5 },
 ];
 const DEFAULT_WAVEFORM_VALUE = 0; // Default to Sine (value 0)
 
@@ -260,6 +262,9 @@ function createOperatorControl(index, container, onStateChangeCallback) {
   adsrWrapper.appendChild(setButton);
 
   controlWrapper.appendChild(adsrWrapper); // Add ADSR section to the main wrapper
+
+  const filterSelector = createOperatorFilterManager(index);
+  controlWrapper.appendChild(filterSelector);
 
   // --- Function to Send Waveform Update ---
   const sendWaveformUpdate = async (opIndex, waveformValue) => {
