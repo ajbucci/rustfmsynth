@@ -2,11 +2,34 @@ use crate::synth::filter::{Filter, FilterType};
 use crate::synth::note::{NoteEvent, NoteSource};
 use crate::synth::waveform::Waveform;
 use crate::synth::Synth;
+use core::str;
 use js_sys::Float32Array;
+use serde::Deserialize;
 use serde_wasm_bindgen;
 use wasm_bindgen::prelude::*;
 extern crate web_sys;
 /// WASM Synth runtime (no threads, no channels, direct API)
+#[derive(Deserialize, Debug, Clone)]
+pub struct LowPassParams {
+    cutoff: f32,
+    q: f32,
+}
+#[derive(Deserialize, Debug, Clone)]
+pub struct CombParams {
+    alpha: f32,
+    k: usize,
+}
+#[derive(Deserialize, Debug, Clone)]
+pub struct PitchedCombParams {
+    alpha: f32,
+}
+#[derive(Deserialize, Debug, Clone)]
+#[serde(tag = "type", content = "params")]
+pub enum FilterParams {
+    LowPass(LowPassParams),
+    Comb(CombParams),
+    PitchedComb(PitchedCombParams),
+}
 #[wasm_bindgen]
 pub struct WasmSynth {
     synth: Synth,
@@ -57,43 +80,32 @@ impl WasmSynth {
     }
 
     #[wasm_bindgen]
-    pub fn set_operator_filter_lowpass(&mut self, operator_index: usize, cutoff: f32, q: f32) {
-        let filter = Filter::new_lowpass_biquad(cutoff, self.sample_rate);
-        self.synth.set_operator_filter(operator_index, filter);
+    pub fn set_operator_filter(&mut self, operator_index: usize, params_bytes: &[u8]) {
+        let filter_params: FilterParams = serde_json::from_slice(params_bytes)
+            .expect("PANIC: Tagged JSON deserialize FilterParams failed");
 
-        web_sys::console::log_1(&12.into()); // LowPass Set OK
-    }
-    #[wasm_bindgen]
-    pub fn set_operator_filter_comb(&mut self, operator_index: usize, alpha: f32, k: usize) {
-        let filter = Filter::new_comb(alpha, k);
-        self.synth.set_operator_filter(operator_index, filter);
+        let filter = match filter_params {
+            FilterParams::LowPass(p) => Filter::new_lowpass_biquad(p.cutoff, self.sample_rate),
+            FilterParams::Comb(p) => Filter::new_comb(p.alpha, p.k),
+            FilterParams::PitchedComb(p) => Filter::new_pitched_comb(p.alpha),
+        };
 
-        web_sys::console::log_1(&12.into()); // LowPass Set OK
-    }
-    #[wasm_bindgen]
-    pub fn set_operator_filter_pitched_comb(&mut self, operator_index: usize, alpha: f32) {
-        let filter = Filter::new_pitched_comb(alpha);
         self.synth.set_operator_filter(operator_index, filter);
-
-        web_sys::console::log_1(&12.into()); // LowPass Set OK
     }
     #[wasm_bindgen]
-    pub fn remove_operator_filter_lowpass(&mut self, operator_index: usize) {
+    pub fn remove_operator_filter(&mut self, operator_index: usize, filter_type_bytes: &[u8]) {
+        let filter_type_str = str::from_utf8(filter_type_bytes);
+        let filter_type = match filter_type_str {
+            Ok("LowPass") => FilterType::LowPassBiquad,
+            Ok("Comb") => FilterType::Comb,
+            Ok("PitchedComb") => FilterType::PitchedComb,
+            _ => {
+                eprintln!("WasmSynth Error: Invalid filter type received");
+                return;
+            }
+        };
         self.synth
-            .remove_operator_filter(operator_index, FilterType::LowPassBiquad);
-        web_sys::console::log_1(&13.into()); // LowPass Set OK
-    }
-    #[wasm_bindgen]
-    pub fn remove_operator_filter_comb(&mut self, operator_index: usize) {
-        self.synth
-            .remove_operator_filter(operator_index, FilterType::Comb);
-        web_sys::console::log_1(&13.into()); // LowPass Set OK
-    }
-    #[wasm_bindgen]
-    pub fn remove_operator_filter_pitched_comb(&mut self, operator_index: usize) {
-        self.synth
-            .remove_operator_filter(operator_index, FilterType::PitchedComb);
-        web_sys::console::log_1(&13.into()); // LowPass Set OK
+            .remove_operator_filter(operator_index, filter_type);
     }
     #[wasm_bindgen]
     pub fn set_operator_envelope(&mut self, operator_index: usize, a: f32, d: f32, s: f32, r: f32) {

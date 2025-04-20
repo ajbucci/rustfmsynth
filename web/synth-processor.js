@@ -96,26 +96,12 @@ class SynthProcessor extends AudioWorkletProcessor {
         }
       } else if (data.type === "set_operator_filter") {
         const opIndex = parseInt(data.operator_index);
-        const filterValue = data.filterValue;
         const filterParams = data.filterParams;
-        if (filterValue === "lowpass") {
-          synth.set_operator_filter_lowpass(opIndex, filterParams.cutoff, filterParams.q);
-        } else if (filterValue === "comb") {
-          synth.set_operator_filter_comb(opIndex, filterParams.alpha, filterParams.k);
-        } else if (filterValue === "pitched_comb") {
-          synth.set_operator_filter_pitched_comb(opIndex, filterParams.alpha);
-        }
+        synth.set_operator_filter(opIndex, filterParams);
       } else if (data.type === "remove_operator_filter") {
-
         const opIndex = parseInt(data.operator_index);
-        const filterValue = data.filterValue;
-        if (filterValue === "lowpass") {
-          synth.remove_operator_filter_lowpass(opIndex);
-        } else if (filterValue === "comb") {
-          synth.remove_operator_filter_comb(opIndex);
-        } else if (filterValue === "pitched_comb") {
-          synth.remove_operator_filter_pitched_comb(opIndex);
-        }
+        const filterType = data.filterType;
+        synth.remove_operator_filter(opIndex, filterType);
 
       } else if (data.type === "set-algorithm") {
         const combinedMatrix = data.matrix; // Payload is the combined matrix

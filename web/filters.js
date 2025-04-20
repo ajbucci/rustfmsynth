@@ -4,7 +4,8 @@ import { resumeAudioContext, debounceHandleUIChange } from './app.js';
 const FILTERS = [
   {
     name: "Low Pass", // Human-readable name
-    value: "lowpass",         // Value sent to Rust/WASM (can be string or number)
+    typeTag: "LowPass",
+    value: 0,         // Value sent to Rust/WASM (can be string or number)
     params: [         // Array of parameter definitions for this filter
       { name: "Cutoff", id: "cutoff", default: 10000.0, min: 20.0, max: 20000.0, step: 1.0, unit: "Hz" },
       { name: "Q", id: "q", default: 0.707, min: 0.1, max: 10.0, step: 0.01, unit: "" }
@@ -13,7 +14,8 @@ const FILTERS = [
   },
   {
     name: "Comb",
-    value: "comb",
+    typeTag: "Comb",
+    value: 1,
     params: [
       { name: "Alpha", id: "alpha", default: 0.5, min: -1.0, max: 1.0, step: 0.01, unit: "" }, // Feedback/Gain
       { name: "K", id: "k", default: 100, min: 1, max: 4096, step: 1, unit: "samples" }         // Delay length
@@ -21,26 +23,24 @@ const FILTERS = [
   },
   {
     name: "Pitched Comb",
-    value: "pitched_comb",
+    typeTag: "PitchedComb",
+    value: 2,
     params: [
       { name: "Alpha", id: "alpha", default: 0.95, min: -1.0, max: 1.0, step: 0.01, unit: "" } // Usually positive feedback, close to 1
     ]
   },
-  {
-    name: "None", // Bypass option
-    value: "none",
-    params: []     // No parameters
-  }
 ];
 // --- Function to Send Update ---
-export const sendSetFilter = async (opIndex, filterValue, filterParams) => {
+export const sendSetFilter = async (opIndex, typeTag, filterParams) => {
   resumeAudioContext(); // Ensure context is running
 
+  let paramsMessage = {};
+  paramsMessage["type"] = typeTag; // Set the type tag for rust serde deserialization enum
+  paramsMessage["params"] = filterParams; // Set the params tag for the same
   const message = {
     type: 'set_operator_filter',
     operator_index: opIndex,
-    filterValue: filterValue,
-    filterParams: filterParams,
+    filterParams: objToJsonBytes(paramsMessage) // Convert to JSON bytes
   };
   const messageId = `set-filter-op-${opIndex}`; // Unique ID
   const success = await tryEnsureSynthAndSendMessage(messageId, message);
@@ -53,13 +53,20 @@ export const sendSetFilter = async (opIndex, filterValue, filterParams) => {
   return success;
 };
 
-export const sendRemoveFilter = async (opIndex, filterValue) => {
+export function objToJsonBytes(obj) {
+  const jsonString = JSON.stringify(obj);
+  const encoder = new TextEncoder();
+  const jsonBytes = encoder.encode(jsonString);
+  return jsonBytes;
+}
+export const sendRemoveFilter = async (opIndex, filterType) => {
   resumeAudioContext(); // Ensure context is running
 
+  const filterTypeBytes = new TextEncoder().encode(filterType);
   const message = {
     type: 'remove_operator_filter',
     operator_index: opIndex,
-    filterValue: filterValue,
+    filterType: filterTypeBytes,
   };
   const messageId = `remove-filter-op-${opIndex}`; // Unique ID
   const success = await tryEnsureSynthAndSendMessage(messageId, message);
@@ -234,12 +241,13 @@ export function createOperatorFilterManager(operatorIndex) {
       alert("Please select a filter type to add.");
       return;
     }
-    const filterValue = selectedValue;
+    const filterValue = parseInt(selectedValue);
     const filterConfig = FILTERS.find(f => f.value === filterValue);
     if (!filterConfig) {
       console.error("Selected filter config not found for value:", filterValue);
       return;
     }
+    const filterType = filterConfig.typeTag;
 
     // Check for duplicates (based on visual display)
     const currentDisplayedValues = new Set();
@@ -256,7 +264,7 @@ export function createOperatorFilterManager(operatorIndex) {
 
     // --- Call sendSetFilter ---
     console.log(`Attempting to add Op ${operatorIndex + 1} Filter: ${filterConfig.name} with params:`, params);
-    const success = await sendSetFilter(operatorIndex, filterValue, params);
+    const success = await sendSetFilter(operatorIndex, filterType, params);
 
     if (success) {
       // VISUALLY Add element *only on success*
@@ -347,7 +355,7 @@ function createActiveFilterDisplayInternal(operatorIndex, activeFilterData, disp
     if (displayArea.children.length === 0) {
       displayArea.textContent = 'No filters active.';
     }
-    sendRemoveFilter(operatorIndex, filterConfig.value)
+    sendRemoveFilter(operatorIndex, filterConfig.typeTag)
   });
   header.appendChild(removeButton);
   container.appendChild(header);
@@ -380,7 +388,7 @@ function createActiveFilterDisplayInternal(operatorIndex, activeFilterData, disp
           console.log(`UI Param Change: Op ${opIdx + 1}, Filter ${filterConfig.name}, Param ${event.target.name}=${event.target.value}. Sending update...`);
 
           // --- Call sendSetFilter ---
-          await sendSetFilter(opIdx, filtVal, currentParams);
+          await sendSetFilter(opIdx, filterConfig.typeTag, currentParams);
         });
       } else {
         console.warn("Could not find input element within param control for", paramInfo.name);

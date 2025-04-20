@@ -15,6 +15,7 @@ wasm-bindgen = { version = "0.2", features = [
   "serde-serialize",
 ], optional = true }
 serde = { version = "1.0", features = ["derive"], optional = true }
+serde_json = { version = "1.0" }
 serde-wasm-bindgen = { version = "0.6", optional = true }
 fastrand = { version = "2.3.0", optional = true }
 once_cell = { version = "1.17.0", optional = true }
