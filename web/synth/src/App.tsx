@@ -1,25 +1,165 @@
-import type { Component } from 'solid-js';
+// src/App.tsx
 
-import logo from './logo.svg';
-import styles from './App.module.css';
+import { Component, onMount, onCleanup, createEffect, createSignal } from 'solid-js';
+import { produce, createStore, unwrap } from 'solid-js/store'; // Import store
 
+import { AppState } from './state';
+import { NUM_OPERATORS } from './config';
+
+// Import Audio Context utilities
+import {
+  getAudioContext,
+  closeAudioContext,
+  addAudioWorkletModule,
+  createAudioWorkletNode
+} from './audio'; // Assuming audio.ts is in the same src directory
+
+// Import the Synth Input Handler
+import * as SynthInputHandler from './synthInputHandler';
+import { MidiInputHandler } from './midiHandlers'; // Import the MIDI handler instance
+
+// Import the UI components
+import KeyboardUI from './components/KeyboardUI';
+import AlgorithmMatrix from './components/AlgorithmMatrix';
+
+// Import base styles if needed
+import './style.css';
+import { createDefaultAppState } from './defaults';
+
+const [appStore, setAppStore] = createStore<AppState>(createDefaultAppState());
+
+// Main App Component
 const App: Component = () => {
+
+  // Variable to hold the processor node reference (not reactive state)
+  let processorNode: AudioWorkletNode | null = null;
+  let midiHandlerInstance: MidiInputHandler | null = null;
+
+  const [isSynthReady, setIsSynthReady] = createSignal(false);
+  // --- Initialization Logic ---
+  const initializeAudioAndSynth = async () => {
+    console.log("App: Initializing Audio and Synth...");
+    try {
+      // 1. Get or Create AudioContext (will warn if suspended)
+      const audioContext = getAudioContext();
+
+      // 2. Load WASM - Needs to be fetched for the *main thread* first
+      // to be sent to the worklet.
+      console.log("App: Fetching Wasm binary...");
+      const wasmResponse = await fetch("/pkg/rustfmsynth_bg.wasm"); // Path relative to public/index.html
+      if (!wasmResponse.ok) throw new Error("Failed to fetch Wasm binary.");
+      const wasmBinary = await wasmResponse.arrayBuffer();
+      console.log("App: Wasm binary fetched.");
+
+
+      // 3. Add Worklet Module
+      await addAudioWorkletModule("/synth-processor.js");
+
+      // 4. Create Worklet Node
+      processorNode = createAudioWorkletNode("synth-processor", {
+        numberOfOutputs: 1,
+      });
+
+      // 5. Set up Message Listener (Only for 'initialized' in this minimal setup)
+      processorNode.port.onmessage = (event) => {
+        if (event.data?.type === 'initialized') {
+          console.log("App: Received 'initialized' confirmation from worklet.");
+          setIsSynthReady(true);
+          // Synth is ready in the worklet, now the handler is fully usable.
+        } else if (event.data?.type === 'init_error') {
+          console.error("App: Received initialization error from worklet:", event.data.error);
+          // Handle critical init error - maybe display UI message
+        } else if (event.data?.type === 'processing_error') {
+          console.warn("App: Received processing error from worklet:", event.data.error, "for message:", event.data.messageType);
+        } else {
+          console.log("App: Received message from worklet:", event.data);
+        }
+      };
+      processorNode.port.onmessageerror = (event) => {
+        console.error("App: Error receiving message from worklet:", event);
+      };
+
+      // 6. Initialize SynthInputHandler with the Port
+      // Do this *before* sending the init message so handler is ready conceptually
+      SynthInputHandler.initializeSynthInputHandler(processorNode.port);
+
+      // 7. Send 'init' message to Worklet with WASM binary
+      console.log("App: Sending 'init' message with Wasm binary to processor...");
+      processorNode.port.postMessage({
+        type: "init",
+        sampleRate: audioContext.sampleRate,
+        wasmBinary: wasmBinary
+      }, [wasmBinary]); // Mark wasmBinary as transferable
+
+      // 8. Connect Node to Destination
+      processorNode.connect(audioContext.destination);
+      console.log("App: Processor node connected to destination.");
+
+      console.log("App: Synth initialization sequence complete. Waiting for 'initialized' confirmation.");
+
+    } catch (error) {
+      console.error("App: Error during synthesizer initialization:", error);
+      // Display error to user, potentially disable UI elements
+      // (Error boundary component in Solid could be useful here)
+      processorNode = null; // Ensure node ref is null on failure
+    }
+  };
+
+  // --- Lifecycle ---
+  onMount(() => {
+    initializeAudioAndSynth();
+    midiHandlerInstance = new MidiInputHandler();
+
+    setAppStore('algorithm', produce(state => { state[0][0] = 1; }));
+  });
+
+  onCleanup(() => {
+    console.log("App: Cleaning up...");
+    // Optional: Disconnect node? Usually handled by context close.
+    // if (processorNode) {
+    //     processorNode.disconnect();
+    // }
+    closeAudioContext(); // Close context via the audio module
+    SynthInputHandler.initializeSynthInputHandler(null); // Clear port in handler
+    processorNode = null;
+  });
+
+  createEffect(() => {
+    const currentAlgorithm = appStore.algorithm;
+    const ready = isSynthReady();
+
+    if (!ready) {
+      console.log("Effect(Algorithm): Skipping synth update, synth not ready.");
+      return; // Don't send update yet
+    }
+    console.log("Effect(Algorithm): Synth ready and state changed, sending matrix to synth:", JSON.stringify(currentAlgorithm));
+    SynthInputHandler.setAlgorithm(unwrap(currentAlgorithm));
+
+    // Trigger URL update/save state
+    // debounceUpdateUrl();
+  });
+  // --- Render ---
   return (
-    <div class={styles.App}>
-      <header class={styles.header}>
-        <img src={logo} class={styles.logo} alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          class={styles.link}
-          href="https://github.com/solidjs/solid"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn Solid
-        </a>
-      </header>
+    <div class="app-container">
+      <h1>Minimal SolidJS FM Synth Keyboard</h1>
+      <p>Click keys or use your physical keyboard (QWERTY row for sharps, ASDF row for naturals).</p>
+      <AlgorithmMatrix
+        numOperators={NUM_OPERATORS}
+        // Pass the reactive algorithm array and its specific setter path
+        // Note: Passing setAppStore directly works, but fine-grained setters are possible
+        algorithm={appStore.algorithm} // Pass the algorithm part of the store
+        setAlgorithmState={(updater) => setAppStore('algorithm', updater)} // Pass a function to update only the algorithm path
+      // OR using produce if AlgorithmMatrix uses it internally:
+      // setAlgorithmState={produce((draft) => { /* matrix update logic here if done in parent */ })}
+      />
+      {/* Render the Keyboard UI Component */}
+      {/* Pass initialStartNote if desired */}
+      <KeyboardUI initialStartNote={48} />
+
+      {/* Add placeholders or divs for other UI sections later */}
+      {/* <div id="operator-controls-container"></div> */}
+      {/* <div id="algorithm-matrix-container"></div> */}
+      {/* <button id="reset-button">Reset</button> */}
     </div>
   );
 };

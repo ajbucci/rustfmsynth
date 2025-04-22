@@ -1,0 +1,552 @@
+:root {
+    --white-key-width: 10%;
+    --black-key-width: 6%;
+    --gap-sm: 5px;
+    --gap-lg: 20px;
+    --breakpoint-lg: 1200px;
+}
+
+body {
+    font-family: sans-serif;
+    text-align: center;
+    margin-top: 50px;
+    background-color: #222;
+    color: aliceblue;
+}
+button {
+    margin: 10px;
+    padding: 10px;
+    color: aliceblue;
+    background-color: #444;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+}
+button:hover {
+    background-color: #555;
+}
+
+#synth-container {
+    display: flex;
+    font-family: "Inter", sans-serif;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+/* Style for when fine mode is active */
+#fine-mode-toggle.active {
+  background-color: #d0e8ff; /* Light blue background */
+  color: #111;
+  font-weight: bold;
+}
+
+.adsr-param {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.2rem;
+  width: 90%;
+}
+.adsr-param input {
+  width: 3em;
+}
+.parameter-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.parameter-title {
+  margin-bottom: 5px;
+}
+.adsr-param label {
+  font-weight: normal !important;
+  font-size: 0.8rem !important;
+}
+.operator-filter-manager {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.filter-adder-params-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+.active-filters-display, .filter-adder-params-area, .active-filter-control {
+  font-size: 0.8rem;
+}
+.remove-filter-button {
+  padding: 3px 5px;
+  margin: 2px 5px;
+}
+.dial-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+.dial-indicator {
+  background-color: white;
+  position: absolute;
+  box-shadow: 0px 1px 2px 0px black;
+}
+.dial {
+  border-radius: 50%;
+  background: #444;
+  background-image: repeating-radial-gradient(rgba(0,0,0,0.0) 2px, rgba(0,0,0,0.1) 5px, rgba(0,0,0,0.2) 1px,rgba(0,0,0,0.1) 5px);
+  box-shadow: inset 0 0 2px 6px #111, 0 0px 6px rgba(0,0,0,0.5);
+  position: relative;
+  cursor: grab;
+}
+.dial-input {
+  margin-top: 0.5em;
+  width: 3em;
+  background: none;
+  border: none;
+  text-align: center;
+  color: inherit;
+}
+.dial.active {
+  box-shadow: inset 0 0 2px 6px #111, 0 0px 6px rgba(0,0,0,0.5), 0px 0px 5px 2px rgba(135, 255, 176, 0.8);
+;
+}
+#bottom-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  width: 100%;
+}
+#keyboard-container {
+    display: flex; /* Arrange keys horizontally */
+    position: relative; /* Needed for positioning black keys */
+    background-color: #333;
+    border-radius: 5px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    height: 180px; /* Adjust height as needed */
+    width: 500px; /* Adjust width based on keys */
+}
+
+.key {
+    box-sizing: border-box;
+    position: relative; /* For label positioning */
+    cursor: pointer;
+    transition: background-color 0.1s ease; /* Smooth transition for active state */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end; /* Position label at the bottom */
+    align-items: center;
+    padding-bottom: 5px;
+    font-family: sans-serif;
+    user-select: none; /* Prevent text selection on click */
+}
+
+.key.white {
+    width: var(--white-key-width); /* Width of white keys */
+    height: 100%; /* Full height of container */
+    background-color: #fff;
+    box-shadow: inset 0 0 0px 1px black;
+    color: #333;
+    border-bottom-left-radius: 3px;
+    border-bottom-right-radius: 3px;
+    z-index: 1; /* White keys below black keys */
+}
+
+.key.black {
+    width: var(--black-key-width); /* Width of black keys */
+    height: 60%; /* Height relative to container */
+    background-color: #222;
+    color: #eee;
+    position: absolute; /* Position relative to container */
+    z-index: 2; /* Black keys above white keys */
+    border-radius: 0 0 3px 3px;
+}
+
+.key.active, .key:active { /* Style for pressed key (JS controlled or mouse down) */
+    background-color: #87ceeb; /* Sky blue for active state */
+}
+
+.key.black.active, .key.black:active {
+    background-color: #add8e6; /* Lighter blue for active black keys */
+}
+
+.key-label {
+    font-size: 10px;
+    text-align: center;
+}
+
+.key-label .note-name {
+    font-weight: bold;
+    display: block;
+}
+
+.key-label .key-code {
+     font-size: 9px;
+     color: #777;
+}
+.key.black .key-label .key-code {
+     color: #aaa;
+}
+
+.controls-container {
+  gap: 15px;
+}
+/* --- Operator Controls Styling --- */
+#operator-controls {
+  display: flex; /* Arrange controls horizontally */
+  position: relative; /* Needed for absolute positioning of background */
+  flex-wrap: wrap; /* Allow wrapping if space is tight */
+  gap: var(--gap-sm);      /* Spacing between controls */
+  border: 3px solid #111;
+  padding: var(--gap-sm);
+  border-radius: 5px;
+  background: linear-gradient(35deg, #252525 0%, #292929 50%, #252525 100%);
+  color: aliceblue;
+  justify-content: center; /* Center controls */
+}
+#operator-controls::before {
+  content: '';
+  position: absolute;
+  top: 0em;
+  left: 0em;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  filter: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='grainy-noise' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='1' stitchTiles='stitch' result='turbulence'/%3E%3CfeColorMatrix in='turbulence' type='saturate' values='0' result='grayscale_noise'/%3E%3CfeBlend in='SourceGraphic' in2='grayscale_noise' mode='normal'/%3E%3C/filter%3E%3C/svg%3E#grainy-noise");
+  /* mix-blend-mode: overlay; */
+  opacity: 0.10; /* CUSTOMIZE OPACITY */
+  pointer-events: none;
+  background: transparent;
+}
+
+#operator-controls > * {
+  position: relative;
+  z-index: 1;
+}
+#operator-controls input,
+#operator-controls select {
+  color: inherit;
+  background: rgba(0,0,0,0.2);
+  background-color: #252525;
+  border: solid 1px rgba(0,0,0,0);
+  border-radius: 10%;
+  text-align: center;
+  padding: 0.2em;
+}
+#operator-controls input:hover {
+  border: solid 1px rgba(255,255,255,0.2);
+  border-radius: 10%;
+}
+.operator-control {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap-lg);
+  min-width: 152px;
+  background: rgba(0,0,0,0.1);
+  border-radius: 1rem;
+  padding: 1rem 0.5rem;
+}
+.operator-control label {
+  font-weight: bold;
+  font-size: 0.9em;
+}
+
+.operator-control input[type="number"]::-webkit-outer-spin-button,
+.operator-control input[type="number"]::-webkit-inner-spin-button,
+.operator-control input[type="number"] {
+  -webkit-appearance: none;
+  -moz-appearance: textfield; /* Remove default spinner */
+  margin: 0;
+}
+
+/* --- Style Specific Controls --- */
+
+/* Keep Ratio slider horizontal (default) */
+.operator-control input[id$="-ratio-dial"] {
+  width: 100px;
+  height: auto; /* Default */
+  writing-mode: horizontal-tb; /* Explicitly horizontal */
+  appearance: auto;
+}
+.global-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+.global-controls button {
+  width: 50%;
+  min-width: 120px;
+}
+
+/* Style Modulation Index Slider as Vertical */
+.operator-control input[id$="-mod-index-dial"] {
+  width: 20px;  /* Vertical sliders need width defined */
+  height: 80px; /* Adjust height as needed */
+  padding: 0 5px; /* Add some padding if needed */
+  writing-mode: vertical-lr; /* Use standardized vertical writing mode */
+  direction: rtl; /* Make the slider go bottom-to-top with vertical-lr */
+  cursor: pointer;
+  margin-top: 5px; /* Add space below label */
+  margin-bottom: 5px; /* Add space above number input */
+}
+
+/* --- Algorithm Matrix Styling --- */
+.algorithm-matrix {
+  display: grid;
+  grid-template-columns: min-content;
+  flex-shrink: 1;
+  flex-grow: 0;
+}
+
+.algorithm-matrix table {
+  border-spacing: 0;
+  max-width: fit-content;
+  border: solid 3px #111;
+  border-bottom: none;
+  border-radius: 5px 5px 0 0;
+
+}
+.algorithm-matrix tr th:last-child,
+.algorithm-matrix tr td:last-child {
+  border-right: none;
+}
+.algorithm-matrix th, .algorithm-matrix td {
+    padding: .7em;
+    /* width: 40px; */
+    /* height: 40px; */
+    border-right: 1px solid #111;
+    border-bottom: 1px solid #111;
+    text-align: center;
+    vertical-align: middle;
+    cursor: pointer; /* All cells clickable */
+    box-sizing: border-box; /* Include border in width/height */
+}
+.algorithm-matrix td div{
+  margin: auto;
+}
+.algorithm-matrix td:hover {
+  background-color: #333;
+}
+.algorithm-matrix td.feedback-cell:hover {
+  background-color: #444;
+}
+.algorithm-matrix td.output-cell:hover {
+  background-color: #444;
+}
+/* Style the added OUT cells */
+.algorithm-matrix td.output-cell, .algorithm-matrix th.out-header {
+    background-color: rgba(255,255,255,0.1); /* Light background for the whole column */
+}
+
+/* Style the connection point within OUT cells */
+.algorithm-matrix td.output-cell .output-point {
+    width: 15px;
+    height: 15px;
+    background-color: #333; /* Default off color */
+    border: 1px solid #111;
+    transition: background-color 0.1s ease;
+}
+
+/* Style the connection point when the OUT cell is active */
+.algorithm-matrix td.output-cell.active .output-point {
+    background-color: #28a745; /* Green for output active */
+    border-color: #1e7e34;
+}
+
+/* Style the feedback cells (diagonal) */
+.algorithm-matrix td.feedback-cell {
+  background-color: #333;
+}
+.connection-point {
+  border-radius: 50%;
+}
+/* Style the connection point INSIDE feedback cells (default state) */
+.algorithm-matrix td.feedback-cell .connection-point {
+     width: 15px;
+     height: 15px;
+     background-color: #b8a94e; /* Darker khaki */
+     border: 1px solid #9e8f3e;
+     transition: background-color 0.1s ease; /* Add transition */
+}
+/* Style the connection point INSIDE feedback cells WHEN ACTIVE */
+/* Make this selector specific */
+.algorithm-matrix td.feedback-cell.active .connection-point {
+     background-color: #ff4500 !important; /* OrangeRed when active - use !important as a test if needed */
+     border-color: #cc3700 !important;
+}
+
+/* Connection points (non-feedback, non-output) */
+.algorithm-matrix td:not(.feedback-cell):not(.output-cell) .connection-point {
+    width: 15px;
+    height: 15px;
+    background-color: #666;
+    border: 1px solid #bbb;
+    transition: background-color 0.1s ease;
+}
+.algorithm-matrix td:not(.feedback-cell):not(.output-cell).active .connection-point {
+    background-color: #007bff; /* Blue */
+    border-color: #0056b3;
+}
+
+.carrier-selectors { /* Removed .feedback-selectors */
+    margin-top: 15px;
+    text-align: left;
+    padding-left: 5px;
+}
+.carrier-selectors span {
+    font-weight: bold;
+    margin-right: 10px;
+}
+.carrier-selectors label {
+    margin-right: 15px;
+    cursor: pointer;
+}
+
+/* --- Hover Info Box Styling --- */
+.matrix-info-box {
+    padding: 0.5em;
+    font-size: 0.9em;
+    color: #eee;
+    background-color: #444;
+    border: 3px solid #111;
+    border-top: none;
+    border-radius: 0 0 3px 3px;
+    text-align: center;
+}
+
+.shift-keys {
+  /* height: 100%; */
+  width: 5%;
+  margin: 0;
+  padding: 0;
+  background-color: #777;
+  border: 0;
+  border-radius: 3px;
+}
+
+.crossfader-container {
+  display: flex;
+  flex-direction: column; /* Arrange slider and input vertically */
+  align-items: center; /* Center items horizontally */
+  margin: 5px 10px; /* Add some spacing */
+}
+
+.crossfader-label {
+  margin-top: 0.5em; /* Space above label */
+  margin-bottom: 0.5em; /* Space between label and slider */
+}
+.crossfader-track-container {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  background: repeating-linear-gradient(
+    0deg,
+    #222 4%,
+    #111 7%,
+    #222 10%
+  );
+  box-shadow: 0px 0px 0px 1px black;
+}
+.crossfader-track {
+  position: relative; /* Needed for absolute positioning of the thumb */
+  height: 100px;
+  background: linear-gradient(90deg, black, #111, black);
+  cursor: pointer;
+}
+
+.crossfader-thumb {
+  position: absolute;
+  width: 16px; /* Thumb wider than track */
+  height: 8px; /* Short thumb */
+  background-color: #393939; /* Lighter thumb color */
+  box-shadow: inset 0 0 3px 2px #191919, 0 0px 3px 0px rgba(0,0,0,0.5);
+  border-radius: 5%;
+  cursor: grab; /* Indicate draggable */
+  left: 50%; /* Start positioning from the center */
+  transform: translateX(-50%); /* Center the thumb horizontally */
+  /* 'top' style will be set by JavaScript */
+}
+.crossfader-thumb-stripe {
+  background-color: #fff;
+  box-shadow: 0px 0px 2px 2px #222, inset 0 0 1px 0px #111;
+}
+.crossfader-input {
+  width: 3em;
+  margin-top: 5px;
+  text-align: center;
+}
+
+.crossfader-thumb.dragging {
+  cursor: grabbing;
+}
+.d-flex {
+  display: flex !important;
+}
+.flex-col {
+  flex-direction: column !important;
+}
+.flex-row {
+  flex-direction: row !important;
+}
+.justify-content-center {
+  justify-content: center;
+}
+@media (min-width: 575px) {
+  .flex-sm-col {
+    flex-direction: column !important;
+  }
+  .flex-sm-row {
+    flex-direction: row !important;
+  }
+}
+@media (min-width: 768px) {
+  .flex-sm-col, .flex-md-col {
+    flex-direction: column !important;
+  }
+  .flex-sm-row, .flex-md-row {
+    flex-direction: row !important;
+  }
+}
+@media (min-width: 992px) {
+  .flex-sm-col, .flex-md-col, .flex-lg-col {
+    flex-direction: column !important;
+  }
+  .flex-sm-row, .flex-md-row, .flex-lg-row {
+    flex-direction: row !important;
+  }
+}
+@media (min-width: 1200px) {
+  .flex-sm-col, .flex-md-col, .flex-lg-col, .flex-xl-col {
+    flex-direction: column !important;
+  }
+  .flex-sm-row, .flex-md-row, .flex-lg-row, .flex-xl-row {
+    flex-direction: row !important;
+  }
+}
+@media (min-width: 1500px) {
+  .flex-sm-col, .flex-md-col, .flex-lg-col, .flex-xl-col, .flex-xxl-col {
+    flex-direction: column !important;
+  }
+  .flex-sm-row, .flex-md-row, .flex-lg-row, .flex-xl-row, .flex-xxl-row {
+    flex-direction: row !important;
+  }
+}
+/* @media (min-width: 1200px) { */
+/*   #operator-controls { */
+/*     flex-wrap: nowrap; */
+/*     width: auto; */
+/*     gap: var(--gap-lg); */
+/*     padding: var(--gap-lg); */
+/*   } */
+/*   .operator-control { */
+/*     flex-basis: auto; */
+/*     gap: var(--gap-lg); */
+/*   } */
+/* } */
