@@ -444,6 +444,7 @@ button:hover {
 }
 .crossfader-track-container {
   display:flex;
+  width: 60px;
   flex-direction:column;
   align-items:center;
   background: repeating-linear-gradient(
@@ -457,14 +458,15 @@ button:hover {
 .crossfader-track {
   position: relative; /* Needed for absolute positioning of the thumb */
   height: 100px;
+  width: 12px;
   background: linear-gradient(90deg, black, #111, black);
   cursor: pointer;
 }
 
 .crossfader-thumb {
   position: absolute;
-  width: 16px; /* Thumb wider than track */
-  height: 8px; /* Short thumb */
+  width: 60px; /* Thumb wider than track */
+  height: 30px; /* Short thumb */
   background-color: #393939; /* Lighter thumb color */
   box-shadow: inset 0 0 3px 2px #191919, 0 0px 3px 0px rgba(0,0,0,0.5);
   border-radius: 5%;

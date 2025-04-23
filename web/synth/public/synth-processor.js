@@ -46,23 +46,23 @@ class SynthProcessor extends AudioWorkletProcessor {
             synth.note_off(data.note);
             break;
           case "set_operator_ratio":
-            synth.set_operator_ratio(data.operator_index, data.ratio);
+            synth.set_operator_ratio(data.operatorIndex, data.ratio);
           case "set_operator_waveform":
-            synth.set_operator_waveform(data.operator_index, data.waveform_value);
+            synth.set_operator_waveform(data.operatorIndex, data.waveformId);
             break;
           case "set_operator_modulation_index":
-            synth.set_operator_modulation_index(data.operator_index, data.modulation_index);
+            synth.set_operator_modulation_index(data.operatorIndex, data.modIndex);
             break;
           case "set_operator_envelope":
-            synth.set_operator_envelope(data.operator_index, data.attack, data.decay, data.sustain, data.release);
+            synth.set_operator_envelope(data.operatorIndex, data.attack, data.decay, data.sustain, data.release);
             break;
           case "set_operator_filter":
             // Assuming filterParams is directly on data, not nested payload? Adjust if needed.
-            synth.set_operator_filter(data.operator_index, data.filterParams);
+            synth.set_operator_filter(data.operatorIndex, data.filterParams);
             break;
           case "remove_operator_filter":
             // Assuming filterType is directly on data? Adjust if needed.
-            synth.remove_operator_filter(data.operator_index, data.filterType);
+            synth.remove_operator_filter(data.operatorIndex, data.filterType);
             break;
           case "set_algorithm":
             synth.set_algorithm(data.matrix);

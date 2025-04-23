@@ -1,5 +1,5 @@
 import { resumeAudioContext } from './audio'; // We'll put resumeAudioContext in App.tsx initially
-import { Note } from './state';
+import { Note, WaveformId } from './state';
 
 let processorPort: MessagePort | null = null;
 
@@ -49,5 +49,50 @@ export function setAlgorithm(matrix: number[][]): void {
     processorPort.postMessage({ type: 'set_algorithm', matrix });
   } catch (e) {
     console.error("SynthInputHandler: Error setting algorithm:", e);
+  }
+}
+
+export function setOperatorRatio(operatorIndex: number, ratio: number): void {
+  if (!processorPort) {
+    console.warn("SynthInputHandler: Port not connected, cannot set ratio.");
+    return;
+  }
+  try {
+    processorPort.postMessage({ type: 'set_operator_ratio', operatorIndex, ratio });
+  } catch (e) {
+    console.error("SynthInputHandler: Error setting ratio:", e);
+  }
+}
+export function setOperatorModIndex(operatorIndex: number, modIndex: number): void {
+  if (!processorPort) {
+    console.warn("SynthInputHandler: Port not connected, cannot set ratio.");
+    return;
+  }
+  try {
+    processorPort.postMessage({ type: 'set_operator_modulation_index', operatorIndex, modIndex });
+  } catch (e) {
+    console.error("SynthInputHandler: Error setting ratio:", e);
+  }
+}
+export function setOperatorWaveform(operatorIndex: number, waveformId: WaveformId): void {
+  if (!processorPort) {
+    console.warn("SynthInputHandler: Port not connected, cannot set ratio.");
+    return;
+  }
+  try {
+    processorPort.postMessage({ type: 'set_operator_waveform', operatorIndex, waveformId });
+  } catch (e) {
+    console.error("SynthInputHandler: Error setting ratio:", e);
+  }
+}
+export function setOperatorEnvelope(operatorIndex: number, attack: number, decay: number, sustain: number, release: number): void {
+  if (!processorPort) {
+    console.warn("SynthInputHandler: Port not connected, cannot set ratio.");
+    return;
+  }
+  try {
+    processorPort.postMessage({ type: 'set_operator_envelope', operatorIndex, attack, decay, sustain, release });
+  } catch (e) {
+    console.error("SynthInputHandler: Error setting ratio:", e);
   }
 }

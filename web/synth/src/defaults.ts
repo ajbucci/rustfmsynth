@@ -12,8 +12,8 @@ export const DEFAULT_ENVELOPE_STATE: EnvelopeState = {
 function createDefaultOperatorState(): OperatorState {
   return {
     ratio: 1.0,
-    modulationIndex: 0.0,
-    waveform: 'Sine',
+    modulationIndex: 1.0,
+    waveform: 0,
     envelope: { ...DEFAULT_ENVELOPE_STATE },
     filters: [],
   };
@@ -52,6 +52,5 @@ export function createDefaultAppState(): AppState {
   return {
     algorithm: createDefaultAlgorithmMatrixState(),
     operators: Array(NUM_OPERATORS).fill(null).map(() => createDefaultOperatorState()),
-    notesHeld: [],
   };
 }

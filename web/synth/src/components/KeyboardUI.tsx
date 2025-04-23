@@ -52,12 +52,16 @@ const KeyboardUI: Component<KeyboardUIProps> = (props) => {
     // Add Physical Key Listeners
     window.addEventListener('keydown', handlePhysicalKeyDown);
     window.addEventListener('keyup', handlePhysicalKeyUp);
+    // Add focus listener
+    window.addEventListener('blur', handleFocusLoss);
   });
 
   onCleanup(() => {
     // Remove Physical Key Listeners
     window.removeEventListener('keydown', handlePhysicalKeyDown);
     window.removeEventListener('keyup', handlePhysicalKeyUp);
+    // Remove Focus Listener
+    window.removeEventListener('blur', handleFocusLoss); // <-- Remove listener here
     const notesToStop: Note[] = activeNotes();
     if (notesToStop.length > 0) {
       console.log("Keyboard Cleanup: Stopping UI notes:", notesToStop);
@@ -120,7 +124,17 @@ const KeyboardUI: Component<KeyboardUIProps> = (props) => {
     }
   };
 
-
+  // --- Focus Loss Handler ---
+  const handleFocusLoss = () => {
+    const notesToStop = untrack(activeNotes); // Get current notes without triggering reactivity
+    if (notesToStop.length > 0) {
+      console.log("Window lost focus. Stopping UI notes:", notesToStop);
+      notesToStop.forEach(note => {
+        SynthInputHandler.noteOff(note);
+      });
+      setActiveNotes([]); // Clear the active notes state in the UI
+    }
+  };
   // --- Shift Functions ---
   // Apply the EXACT logic from original vanilla JS click handlers
   const shiftLeft = (): void => {

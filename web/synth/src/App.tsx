@@ -1,6 +1,6 @@
 // src/App.tsx
 
-import { Component, onMount, onCleanup, createEffect, createSignal } from 'solid-js';
+import { Component, onMount, onCleanup, createEffect, createSignal, For } from 'solid-js';
 import { produce, createStore, unwrap } from 'solid-js/store'; // Import store
 
 import { AppState } from './state';
@@ -21,13 +21,14 @@ import { MidiInputHandler } from './midiHandlers'; // Import the MIDI handler in
 // Import the UI components
 import KeyboardUI from './components/KeyboardUI';
 import AlgorithmMatrix from './components/AlgorithmMatrix';
+import OperatorControl from './components/OperatorControl';
 
 // Import base styles if needed
 import './style.css';
 import { createDefaultAppState } from './defaults';
 
-const [appStore, setAppStore] = createStore<AppState>(createDefaultAppState());
-
+export const [appStore, setAppStore] = createStore<AppState>(createDefaultAppState());
+const [isFineModeActive, setIsFineModeActive] = createSignal(false);
 // Main App Component
 const App: Component = () => {
 
@@ -104,9 +105,31 @@ const App: Component = () => {
       processorNode = null; // Ensure node ref is null on failure
     }
   };
-
+  // --- Fine Mode Global Listeners --- 
+  const handleGlobalKeyDown = (e: KeyboardEvent) => {
+    if (e.key === "Shift" && !e.repeat && !isFineModeActive()) {
+      // Use functional update form for signals too
+      setIsFineModeActive(true);
+      // Update body cursor directly (effect in Dial handles body cursor DURING drag)
+      if (!document.body.classList.contains('dial-dragging-active')) {
+        document.body.style.cursor = 'cell';
+      }
+    }
+  };
+  const handleGlobalKeyUp = (e: KeyboardEvent) => {
+    if (e.key === "Shift" && isFineModeActive()) {
+      // Use functional update form
+      setIsFineModeActive(false);
+      // Update body cursor directly
+      if (!document.body.classList.contains('dial-dragging-active')) {
+        document.body.style.cursor = '';
+      }
+    }
+  };
   // --- Lifecycle ---
   onMount(() => {
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    window.addEventListener('keyup', handleGlobalKeyUp);
     initializeAudioAndSynth();
     midiHandlerInstance = new MidiInputHandler();
 
@@ -119,6 +142,8 @@ const App: Component = () => {
     // if (processorNode) {
     //     processorNode.disconnect();
     // }
+    window.removeEventListener('keydown', handleGlobalKeyDown);
+    window.removeEventListener('keyup', handleGlobalKeyUp);
     closeAudioContext(); // Close context via the audio module
     SynthInputHandler.initializeSynthInputHandler(null); // Clear port in handler
     processorNode = null;
@@ -139,27 +164,45 @@ const App: Component = () => {
     // debounceUpdateUrl();
   });
   // --- Render ---
+  const operatorIndices = () => Array.from({ length: NUM_OPERATORS }, (_, i) => i); // 0-based for array access
   return (
     <div class="app-container">
       <h1>Minimal SolidJS FM Synth Keyboard</h1>
       <p>Click keys or use your physical keyboard (QWERTY row for sharps, ASDF row for naturals).</p>
-      <AlgorithmMatrix
-        numOperators={NUM_OPERATORS}
-        // Pass the reactive algorithm array and its specific setter path
-        // Note: Passing setAppStore directly works, but fine-grained setters are possible
-        algorithm={appStore.algorithm} // Pass the algorithm part of the store
-        setAlgorithmState={(updater) => setAppStore('algorithm', updater)} // Pass a function to update only the algorithm path
-      // OR using produce if AlgorithmMatrix uses it internally:
-      // setAlgorithmState={produce((draft) => { /* matrix update logic here if done in parent */ })}
-      />
-      {/* Render the Keyboard UI Component */}
-      {/* Pass initialStartNote if desired */}
-      <KeyboardUI initialStartNote={48} />
+      <div id="synth-container">
+        <div class="controls-container d-flex flex-col flex-xxl-row">
+          <div class="controls-top-row d-flex flex-col">
+            <AlgorithmMatrix
+              numOperators={NUM_OPERATORS}
+              // Pass the reactive algorithm array and its specific setter path
+              // Note: Passing setAppStore directly works, but fine-grained setters are possible
+              algorithm={appStore.algorithm} // Pass the algorithm part of the store
+              setAlgorithmState={(updater) => setAppStore('algorithm', updater)} // Pass a function to update only the algorithm path
+            // OR using produce if AlgorithmMatrix uses it internally:
+            // setAlgorithmState={produce((draft) => { /* matrix update logic here if done in parent */ })}
+            />
+          </div>
+          <div id="operator-controls"> {/* Wrapper for layout */}
+            <For each={operatorIndices()}>
+              {(opIndex) => (
+                <OperatorControl
+                  operatorIndex={opIndex}
+                  isFineModeActive={isFineModeActive}
+                // No ratioValue or onRatioChange needed here
+                />
+              )}
+            </For>
+          </div>
+        </div>
+        {/* Render the Keyboard UI Component */}
+        {/* Pass initialStartNote if desired */}
+        <KeyboardUI initialStartNote={48} />
 
-      {/* Add placeholders or divs for other UI sections later */}
-      {/* <div id="operator-controls-container"></div> */}
-      {/* <div id="algorithm-matrix-container"></div> */}
-      {/* <button id="reset-button">Reset</button> */}
+        {/* Add placeholders or divs for other UI sections later */}
+        {/* <div id="operator-controls-container"></div> */}
+        {/* <button id="reset-button">Reset</button> */}
+
+      </div>
     </div>
   );
 };
