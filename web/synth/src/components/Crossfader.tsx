@@ -211,14 +211,14 @@ const Crossfader: Component<CrossfaderProps> = (props) => {
       if (newValue !== props.value()) {
         props.onChange(newValue);
       } else {
-        target.value = formatValueForInput(untrack(props.value));
+        target.value = formatValueForNumericInput(untrack(props.value));
       }
     } else {
-      target.value = formatValueForInput(props.value());
+      target.value = formatValueForNumericInput(props.value());
     }
   };
 
-  const formatValueForInput = (value: number): string => {
+  const formatValueForNumericInput = (value: number): string => {
     // Determine decimal places based on step size if possible
     const stepStr = String(step());
     const decimalPlaces = stepStr.includes('.') ? stepStr.split('.')[1].length : 0;
@@ -284,7 +284,7 @@ const Crossfader: Component<CrossfaderProps> = (props) => {
         id={props.id ? `${props.id}-input` : undefined}
         type="text" // Keep text for flexible formatting
         class="crossfader-input"
-        value={formatValueForInput(props.value())} // Display formatted prop value
+        value={formatValueForNumericInput(props.value())} // Display formatted prop value
         // Update on blur or enter to prevent excessive updates
         onBlur={handleInputChange}
         onKeyDown={(e) => { if (e.key === 'Enter') { handleInputChange(e); (e.currentTarget as HTMLInputElement).blur(); } }}

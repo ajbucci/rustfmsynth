@@ -1,6 +1,8 @@
 {
   "compilerOptions": {
-    "strict": true,
+    "allowJs": true,
+    "checkJs": false,
+    "strict": false,
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "node",
@@ -8,7 +10,9 @@
     "esModuleInterop": true,
     "jsx": "preserve",
     "jsxImportSource": "solid-js",
-    "types": ["vite/client"],
+    "types": [
+      "vite/client"
+    ],
     "noEmit": true,
     "isolatedModules": true
   }

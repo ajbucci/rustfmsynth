@@ -61,7 +61,10 @@ const NumericParameterInput: Component<NumericParameterInputProps> = (props) => 
 
   return (
     <div class={`param param-${props.id}`}>
-      <label for={props.id}>{props.label}</label>
+      <label for={props.id}>
+        {props.label}{" "}
+        {props.unit && `(${props.unit})`}
+      </label>
       <input
         type="text"
         inputmode="decimal"
@@ -74,7 +77,6 @@ const NumericParameterInput: Component<NumericParameterInputProps> = (props) => 
         disabled={props.disabled ? props.disabled() : false}
         class="number-input"
       />
-      {props.unit && <span class="param-unit"> {props.unit}</span>}
     </div>
   );
 };

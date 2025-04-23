@@ -65,34 +65,57 @@ export function setOperatorRatio(operatorIndex: number, ratio: number): void {
 }
 export function setOperatorModIndex(operatorIndex: number, modIndex: number): void {
   if (!processorPort) {
-    console.warn("SynthInputHandler: Port not connected, cannot set ratio.");
+    console.warn("SynthInputHandler: Port not connected, cannot set modulation index.");
     return;
   }
   try {
     processorPort.postMessage({ type: 'set_operator_modulation_index', operatorIndex, modIndex });
   } catch (e) {
-    console.error("SynthInputHandler: Error setting ratio:", e);
+    console.error("SynthInputHandler: Error setting modulation index:", e);
   }
 }
 export function setOperatorWaveform(operatorIndex: number, waveformId: WaveformId): void {
   if (!processorPort) {
-    console.warn("SynthInputHandler: Port not connected, cannot set ratio.");
+    console.warn("SynthInputHandler: Port not connected, cannot set waveform.");
     return;
   }
   try {
     processorPort.postMessage({ type: 'set_operator_waveform', operatorIndex, waveformId });
   } catch (e) {
-    console.error("SynthInputHandler: Error setting ratio:", e);
+    console.error("SynthInputHandler: Error setting waveform:", e);
   }
 }
 export function setOperatorEnvelope(operatorIndex: number, attack: number, decay: number, sustain: number, release: number): void {
   if (!processorPort) {
-    console.warn("SynthInputHandler: Port not connected, cannot set ratio.");
+    console.warn("SynthInputHandler: Port not connected, cannot set envelope.");
     return;
   }
   try {
     processorPort.postMessage({ type: 'set_operator_envelope', operatorIndex, attack, decay, sustain, release });
   } catch (e) {
-    console.error("SynthInputHandler: Error setting ratio:", e);
+    console.error("SynthInputHandler: Error setting envelope:", e);
+  }
+}
+
+export function setOperatorFilter(operatorIndex: number, filterParams: Uint8Array): void {
+  if (!processorPort) {
+    console.warn("SynthInputHandler: Port not connected, cannot set ratio.");
+    return;
+  }
+  try {
+    processorPort.postMessage({ type: 'set_operator_filter', operatorIndex, filterParams });
+  } catch (e) {
+    console.error("SynthInputHandler: Error setting filter:", e);
+  }
+}
+export function removeOperatorFilter(operatorIndex: number, filterType: Uint8Array): void {
+  if (!processorPort) {
+    console.warn("SynthInputHandler: Port not connected, cannot set ratio.");
+    return;
+  }
+  try {
+    processorPort.postMessage({ type: 'remove_operator_filter', operatorIndex, filterType });
+  } catch (e) {
+    console.error("SynthInputHandler: Error removing filter:", e);
   }
 }

@@ -8,6 +8,7 @@ import WaveformSelect from './WaveformSelect'; // Import the WaveformSelect comp
 import EnvelopeControl from './EnvelopeControl'; // Import the EnvelopeControl component
 import { NUM_OPERATORS } from '../config'; // Import the number of operators
 import * as SynthInputHandler from '../synthInputHandler'; // Import the synth input handler
+import FilterManager from './FilterManager';
 // Define props for the OperatorControl
 interface OperatorControlProps {
   operatorIndex: number;
@@ -103,6 +104,9 @@ const OperatorControl: Component<OperatorControlProps> = (props) => {
         //isActive={isActive}
         value={envelopeValue} // Pass the accessor for the whole envelope object
         onParamChange={handleEnvelopeParamChange} // Pass the single handler
+      />
+      <FilterManager
+        operatorIndex={props.operatorIndex}
       />
     </div>
   );

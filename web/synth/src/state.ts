@@ -16,15 +16,15 @@ export interface PitchedCombFilterParams {
   alpha: number;
 }
 export interface LowPassFilterState {
-  typeTag: "LowPass"; // The discriminator
+  type: "LowPass"; // The discriminator
   params: LowPassFilterParams;
 }
 export interface CombFilterState {
-  typeTag: "Comb";
+  type: "Comb";
   params: CombFilterParams;
 }
 export interface PitchedCombFilterState {
-  typeTag: "PitchedComb";
+  type: "PitchedComb";
   params: PitchedCombFilterParams;
 }
 export type FilterState =
@@ -90,3 +90,51 @@ export const envelopeParamsInfo: ReadonlyArray<EnvelopeParamInfo> = [
   { key: 'sustain', label: 'Sustain:', min: 0, max: 1, step: .001 },
   { key: 'release', label: 'Release:', min: 0, max: 10, step: .001 },
 ] as const;
+
+export type FilterParamInfo = {
+  name: string;      // UI Label: "Cutoff", "Alpha"
+  id: string;        // Key in the corresponding FilterState['params'] object: "cutoff", "alpha"
+  default: number;   // Default numeric value for adder/initial state
+  min: number;       // Min value for input/clamping
+  max: number;       // Max value for input/clamping
+  step?: number;     // Input step suggestion
+  unit?: string;     // UI Unit display: "Hz", "samples"
+};
+// Define structure for the main filter configuration object
+export type FilterConfig = {
+  name: string;       // Human-readable name for UI (e.g., dropdown)
+  type: FilterState['type'];    // Unique identifier string matching FilterState['typeTag'] (e.g., "LowPass", "Comb")
+  value: number | string; // A simple value potentially used for select dropdowns or simple backend messages (optional).
+  params: ReadonlyArray<FilterParamInfo>; // Array defining the parameters for this filter type
+};
+export const FILTERS: ReadonlyArray<FilterConfig> = [
+  {
+    name: "Low Pass",
+    type: "LowPass", // Matches LowPassFilterState['typeTag']
+    value: 0, params: [
+      { name: "Cutoff", id: "cutoff", default: 20000.0, min: 20.0, max: 20000.0, step: 1.0, unit: "Hz" },
+      { name: "Q", id: "q", default: 0.707, min: 0.1, max: 10.0, step: 0.01, unit: "" }
+    ]
+  },
+  {
+    name: "Comb",
+    type: "Comb", // Matches CombFilterState['typeTag']
+    value: 1,
+    params: [
+      { name: "Alpha", id: "alpha", default: 0.5, min: -1.0, max: 1.0, step: 0.01, unit: "" },
+      { name: "K", id: "k", default: 100, min: 1, max: 4096, step: 1, unit: "samples" }
+    ]
+  },
+  {
+    name: "Pitched Comb",
+    type: "PitchedComb", // Matches PitchedCombFilterState['typeTag']
+    value: 2,
+    params: [
+      { name: "Alpha", id: "alpha", default: 0.95, min: -1.0, max: 1.0, step: 0.01, unit: "" }
+    ]
+  },
+] as const;
+
+export function getFilterConfigByType(type: string): FilterConfig | undefined {
+  return FILTERS.find(f => f.type === type);
+}
