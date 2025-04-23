@@ -235,7 +235,14 @@ const Crossfader: Component<CrossfaderProps> = (props) => {
         class="crossfader-track-container"
         ref={trackElement}
         onMouseDown={(e) => { if (e.button === 0) handleInteractionStart(e.clientY); }}
-        onTouchStart={(e) => { e.preventDefault(); handleInteractionStart(e.touches[0].clientY); }}
+        on:touchstart={{
+          passive: false, // Set listener options directly
+          handleEvent: (event: TouchEvent) => { // Define the handleEvent method
+            // Call original handler, keyDataWithStyle is available via closure
+            event.preventDefault();
+            handleInteractionStart(event.touches[0].clientY);
+          }
+        }}
       // Add ARIA attributes to the track maybe? Or keep on container?
       >
         <div class="crossfader-track">
@@ -250,7 +257,14 @@ const Crossfader: Component<CrossfaderProps> = (props) => {
             }}
             // Make thumb itself draggable too (optional)
             onMouseDown={(e) => { if (e.button === 0) handleInteractionStart(e.clientY); }}
-            onTouchStart={(e) => { e.preventDefault(); handleInteractionStart(e.touches[0].clientY); }}
+            on:touchstart={{
+              passive: false, // Set listener options directly
+              handleEvent: (event: TouchEvent) => { // Define the handleEvent method
+                // Call original handler, keyDataWithStyle is available via closure
+                event.preventDefault();
+                handleInteractionStart(event.touches[0].clientY);
+              }
+            }}
           >
             <div class="crossfader-thumb-stripe"
               style={

@@ -31,47 +31,45 @@ const EnvelopeControl: Component<EnvelopeControlProps> = (props) => {
     }
   };
 
-  // --- Button Click Handler (if used) ---
-  const handleSetEnvelopeClick = () => {
-    console.log(`Set Envelope button clicked for operator ${opIndex}.`);
-    // Example: Log the current value from the prop accessor
-    // console.log("Current envelope value via prop:", props.value());
-    // Any action here would likely involve calling another handler passed via props
-  };
+  // // --- Button Click Handler (if used) ---
+  // const handleSetEnvelopeClick = () => {
+  //   console.log(`Set Envelope button clicked for operator ${opIndex}.`);
+  //   // Example: Log the current value from the prop accessor
+  //   // console.log("Current envelope value via prop:", props.value());
+  //   // Any action here would likely involve calling another handler passed via props
+  // };
 
   return (
-    <div class="parameter-container section-box">
+    <div class="parameter-container">
       <label class="parameter-title">Envelope</label>
-      <div class="envelope-params-container">
-        <For each={envelopeParamsInfo}>
-          {(paramInfo: EnvelopeParamInfo) => {
-            const inputId = `op-${opIndex}-adsr-${paramInfo.key}`;
-            // Accessor now reads from the props.value() object
-            const paramValueAccessor = () => {
-              const envelope = props.value(); // Get the whole envelope object
-              return envelope?.[paramInfo.key];
-            }
+      <For each={envelopeParamsInfo}>
+        {(paramInfo: EnvelopeParamInfo) => {
+          const inputId = `op-${opIndex}-adsr-${paramInfo.key}`;
+          // Accessor now reads from the props.value() object
+          const paramValueAccessor = () => {
+            const envelope = props.value(); // Get the whole envelope object
+            return envelope?.[paramInfo.key];
+          }
 
-            return (
-              <div class="adsr-param">
-                <label for={inputId}>{paramInfo.label}</label>
-                <input
-                  type="number"
-                  id={inputId}
-                  value={paramValueAccessor()} // Use the derived accessor
-                  onInput={createEnvelopeInputHandler(paramInfo.key)}
-                  min={paramInfo.min}
-                  max={paramInfo.max}
-                  step={paramInfo.step}
-                  //disabled={!props.isActive()}
-                  data-operator-index={opIndex}
-                  class="number-input"
-                />
-              </div>
-            );
-          }}
-        </For>
-      </div>
+          return (
+            <div class="param">
+              <label for={inputId}>{paramInfo.label}</label>
+              <input
+                type="number"
+                id={inputId}
+                value={paramValueAccessor()} // Use the derived accessor
+                onInput={createEnvelopeInputHandler(paramInfo.key)}
+                min={paramInfo.min}
+                max={paramInfo.max}
+                step={paramInfo.step}
+                //disabled={!props.isActive()}
+                data-operator-index={opIndex}
+                class="number-input"
+              />
+            </div>
+          );
+        }}
+      </For>
     </div>
   );
 };

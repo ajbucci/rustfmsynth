@@ -178,43 +178,47 @@ const KeyboardUI: Component<KeyboardUIProps> = (props) => {
     return activeNotes().some(n => n.noteNumber === keyData.note);
   };
   return (
-    <div class="keyboard-outer-wrapper">
-      <div id="bottom-row" class="bottom-row-controls">
-        <button id="shift-keys-left" onClick={shiftLeft}>←</button>
+    <div id="bottom-row" class="bottom-row-controls">
+      <button id="shift-keys-left" class="shift-keys" onClick={shiftLeft}>←</button>
 
-        <div id="keyboard-container" class="keyboard-container">
-          {/* Iterate over the memoized positionedKeys */}
-          <For each={positionedKeys()}>
-            {(keyDataWithStyle) => { // Now includes style
-              const isActive = () => isKeyVisuallyActive(keyDataWithStyle.keyCode);
+      <div id="keyboard-container" class="keyboard-container">
+        {/* Iterate over the memoized positionedKeys */}
+        <For each={positionedKeys()}>
+          {(keyDataWithStyle) => { // Now includes style
+            const isActive = () => isKeyVisuallyActive(keyDataWithStyle.keyCode);
 
-              return (
-                <div
-                  class={`key ${keyDataWithStyle.type}`}
-                  classList={{ active: isActive() }}
-                  data-code={keyDataWithStyle.keyCode}
-                  data-note={keyDataWithStyle.note}
-                  // Apply pre-calculated style
-                  style={keyDataWithStyle.style}
-                  onMouseDown={[handlePointerDown, keyDataWithStyle]} // Pass original data part
-                  onMouseUp={[handlePointerUpOrLeave, keyDataWithStyle]}
-                  onMouseLeave={[handlePointerUpOrLeave, keyDataWithStyle]}
-                  onTouchStart={[handlePointerDown, keyDataWithStyle]}
-                  onTouchEnd={[handlePointerUpOrLeave, keyDataWithStyle]}
-                  onTouchCancel={[handlePointerUpOrLeave, keyDataWithStyle]}
-                >
-                  <div class="key-label">
-                    <span class="note-name">{keyDataWithStyle.noteName}</span>
-                    <span class="key-code">{keyDataWithStyle.keyCode.replace('Key', '').replace('Digit', '')}</span>
-                  </div>
+            return (
+              <div
+                class={`key ${keyDataWithStyle.type}`}
+                classList={{ active: isActive() }}
+                data-code={keyDataWithStyle.keyCode}
+                data-note={keyDataWithStyle.note}
+                // Apply pre-calculated style
+                style={keyDataWithStyle.style}
+                onMouseDown={[handlePointerDown, keyDataWithStyle]} // Pass original data part
+                onMouseUp={[handlePointerUpOrLeave, keyDataWithStyle]}
+                onMouseLeave={[handlePointerUpOrLeave, keyDataWithStyle]}
+                on:touchstart={{
+                  passive: false, // Set listener options directly
+                  handleEvent: (event: TouchEvent) => { // Define the handleEvent method
+                    // Call original handler, keyDataWithStyle is available via closure
+                    handlePointerDown(keyDataWithStyle, event);
+                  }
+                }}
+                onTouchEnd={[handlePointerUpOrLeave, keyDataWithStyle]}
+                onTouchCancel={[handlePointerUpOrLeave, keyDataWithStyle]}
+              >
+                <div class="key-label">
+                  <span class="note-name">{keyDataWithStyle.noteName}</span>
+                  <span class="key-code">{keyDataWithStyle.keyCode.replace('Key', '').replace('Digit', '')}</span>
                 </div>
-              );
-            }}
-          </For>
-        </div>
-
-        <button id="shift-keys-right" onClick={shiftRight}>→</button>
+              </div>
+            );
+          }}
+        </For>
       </div>
+
+      <button id="shift-keys-right" class="shift-keys" onClick={shiftRight}>→</button>
     </div>
   );
 };

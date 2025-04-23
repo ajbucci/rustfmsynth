@@ -303,7 +303,14 @@ const Dial: Component<DialProps> = (props) => {
       aria-label={props.label || 'Dial Control'}
       title={tooltipText()} // Dynamic tooltip
       onMouseDown={(e) => handleInteractionStart(e.clientX, e.clientY)}
-      onTouchStart={(e) => { e.preventDefault(); handleInteractionStart(e.touches[0].clientX, e.touches[0].clientY); }}
+      on:touchstart={{
+        passive: false, // Set listener options directly
+        handleEvent: (event: TouchEvent) => { // Define the handleEvent method
+          // Call original handler, keyDataWithStyle is available via closure
+          event.preventDefault();
+          handleInteractionStart(event.touches[0].clientX, event.touches[0].clientY);
+        }
+      }}
       style={{
         cursor: isDragging() ? (props.isFineModeActive() ? 'cell' : 'grabbing') : 'grab'
       }}
