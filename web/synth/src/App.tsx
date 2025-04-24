@@ -1,33 +1,33 @@
-// src/App.tsx
-
 import { Component, onMount, onCleanup, createEffect, createSignal, For } from 'solid-js';
-import { produce, createStore, unwrap } from 'solid-js/store'; // Import store
+import { createStore, unwrap, SetStoreFunction } from 'solid-js/store';
 
 import { AppState } from './state';
 import { NUM_OPERATORS } from './config';
 
-// Import Audio Context utilities
 import {
   getAudioContext,
   closeAudioContext,
   addAudioWorkletModule,
   createAudioWorkletNode
-} from './audio'; // Assuming audio.ts is in the same src directory
+} from './audio';
 
-// Import the Synth Input Handler
 import * as SynthInputHandler from './synthInputHandler';
-import { MidiInputHandler } from './midiHandlers'; // Import the MIDI handler instance
+import { MidiInputHandler } from './midiHandlers';
 
-// Import the UI components
 import KeyboardUI from './components/KeyboardUI';
 import AlgorithmMatrix from './components/AlgorithmMatrix';
 import OperatorControl from './components/OperatorControl';
 
-// Import base styles if needed
 import './style.css';
 import { createDefaultAppState } from './defaults';
+import { createUrlStatePersistence } from './urlState';
 
-export const [appStore, setAppStore] = createStore<AppState>(createDefaultAppState());
+export const [appStore, _setAppStoreOriginal] = createStore<AppState>(createDefaultAppState());
+export const setAppStore = createUrlStatePersistence(
+  appStore,
+  _setAppStoreOriginal as SetStoreFunction<AppState>, // Pass original setter
+  { debounceMs: 500 }
+);
 const [isFineModeActive, setIsFineModeActive] = createSignal(false);
 // Main App Component
 const App: Component = () => {
@@ -132,13 +132,11 @@ const App: Component = () => {
     window.addEventListener('keyup', handleGlobalKeyUp);
     initializeAudioAndSynth();
     midiHandlerInstance = new MidiInputHandler();
-
-    setAppStore('algorithm', produce(state => { state[0][0] = 1; }));
   });
 
   onCleanup(() => {
     console.log("App: Cleaning up...");
-    // Optional: Disconnect node? Usually handled by context close.
+    // Disconnect node? Usually handled by context close.
     // if (processorNode) {
     //     processorNode.disconnect();
     // }
@@ -159,9 +157,6 @@ const App: Component = () => {
     }
     console.log("Effect(Algorithm): Synth ready and state changed, sending matrix to synth:", JSON.stringify(currentAlgorithm));
     SynthInputHandler.setAlgorithm(unwrap(currentAlgorithm));
-
-    // Trigger URL update/save state
-    // debounceUpdateUrl();
   });
   // --- Render ---
   const operatorIndices = () => Array.from({ length: NUM_OPERATORS }, (_, i) => i); // 0-based for array access
@@ -174,12 +169,8 @@ const App: Component = () => {
           <div class="controls-top-row d-flex flex-col">
             <AlgorithmMatrix
               numOperators={NUM_OPERATORS}
-              // Pass the reactive algorithm array and its specific setter path
-              // Note: Passing setAppStore directly works, but fine-grained setters are possible
-              algorithm={appStore.algorithm} // Pass the algorithm part of the store
-              setAlgorithmState={(updater) => setAppStore('algorithm', updater)} // Pass a function to update only the algorithm path
-            // OR using produce if AlgorithmMatrix uses it internally:
-            // setAlgorithmState={produce((draft) => { /* matrix update logic here if done in parent */ })}
+              algorithm={appStore.algorithm}
+              setAlgorithmState={(updater) => setAppStore('algorithm', updater)}
             />
           </div>
           <div id="operator-controls"> {/* Wrapper for layout */}
@@ -188,20 +179,12 @@ const App: Component = () => {
                 <OperatorControl
                   operatorIndex={opIndex}
                   isFineModeActive={isFineModeActive}
-                // No ratioValue or onRatioChange needed here
                 />
               )}
             </For>
           </div>
         </div>
-        {/* Render the Keyboard UI Component */}
-        {/* Pass initialStartNote if desired */}
         <KeyboardUI initialStartNote={48} />
-
-        {/* Add placeholders or divs for other UI sections later */}
-        {/* <div id="operator-controls-container"></div> */}
-        {/* <button id="reset-button">Reset</button> */}
-
       </div>
     </div>
   );

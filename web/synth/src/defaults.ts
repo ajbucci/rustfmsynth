@@ -49,6 +49,7 @@ function createDefaultAlgorithmMatrixState(): number[][] {
 // --- Main Default App State Factory ---
 
 export function createDefaultAppState(): AppState {
+  console.log("Creating default app state...");
   return {
     algorithm: createDefaultAlgorithmMatrixState(),
     operators: Array(NUM_OPERATORS).fill(null).map(() => createDefaultOperatorState()),

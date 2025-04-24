@@ -1,10 +1,10 @@
-import { Component, Accessor, createSignal, onMount } from 'solid-js';
+import { Component, Accessor, createSignal, createEffect, on, untrack } from 'solid-js';
 import { clampValue } from '../utils';
 
 interface NumericParameterInputProps {
   label: string;
   id: string;
-  numericValue: Accessor<number>;
+  numericValue: Accessor<number>; // The source of truth from the parent
   onCommit: (newValue: number) => void;
   min: number;
   max: number;
@@ -16,47 +16,54 @@ interface NumericParameterInputProps {
 const NumericParameterInput: Component<NumericParameterInputProps> = (props) => {
   const [inputValue, setInputValue] = createSignal<string>('');
 
-  onMount(() => {
-    const initialNumericValue = props.numericValue() ?? props.min;
-    setInputValue(String(initialNumericValue));
-  });
+  createEffect(() => {
+    const propNumValue = props.numericValue() ?? props.min;
+    const propStringValue = String(propNumValue);
 
+    // Only update the internal signal if the prop's string representation
+    // differs from the current internal value. This prevents loops where
+    // typing updates inputValue -> triggers onCommit -> updates prop -> triggers effect -> updates inputValue
+    // Use untrack to read the current inputValue without making this effect depend on it.
+    if (untrack(inputValue) !== propStringValue) {
+      setInputValue(propStringValue);
+    }
+  });
   const handleInput = (event: InputEvent) => {
     const target = event.currentTarget as HTMLInputElement;
     const currentString = target.value;
-    let valueToCommit: number | null = null;
 
-    const isValidInputFormat = /^-?\d*\.?\d*$/.test(currentString);
+    // Allow user to type intermediate valid states (like "-", ".", "1.")
+    const isValidIntermediate = /^-?\d*\.?\d*$/.test(currentString);
 
-    if (isValidInputFormat) {
+    if (isValidIntermediate) {
       setInputValue(currentString);
 
       const numericValue = parseFloat(currentString);
+      let valueToCommit: number | null = null;
+
       if (!isNaN(numericValue)) {
         valueToCommit = clampValue(numericValue, props.min, props.max);
-      } else if (currentString === '' || currentString === '.' || currentString === '-' || currentString === '-.') {
-        valueToCommit = props.min;
-      } else if (/^[-]?0\.0*$/.test(currentString)) {
-        valueToCommit = clampValue(0, props.min, props.max);
+      } else if (currentString === '' || currentString === '-' || currentString === '.' || currentString === '-.') {
+        // If input is empty or in an intermediate state that parses to NaN,
+        // maybe commit the minimum value or wait for blur? Let's commit min for now.
+        // valueToCommit = props.min;
       }
-    } else {
-      console.warn(`Invalid input format "${currentString}", commit skipped.`);
-    }
 
-    const parentNumericValue = props.numericValue();
-    if (valueToCommit !== null && valueToCommit !== parentNumericValue) {
-      props.onCommit(valueToCommit);
+      if (valueToCommit !== null) {
+        const currentPropValue = props.numericValue();
+        // Use tolerance for float comparison
+        if (Math.abs(valueToCommit - currentPropValue) > 1e-9) {
+          props.onCommit(valueToCommit);
+        }
+      }
     }
   };
 
   const handleBlur = () => {
+    // On blur, ensure the input displays the *definitive* value from the prop
+    // This cleans up any intermediate states (like ending with ".")
     const finalNumericValue = props.numericValue() ?? props.min;
-    const formattedFinalValue = String(finalNumericValue);
-    const currentVisual = inputValue();
-
-    if (currentVisual !== formattedFinalValue) {
-      setInputValue(formattedFinalValue);
-    }
+    setInputValue(String(finalNumericValue));
   };
 
   return (
