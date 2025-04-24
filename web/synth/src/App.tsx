@@ -163,7 +163,7 @@ const App: Component = () => {
   return (
     <div class="app-container">
       <h1>The Synth</h1>
-      <p>Click keys, use your physical keyboard (QWERTY row for sharps, ASDF row for naturals), or use MIDI.</p>
+      <p>Use your keyboard, MIDI, or click the keys below.</p>
       <div id="synth-container">
         <div class="controls-container d-flex flex-col flex-xxl-row">
           <div class="controls-top-row d-flex flex-col">
