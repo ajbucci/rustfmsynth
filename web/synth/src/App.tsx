@@ -1,7 +1,7 @@
 import { Component, onMount, onCleanup, createEffect, createSignal, For } from 'solid-js';
 import { createStore, unwrap, SetStoreFunction } from 'solid-js/store';
 
-import { AppState } from './state';
+import { AppState, AlgorithmSetterArg } from './state';
 import { NUM_OPERATORS } from './config';
 
 import {
@@ -28,6 +28,7 @@ export const setAppStore = createUrlStatePersistence(
   _setAppStoreOriginal as SetStoreFunction<AppState>, // Pass original setter
   { debounceMs: 500 }
 );
+
 const [isFineModeActive, setIsFineModeActive] = createSignal(false);
 // Main App Component
 const App: Component = () => {
@@ -148,15 +149,13 @@ const App: Component = () => {
   });
 
   createEffect(() => {
-    const currentAlgorithm = appStore.algorithm;
     const ready = isSynthReady();
 
     if (!ready) {
-      console.log("Effect(Algorithm): Skipping synth update, synth not ready.");
+      console.log("App: Skipping synth update, synth not ready.");
       return; // Don't send update yet
     }
-    console.log("Effect(Algorithm): Synth ready and state changed, sending matrix to synth:", JSON.stringify(currentAlgorithm));
-    SynthInputHandler.setAlgorithm(unwrap(currentAlgorithm));
+    SynthInputHandler.setSynthState(unwrap(appStore));
   });
   // --- Render ---
   const operatorIndices = () => Array.from({ length: NUM_OPERATORS }, (_, i) => i); // 0-based for array access
@@ -170,7 +169,7 @@ const App: Component = () => {
             <AlgorithmMatrix
               numOperators={NUM_OPERATORS}
               algorithm={appStore.algorithm}
-              setAlgorithmState={(updater) => setAppStore('algorithm', updater)}
+              setAlgorithmState={(updater: AlgorithmSetterArg) => setAppStore('algorithm', updater)}
             />
           </div>
           <div id="operator-controls"> {/* Wrapper for layout */}

@@ -138,3 +138,5 @@ export const FILTERS: ReadonlyArray<FilterConfig> = [
 export function getFilterConfigByType(type: string): FilterConfig | undefined {
   return FILTERS.find(f => f.type === type);
 }
+
+export type AlgorithmSetterArg = number[][] | ((prevAlgorithm: number[][]) => number[][]);

@@ -1,5 +1,6 @@
 import { resumeAudioContext } from './audio'; // We'll put resumeAudioContext in App.tsx initially
-import { Note, WaveformId } from './state';
+import { Note, WaveformId, AppState, FILTERS } from './state';
+import { objToJsonBytes, stringToBytes } from './utils';
 
 let processorPort: MessagePort | null = null;
 
@@ -118,4 +119,55 @@ export function removeOperatorFilter(operatorIndex: number, filterType: Uint8Arr
   } catch (e) {
     console.error("SynthInputHandler: Error removing filter:", e);
   }
+}
+/**
+ * Sends the entire application state to the synth worklet.
+ * Assumes the synth worklet is ready and connected.
+ * @param appState The complete state of the synthesizer.
+ */
+export function setSynthState(appState: AppState): void {
+  console.log("SynthInputHandler: Setting full synth state...");
+
+  if (!processorPort) {
+    console.error("SynthInputHandler: Cannot set full state, port not connected.");
+    return;
+  }
+
+  // 1. Set Algorithm
+  setAlgorithm(appState.algorithm);
+
+  // 2. Set Operator States
+  appState.operators.forEach((opState, index) => {
+    console.log(`SynthInputHandler: Setting state for Operator ${index}`);
+
+    // Set basic parameters
+    setOperatorRatio(index, opState.ratio);
+    setOperatorModIndex(index, opState.modulationIndex);
+    setOperatorWaveform(index, opState.waveform);
+
+    // Set envelope
+    setOperatorEnvelope(index, opState.envelope.attack, opState.envelope.decay, opState.envelope.sustain, opState.envelope.release); // Use the state object directly
+
+    // --- Filter Synchronization ---
+    // a) Remove all known filter types for this operator first
+    //    This ensures a clean slate before adding the current ones.
+    FILTERS.forEach(filterConfig => {
+      const encodedType = stringToBytes(filterConfig.type);
+      if (encodedType) {
+        removeOperatorFilter(index, encodedType);
+      }
+    });
+
+    // b) Add/Set the filters defined in the current state
+    opState.filters.forEach(filterState => {
+      const encodedParams = objToJsonBytes(filterState);
+      if (encodedParams) {
+        setOperatorFilter(index, encodedParams);
+      } else {
+        console.warn(`SynthInputHandler: Failed to encode parameters for filter type ${filterState.type} on operator ${index}`);
+      }
+    });
+  });
+
+  console.log("SynthInputHandler: Full synth state update complete.");
 }

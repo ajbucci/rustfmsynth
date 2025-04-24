@@ -1,15 +1,14 @@
 import { Component, For, createSignal } from 'solid-js';
-import { Store, SetStoreFunction, unwrap } from 'solid-js/store';
+import { Store, unwrap } from 'solid-js/store';
 import { produce } from 'solid-js/store';
 import * as SynthInputHandler from '../synthInputHandler';
-
+import { AlgorithmSetterArg } from '../state';
 import '../style.css';
-
 interface AlgorithmMatrixProps {
   numOperators: number;
   // Pass the algorithm part of the store and its setter
   algorithm: Store<number[][]>; // The reactive matrix state
-  setAlgorithmState: SetStoreFunction<number[][]>; // Function to update the store
+  setAlgorithmState: (valueOrUpdater: AlgorithmSetterArg) => void; // Function to update the store
 }
 
 const AlgorithmMatrix: Component<AlgorithmMatrixProps> = (props) => {
@@ -51,8 +50,7 @@ const AlgorithmMatrix: Component<AlgorithmMatrixProps> = (props) => {
       // 'produce' implicitly returns the next immutable state based on draft modifications.
     }));
 
-    // NOTE: probably do not need to call from here any longer with new reactivity in place in App.tsx
-    // SynthInputHandler.setAlgorithm(unwrap(props.algorithm));
+    SynthInputHandler.setAlgorithm(unwrap(props.algorithm));
   };
 
   const handleMouseOver = (event: MouseEvent) => {
