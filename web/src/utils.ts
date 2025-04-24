@@ -26,3 +26,44 @@ export function binaryStringToU8Array(binaryString: string): Uint8Array {
   }
   return bytes;
 }
+/**
+ * Formats a number to a string with at least a minimum number of decimal places,
+ * without truncating existing precision.
+ * @param num The number to format.
+ * @param minDecimalPlaces The minimum number of decimal places to show.
+ * @returns The formatted string.
+ */
+export function formatNumberToMinDecimals(num: number | null | undefined, minDecimalPlaces: number): string {
+  if (num == null || isNaN(num)) {
+    // Handle null, undefined, NaN - return empty or a placeholder?
+    // Let's return a default representation or empty based on context.
+    // For now, let's treat it like 0 for formatting if needed, or maybe return ""
+    // If we treat as 0: num = 0; else return "";
+    num = num ?? 0; // Coalesce null/undefined to 0 for formatting below
+    if (isNaN(num)) return "NaN"; // Explicitly show NaN
+  }
+
+  // Ensure minDecimalPlaces is a non-negative integer
+  minDecimalPlaces = Math.max(0, Math.floor(minDecimalPlaces));
+
+  const numAsString = String(num);
+  const decimalPointIndex = numAsString.indexOf('.');
+
+  if (decimalPointIndex === -1) {
+    // Integer or became integer string (e.g. 1.0 -> "1")
+    if (minDecimalPlaces === 0) {
+      return numAsString; // No decimals needed
+    }
+    return `${numAsString}.${'0'.repeat(minDecimalPlaces)}`;
+  } else {
+    // Number has a decimal part
+    const existingDecimalPlaces = numAsString.length - decimalPointIndex - 1;
+    if (existingDecimalPlaces >= minDecimalPlaces) {
+      return numAsString; // Already has enough or more decimals
+    } else {
+      // Needs padding
+      const zerosToAdd = minDecimalPlaces - existingDecimalPlaces;
+      return `${numAsString}${'0'.repeat(zerosToAdd)}`;
+    }
+  }
+}

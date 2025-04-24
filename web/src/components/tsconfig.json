@@ -12,6 +12,5 @@
       "vite/client"
     ],
     "noEmit": true,
-    "isolatedModules": true
   }
 }

@@ -100,7 +100,7 @@ export function setOperatorEnvelope(operatorIndex: number, attack: number, decay
 
 export function setOperatorFilter(operatorIndex: number, filterParams: Uint8Array): void {
   if (!processorPort) {
-    console.warn("SynthInputHandler: Port not connected, cannot set ratio.");
+    console.warn("SynthInputHandler: Port not connected, cannot set filter.");
     return;
   }
   try {
@@ -111,7 +111,7 @@ export function setOperatorFilter(operatorIndex: number, filterParams: Uint8Arra
 }
 export function removeOperatorFilter(operatorIndex: number, filterType: Uint8Array): void {
   if (!processorPort) {
-    console.warn("SynthInputHandler: Port not connected, cannot set ratio.");
+    console.warn("SynthInputHandler: Port not connected, cannot set filter.");
     return;
   }
   try {

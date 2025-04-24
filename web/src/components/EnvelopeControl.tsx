@@ -40,6 +40,7 @@ const EnvelopeControl: Component<EnvelopeControlProps> = (props) => {
               min={paramInfo.min}
               max={paramInfo.max}
               step={paramInfo.step}
+              minDecimalPlaces={paramInfo.minDecimals}
             // disabled={!props.isActive?.()} // Pass disabled state if applicable
             />
           );
