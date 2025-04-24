@@ -18,14 +18,23 @@ jobs:
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
-      - name: Build WASM
-        run: wasm-pack build --target web --out-dir ./web/pkg --no-default-features --features wasm
+      - name: Build wasm
+        run: wasm-pack build --target web --out-dir ./web/public/pkg --no-default-features --features wasm
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 23.x
+
+      - name: Build solidjs
+        run: |
+          cd web
+          npm i
+          npm run build
 
       - name: Prepare deploy dir
         run: |
           mkdir -p out
-          cp -r web/* out/
-          cp -r web/pkg out/pkg
+          cp -r web/dist/* out/
           touch out/.nojekyll
           rm -f out/pkg/.gitignore
 

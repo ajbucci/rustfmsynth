@@ -12,6 +12,7 @@ extern crate web_sys;
 #[derive(Deserialize, Debug, Clone)]
 pub struct LowPassParams {
     cutoff: f32,
+    #[allow(dead_code)]
     q: f32,
 }
 #[derive(Deserialize, Debug, Clone)]

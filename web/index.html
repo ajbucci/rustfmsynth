@@ -1,51 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <link rel="shortcut icon" type="image/ico" href="/src/assets/favicon.ico" />
+    <title>Solid App</title>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
 
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rust FM Synth</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
-  </style>
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
-</head>
-
-<body>
-  <h1>Rust FM Synthesizer (WASM)</h1>
-
-  <p>Play notes using your keyboard (A,S,D,F...) or click the keys below.</p>
-  <!-- Container for the visual keyboard -->
-  <div id="synth-container">
-    <div class="controls-container d-flex flex-col flex-xxl-row">
-      <div id="controls-top-row d-flex flex-col">
-        <div id="algorithm-matrix" class="d-flex justify-content-center">
-
-        </div>
-        <div class="global-controls d-flex flex-row">
-          <button id="fine-mode-toggle" title="Toggle fine detail adjustment for all dials (Shift key)">
-            Fine Mode: OFF
-          </button>
-
-          <button id="reset-button">Reset Patch</button>
-        </div>
-      </div>
-      <div id="operator-controls">
-
-      </div>
-    </div>
-    <div id="bottom-row">
-      <button id='shift-keys-left' class='shift-keys'>-</button>
-      <div id="keyboard-container">
-        <!-- Keyboard will be generated here by JS -->
-      </div>
-      <button id='shift-keys-right' class='shift-keys'>+</button>
-    </div>
-  </div>
-
-
-  <script type="module" src="app.js"></script>
-</body>
-
+    <script src="/src/index.tsx" type="module"></script>
+  </body>
 </html>

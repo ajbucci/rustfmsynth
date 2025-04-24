@@ -48,14 +48,14 @@ const App: Component = () => {
       // 2. Load WASM - Needs to be fetched for the *main thread* first
       // to be sent to the worklet.
       console.log("App: Fetching Wasm binary...");
-      const wasmResponse = await fetch("/pkg/rustfmsynth_bg.wasm"); // Path relative to public/index.html
+      const wasmResponse = await fetch("./pkg/rustfmsynth_bg.wasm"); // Path relative to public/index.html
       if (!wasmResponse.ok) throw new Error("Failed to fetch Wasm binary.");
       const wasmBinary = await wasmResponse.arrayBuffer();
       console.log("App: Wasm binary fetched.");
 
 
       // 3. Add Worklet Module
-      await addAudioWorkletModule("/synth-processor.js");
+      await addAudioWorkletModule("./synth-processor.js");
 
       // 4. Create Worklet Node
       processorNode = createAudioWorkletNode("synth-processor", {
