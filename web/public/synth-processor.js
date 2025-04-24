@@ -47,6 +47,7 @@ class SynthProcessor extends AudioWorkletProcessor {
             break;
           case "set_operator_ratio":
             synth.set_operator_ratio(data.operatorIndex, data.ratio);
+            break;
           case "set_operator_waveform":
             synth.set_operator_waveform(data.operatorIndex, data.waveformId);
             break;
