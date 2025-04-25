@@ -161,8 +161,10 @@ const App: Component = () => {
   const operatorIndices = () => Array.from({ length: NUM_OPERATORS }, (_, i) => i); // 0-based for array access
   return (
     <div class="app-container">
-      <h1>The Synth</h1>
-      <p>Use your keyboard, MIDI, or click the keys below.</p>
+      <div class="intro">
+        <span class="title">The Synth</span>
+        <p>Use your keyboard, MIDI, or click the keys below.</p>
+      </div>
       <div id="synth-container">
         <div class="controls-container d-flex flex-col flex-xxl-row">
           <div class="controls-top-row d-flex flex-col">
