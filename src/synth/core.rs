@@ -154,36 +154,35 @@ impl Synth {
         }
     }
 
-    /// Process audio for the current buffer
     pub fn process(&mut self, output: &mut [f32], sample_rate: f32) {
-        // Clear output buffer
-        output.fill(0.0); // Clear the main output buffer first
-
-        // Process voices, generate their audio into temporary buffers, and calculate energy
         let (total_energy, voice_buffers) = self.process_voices(output.len(), sample_rate);
 
-        // Calculate target gain based on the combined energy of active voices
-        let target_gain = self.calculate_target_gain(total_energy);
+        let energy_gain = if total_energy > 1e-9 {
+            // Use .recip() for 1.0 / x, add small epsilon to avoid division by zero / instability near zero
+            (1.0 + total_energy.sqrt() * 2.5).recip()
+        } else {
+            1.0
+        };
+        let target_gain = energy_gain * self.master_volume;
 
-        // Mix voices and apply gain with anti-pop processing
-        self.mix_voices_with_gain(output, voice_buffers, target_gain, sample_rate);
+        self.mix_and_apply_gain(output, voice_buffers, target_gain, sample_rate);
 
-        // Apply soft knee limiter for safety
         self.apply_limiter(output);
+        // Optional safety clamp (if the limiter logic isn't perfect)
+        // for sample in output.iter_mut() {
+        //     *sample = sample.clamp(-1.0, 1.0);
+        // }
     }
 
-    /// Process all voices that are not finished, return their total energy and individual buffers.
+    /// Process active voices, returning their total energy and individual audio buffers.
     fn process_voices(&mut self, buffer_size: usize, sample_rate: f32) -> (f32, Vec<Vec<f32>>) {
         let mut total_energy = 0.0;
-        // Pre-allocate buffers for voices that will be processed
         let active_voice_count = self.voices.iter().filter(|v| v.active).count();
-        let mut voice_buffers = Vec::with_capacity(active_voice_count);
+        let mut voice_buffers = Vec::with_capacity(active_voice_count); // Consider pre-allocating here
 
-        // Process only voices that are not fully finished (active or releasing)
+        // Process only active voices
         for voice in self.voices.iter_mut().filter(|v| v.active) {
             let mut voice_buffer = vec![0.0; buffer_size];
-
-            // Process the voice using the engine's algorithm and operators
             voice.process(
                 &self.algorithm,
                 &self.operators,
@@ -191,94 +190,84 @@ impl Synth {
                 sample_rate,
             );
 
-            // Calculate voice energy (RMS power) after processing
-            let voice_energy = voice_buffer.iter().map(|s| s * s).sum::<f32>() / buffer_size as f32;
-
-            total_energy += voice_energy;
-            voice_buffers.push(voice_buffer); // Add the processed buffer
+            // Calculate voice energy (mean squared amplitude)
+            let energy = voice_buffer.iter().map(|s| s * s).sum::<f32>() / buffer_size as f32;
+            total_energy += energy;
+            voice_buffers.push(voice_buffer);
         }
 
-        (total_energy, voice_buffers) // Return total energy and the buffers of processed voices
+        (total_energy, voice_buffers)
     }
 
-    /// Calculate the target gain based on total energy and master volume
-    fn calculate_target_gain(&self, total_energy: f32) -> f32 {
-        let energy_gain = if total_energy > 0.0 {
-            1.0 / (1.0 + total_energy.sqrt() * 2.5)
-        } else {
-            1.0
-        };
-
-        // Apply master volume
-        energy_gain * self.master_volume
-    }
-
-    /// Mix all voice buffers with gain and apply crossfade to prevent pops
-    fn mix_voices_with_gain(
+    /// Mix voice buffers and apply target gain with smoothing (crossfade).
+    fn mix_and_apply_gain(
         &mut self,
         output: &mut [f32],
         voice_buffers: Vec<Vec<f32>>,
         target_gain: f32,
         sample_rate: f32,
     ) {
-        // Create a temporary buffer for mixing
-        let mut temp_buffer = vec![0.0; output.len()];
+        let buffer_len = output.len();
+        output.fill(0.0); // Clear output buffer before mixing *into* it
 
-        // Mix all voice buffers into the temporary buffer
+        // Mix voice buffers directly into the output buffer
         for voice_buffer in voice_buffers {
-            for (i, sample) in voice_buffer.iter().enumerate() {
-                temp_buffer[i] += *sample;
+            for (i, sample) in voice_buffer.iter().enumerate().take(buffer_len) {
+                output[i] += *sample;
             }
         }
 
         // Calculate crossfade parameters
-        let gain_ratio = if self.current_gain > 0.0 {
-            target_gain / self.current_gain
+        let gain_ratio_abs = if self.current_gain.abs() > 1e-9 {
+            (target_gain / self.current_gain).abs()
         } else {
-            1.0
+            1.0 // Assume large change if current gain is near zero
+        };
+        // Crossfade duration depends on how much the gain changes
+        let gain_change_factor = (1.0 - gain_ratio_abs).abs().min(1.0); // Factor from 0 to 1
+        let crossfade_ms = 5.0f32.mul_add(gain_change_factor, 5.0); // Lerp between 5ms and 10ms - Adjust if needed
+                                                                    // let crossfade_ms = 5.0 + gain_change_factor * (20.0 - 5.0); // Original: 5ms to 20ms based on change
+        let crossfade_samples = (crossfade_ms / 1000.0 * sample_rate).round() as usize;
+        let crossfade_samples = crossfade_samples.min(buffer_len); // Clamp to buffer length
+
+        // Apply gain: smoothed for crossfade_samples, then target_gain
+        let inv_crossfade_len = if crossfade_samples > 0 {
+            1.0 / crossfade_samples as f32
+        } else {
+            0.0 // Avoid division by zero; won't be used if samples == 0
         };
 
-        // Determine crossfade length based on gain change magnitude
-        let base_crossfade_ms = 5.0;
-        let max_crossfade_ms = 20.0;
-        let gain_change_factor = (1.0 - gain_ratio.abs()).abs().min(1.0);
-        let crossfade_ms =
-            base_crossfade_ms + gain_change_factor * (max_crossfade_ms - base_crossfade_ms);
-        let crossfade_samples = (crossfade_ms / 1000.0 * sample_rate) as usize;
-        let crossfade_samples = crossfade_samples.min(output.len());
-
-        // Apply crossfade at the beginning of the buffer
-        for i in 0..crossfade_samples {
-            // Use a smoother curve for the crossfade (cubic easing)
-            let t = i as f32 / crossfade_samples as f32;
-            let smooth_t = t * t * (3.0 - 2.0 * t); // Cubic easing function
-            let fade_in_gain = self.current_gain * (1.0 - smooth_t) + target_gain * smooth_t;
-            output[i] = temp_buffer[i] * fade_in_gain;
+        for i in 0..buffer_len {
+            let gain = if i < crossfade_samples {
+                // Interpolate gain during crossfade using cubic easing
+                let t = (i + 1) as f32 * inv_crossfade_len; // Easing input t from (0, 1]
+                let smooth_t = t * t * (3.0 - 2.0 * t); // Cubic ease-in-out curve
+                                                        // Lerp: start * (1-t) + end * t
+                self.current_gain
+                    .mul_add(1.0 - smooth_t, target_gain * smooth_t)
+            } else {
+                // Use target gain after crossfade
+                target_gain
+            };
+            // Apply calculated gain to the mixed sample
+            output[i] *= gain;
         }
 
-        // Apply target gain to the rest of the buffer
-        for i in crossfade_samples..output.len() {
-            output[i] = temp_buffer[i] * target_gain;
-        }
-
-        // Update current gain
+        // Update current gain for the next buffer
         self.current_gain = target_gain;
     }
-
-    /// Apply a soft knee limiter to prevent clipping
-    fn apply_limiter(&self, output: &mut [f32]) {
+    pub fn apply_limiter(&mut self, output: &mut [f32]) {
+        // Apply soft knee limiter
         for sample in output.iter_mut() {
-            if sample.abs() > 0.9 {
-                let excess = (sample.abs() - 0.9) / 0.1;
-                let scale = 1.0 - excess * 0.1;
-                *sample *= scale;
+            let abs_sample = sample.abs();
+            // Apply limiter only if sample exceeds the threshold (0.9)
+            if abs_sample > 0.9 {
+                *sample *= (1.9 - abs_sample).max(0.0); // Ensure scale doesn't go negative
             }
         }
     }
-
     /// Set the buffer size for the synth engine
     pub fn set_buffer_size(&mut self, buffer_size: usize) {
-        // You can store this buffer size in the engine if needed
         println!("Buffer size set to: {}", buffer_size);
         self.buffer_size = buffer_size;
     }
