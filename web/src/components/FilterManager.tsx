@@ -138,7 +138,7 @@ const FilterManager: Component<FilterManagerProps> = (props) => {
           // disabled={!props.isActive?.()} // Uncomment if needed
           value={adderSelectedTypeTag() ?? ''}
         >
-          <option value="" disabled={adderSelectedTypeTag() !== null}>-- Select Filter --</option>
+          <option value="">Select Filter...</option>
           <For each={FILTERS}>
             {(filterConfig) => (
               <option
@@ -173,15 +173,16 @@ const FilterManager: Component<FilterManagerProps> = (props) => {
               );
             }}
           </For>
+
+          <button
+            class="add-filter-button button"
+            id={`op-${opIndex}-add-filter-button`}
+            onClick={handleAddFilterClick}
+            disabled={!adderSelectedTypeTag()} // || !props.isActive?.()} // Uncomment if needed
+          >
+            Add Filter to Chain
+          </button>
         </Show>
-        <button
-          class="add-filter-button button"
-          id={`op-${opIndex}-add-filter-button`}
-          onClick={handleAddFilterClick}
-          disabled={!adderSelectedTypeTag()} // || !props.isActive?.()} // Uncomment if needed
-        >
-          Add Filter to Chain
-        </button>
       </div>
     </>
   );

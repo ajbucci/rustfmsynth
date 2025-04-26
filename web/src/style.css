@@ -4,47 +4,92 @@
     --gap-sm: 5px;
     --gap-lg: 20px;
     --breakpoint-lg: 1200px;
+    /* --- Synthwave Colors --- */
+    --yellow: #e9d625;
+    --pink: #f506f7;
+    --light-pink: #FF37FB;
+    --teal: #2de2e6;
+    --teal-fg: #A5E3FF;
+    --purple: #261447; /* Darker purple for elements */
+    --dark-purple: #1E1037;
+    --lighter-purple:#321A5F;
+    --bg: #0d0221;     /* Deep background color */
+    --light-text: aliceblue; /* Keep light text for contrast */
+    --pink-rgb: 245, 6, 247; /* RGB for pink */
+    --teal-rgb: 45, 226, 230;
+    --yellow-rgb: 233, 214, 37;
+    --purple-rgb: 38, 20, 71; /* RGB for purple */
+    --bg-rgb: 13, 2, 33; /* RGB for deep background */
+    --light-text-rgb: 240, 248, 255; /* RGB for light text */
+    --border-radius-sm: 5px;
+    --border-radius: 10px;
+    --border-radius-lg: 20px;
 }
 
 body {
     font-family: sans-serif;
     text-align: center;
-    background-color: #222;
-    color: aliceblue;
+    /* background-color: #222; */
+    background-color: var(--bg); /* Use deep background */
+    color: var(--light-text); /* Use light text variable */
+    /* Optional: Add a subtle gradient */
+    /* background-image: linear-gradient(to bottom, var(--bg), var(--purple)); */
 }
 #header {
   padding: 1rem;
-  background-color: #111;
-  box-shadow: 0 1px 3px 0px rgba(0, 0, 0, 0.5);
+  /* background-color: #111; */
+  background-color: var(--purple); /* Dark purple header */
+  box-shadow: 0 1px 5px 0px var(--pink); /* Pink glow shadow */
   display: none !important;
 }
 #header .logo {
   font-family: "Major Mono Display", monospace;
   font-weight: 400;
   font-size: 2rem;
-  color: aliceblue;
+  /* color: aliceblue; */
+  color: var(--teal); /* Teal logo color */
+  text-shadow: 0 0 5px var(--teal), 0 0 8px var(--teal); /* Add glow */
 }
 #synth .title {
-  font-family: "Permanent Marker", system-ui;
+  font-family: "Permanent Marker", fantasy, system-ui;
   font-weight: 1;
   font-size: 4rem;
   margin: 1rem;
+  color: var(--light-pink); /* Hot pink title */
+  /*text-shadow: 0 1px 1px rgba(var(--bg-rgb),0.8), 0 2px 5px rgba(var(--teal-rgb),0.9), 0 4px 8px rgba(var(--yellow-rgb),0.5);  /* Strong pink glow */
+  text-shadow: 0px 2px 4px var(--pink);
 }
 .intro {
   margin-top: 1rem;
   margin-bottom: 2rem;
+  color: var(--teal-fg); /* Teal intro text */
+}
+
+@property --deg-transition {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 145deg;
 }
 button {
     margin: 10px;
     padding: 10px;
-    color: aliceblue;
-    background-color: #444;
-    border: none;
+    /* color: aliceblue; */
+    color: var(--light-text);
+    /* background-color: #444; */
+    background-image: linear-gradient(var(--deg-transition), var(--lighter-purple) 0%, var(--dark-purple) 100%); /* Purple buttons */
+    border: 0px solid var(--teal); /* Teal border */
+    box-shadow: 0 0 3px 1px var(--yellow);
     cursor: pointer;
-    border-radius: 5px;
+    border-radius: var(--border-radius-sm);
+    transition: --deg-transition 2s ease, box-shadow 0.3s ease; /* Smooth transition */
 }
 button:hover {
-    background-color: #555;
+    /* background-color: #555; */
+    /* background-image: linear-gradient(var(--deg-end), var(--lighter-purple) 0%, var(--dark-purple) 100%); /* Purple buttons */
+    --deg-transition: -145deg;
+    /* color: var(--bg);  */
+    border-color: var(--yellow);
+    box-shadow: 0 0 8px 1px var(--pink); /* Yellow glow on hover */
 }
 
 #synth-container {
@@ -53,13 +98,18 @@ button:hover {
     flex-direction: column;
     align-items: center;
     gap: 15px;
+    padding-left: 5px;
+    padding-right: 5px;
 }
 
 /* Style for when fine mode is active */
 #fine-mode-toggle.active {
-  background-color: #d0e8ff; /* Light blue background */
-  color: #111;
+  /* background-color: #d0e8ff; */
+  background-color: var(--yellow); /* Yellow background for active */
+  color: var(--bg); /* Dark text for contrast */
   font-weight: bold;
+  border-color: var(--yellow);
+  box-shadow: 0 0 8px var(--yellow);
 }
 
 .param {
@@ -72,6 +122,9 @@ button:hover {
 }
 .param input {
   width: 3em;
+  background-color: var(--purple); /* Match controls */
+  border: 1px solid var(--teal);
+  color: var(--light-text);
 }
 .parameter-container {
   display: flex;
@@ -79,17 +132,25 @@ button:hover {
   align-items: center;
 }
 .parameter-title {
-  margin-bottom: 5px;
+  margin-bottom: 7px;
+  color: var(--teal); /* Teal titles */
+  font-size: 0.9rem;
+  text-shadow: 0px 1px 3px var(--pink);
 }
 .param label {
   font-weight: normal !important;
   font-size: 0.8rem !important;
+  color: var(--teal-fg);
 }
 .operator-filter-manager {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
+  background-color: rgba(var(--purple-rgb), 0.5); /* Use RGBA if needed or just var(--purple) */
+  padding: 10px;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--teal);
 }
 .filter-adder-params-area {
   display: flex;
@@ -99,10 +160,22 @@ button:hover {
 }
 .active-filters-display, .filter-adder-params-area, .active-filter-control {
   font-size: 0.8rem;
+  color: var(--light-text);
+}
+.active-filter-header {
+  margin-bottom: 0.3rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 .remove-filter-button {
   padding: 3px 5px;
   margin: 2px 5px;
+}
+.remove-filter-button:hover {
+    background-color: var(--bg);
+    color: var(--pink);
+    box-shadow: 0 0 5px var(--pink);
 }
 .dial-container {
   display: flex;
@@ -112,15 +185,20 @@ button:hover {
   position: relative;
 }
 .dial-indicator {
-  background-color: white;
+  /* background-color: white; */
+  background-color: var(--yellow); /* Yellow indicator */
   position: absolute;
-  box-shadow: 0px 1px 2px 0px black;
+  /* box-shadow: 0px 1px 2px 0px black; */
+  box-shadow: 0 0 6px var(--yellow); /* Yellow glow */
+  border-radius: 2px; /* Make it slightly rounded */
 }
 .dial {
   border-radius: 50%;
-  background: #444;
+  /* background: #444; */
+  background: var(--purple); /* Purple dial base */
   background-image: repeating-radial-gradient(rgba(0,0,0,0.0) 2px, rgba(0,0,0,0.1) 5px, rgba(0,0,0,0.2) 1px,rgba(0,0,0,0.1) 5px);
-  box-shadow: inset 0 0 2px 6px #111, 0 0px 6px rgba(0,0,0,0.5);
+  /* box-shadow: inset 0 0 2px 6px #111, 0 0px 6px rgba(0,0,0,0.5); */
+  box-shadow: inset 0 0 2px 6px var(--bg), 0 0px 6px rgba(0,0,0,0.5); /* Use background color for inset */
   position: relative;
   cursor: grab;
 }
@@ -130,33 +208,37 @@ button:hover {
   background: none;
   border: none;
   text-align: center;
-  color: inherit;
+  color: inherit; /* Inherits from body (aliceblue) */
 }
 .dial.active {
-  box-shadow: inset 0 0 2px 6px #111, 0 0px 6px rgba(0,0,0,0.5), 0px 0px 5px 2px rgba(135, 255, 176, 0.8);
-;
+  /* box-shadow: inset 0 0 2px 6px #111, 0 0px 6px rgba(0,0,0,0.5), 0px 0px 5px 2px rgba(135, 255, 176, 0.8); */
+  box-shadow: inset 0 0 2px 6px var(--bg), 0 0px 6px rgba(0,0,0,0.5), 0px 0px 5px 2px var(--yellow); /* Teal glow when active */
 }
 #bottom-row {
   display: flex;
   flex-direction: row;
   justify-content: center;
   width: 100%;
+  margin-bottom: 1rem;
 }
 #keyboard-container {
     display: flex; /* Arrange keys horizontally */
     position: relative; /* Needed for positioning black keys */
-    background-color: #333;
-    border-radius: 5px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    /* background-color: #333; */
+    background-color: var(--purple); /* Purple keyboard base */
+    border-radius: var(--border-radius-sm);
+    /* box-shadow: 0 4px 8px rgba(0,0,0,0.3); */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3), 0 0 10px var(--teal); /* Add a subtle teal glow */
     height: 180px; /* Adjust height as needed */
     width: 500px; /* Adjust width based on keys */
+    border: 1px solid var(--teal); /* Teal border for definition */
 }
 
 .key {
     box-sizing: border-box;
     position: relative; /* For label positioning */
     cursor: pointer;
-    transition: background-color 0.1s ease; /* Smooth transition for active state */
+    transition: background-color 0.1s ease, box-shadow 0.1s ease; /* Smooth transition for active state */
     display: flex;
     flex-direction: column;
     justify-content: flex-end; /* Position label at the bottom */
@@ -169,8 +251,9 @@ button:hover {
 .key.white {
     width: var(--white-key-width); /* Width of white keys */
     height: 100%; /* Full height of container */
-    background-color: #fff;
-    box-shadow: inset 0 0 0px 1px black;
+    background-color: #fff; /* Keep white keys mostly white */
+    /* box-shadow: inset 0 0 0px 1px black; */
+    box-shadow: inset 0 0 0px 1px var(--purple); /* Purple lines */
     color: #333;
     border-bottom-left-radius: 3px;
     border-bottom-right-radius: 3px;
@@ -180,19 +263,27 @@ button:hover {
 .key.black {
     width: var(--black-key-width); /* Width of black keys */
     height: 60%; /* Height relative to container */
-    background-color: #222;
-    color: #eee;
+    /* background-color: #222; */
+    background-color: var(--purple); /* Purple black keys */
+    /* color: #eee; */
+    color: var(--light-text);
     position: absolute; /* Position relative to container */
     z-index: 2; /* Black keys above white keys */
     border-radius: 0 0 3px 3px;
+    border: 1px solid var(--bg); /* Subtle border */
 }
 
-.key.active, .key:active { /* Style for pressed key (JS controlled or mouse down) */
-    background-color: #87ceeb; /* Sky blue for active state */
+/* --- Synthwave Key Active States --- */
+.key.white.active, .key.white:active {
+    /* background-color: #87ceeb; */
+    background-color: var(--teal); /* Teal for active white keys */
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.5), 0 0 8px var(--teal); /* Add glow */
 }
 
 .key.black.active, .key.black:active {
-    background-color: #add8e6; /* Lighter blue for active black keys */
+    /* background-color: #add8e6; */
+    background-color: var(--pink); /* Pink for active black keys */
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.5), 0 0 8px var(--pink); /* Add glow */
 }
 
 .key-label {
@@ -209,8 +300,13 @@ button:hover {
      font-size: 9px;
      color: #777;
 }
+.key.black .key-label {
+    color: var(--teal); /* Teal labels on black keys */
+}
 .key.black .key-label .key-code {
-     color: #aaa;
+     /* color: #aaa; */
+     color: var(--teal);
+     opacity: 0.7;
 }
 
 .controls-container {
@@ -222,16 +318,22 @@ button:hover {
   position: relative; /* Needed for absolute positioning of background */
   flex-wrap: wrap; /* Allow wrapping if space is tight */
   gap: var(--gap-sm);      /* Spacing between controls */
-  border: 3px solid #111;
+  /* border: 3px solid #111; */
   padding: var(--gap-sm);
-  border-radius: 5px;
-  background: linear-gradient(35deg, #252525 0%, #292929 50%, #252525 100%);
-  color: aliceblue;
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  /* background: linear-gradient(35deg, #252525 0%, #292929 50%, #252525 100%); */
+  background: linear-gradient(35deg, var(--bg) 0%, var(--purple) 50%, var(--bg) 100%); /* Gradient with theme colors */
+  /* color: aliceblue; */
+  color: var(--light-text);
   justify-content: center; /* Center controls */
+  box-shadow: 0 0 7px 1px var(--pink); /* Add pink glow */
 }
 #operator-controls::before {
+  /* Keep the grain texture, it fits the retro vibe */
   content: '';
   position: absolute;
+  border-radius: var(--border-radius);
   top: 0em;
   left: 0em;
   width: 100%;
@@ -239,7 +341,7 @@ button:hover {
   z-index: 0;
   filter: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='grainy-noise' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='1' stitchTiles='stitch' result='turbulence'/%3E%3CfeColorMatrix in='turbulence' type='saturate' values='0' result='grayscale_noise'/%3E%3CfeBlend in='SourceGraphic' in2='grayscale_noise' mode='normal'/%3E%3C/filter%3E%3C/svg%3E#grainy-noise");
   /* mix-blend-mode: overlay; */
-  opacity: 0.10; /* CUSTOMIZE OPACITY */
+  opacity: 0.15; /* Increase grain opacity slightly */
   pointer-events: none;
   background: transparent;
 }
@@ -251,16 +353,22 @@ button:hover {
 #operator-controls input,
 #operator-controls select {
   color: inherit;
-  background: rgba(0,0,0,0.2);
-  background-color: #252525;
-  border: solid 1px rgba(0,0,0,0);
-  border-radius: 10%;
+  /* background: rgba(0,0,0,0.2); */
+  /* background-color: #252525; */
+  background-color: var(--purple); /* Purple inputs */
+  /* border: solid 1px rgba(0,0,0,0); */
+  border: solid 1px rgba(var(--teal-rgb),0.3); /* Teal border */
+  border-radius: var(--border-radius-sm);
   text-align: center;
   padding: 0.2em;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
-#operator-controls input:hover {
-  border: solid 1px rgba(255,255,255,0.2);
-  border-radius: 10%;
+#operator-controls input:hover,
+#operator-controls select:hover {
+  /* border: solid 1px rgba(255,255,255,0.2); */
+  border-color: rgba(var(--yellow-rgb),0.3); /* Yellow border on hover */
+  box-shadow: 0 0 5px var(--yellow); /* Yellow glow on hover */
+  border-radius: var(--border-radius-sm);
 }
 .operator-control {
   display: flex;
@@ -269,13 +377,12 @@ button:hover {
   gap: var(--gap-lg);
   box-sizing: border-box;
   flex-basis: 100px;
-  background: rgba(0,0,0,0.1);
-  border-radius: 1rem;
+  /* background: rgba(0,0,0,0.1); */
+  background: rgba(var(--purple-rgb), 0.5); /* Use RGBA or slightly lighter purple if needed */
+  border-radius: var(--border-radius);
   padding: 1rem 0.5rem;
-}
-.operator-control label {
-  font-weight: bold;
-  font-size: 0.9em;
+  margin: 0;
+  box-shadow: 0 0 3px 0px rgba(var(--teal-rgb),0.9);
 }
 
 .operator-control input[type="number"]::-webkit-outer-spin-button,
@@ -294,6 +401,8 @@ button:hover {
   height: auto; /* Default */
   writing-mode: horizontal-tb; /* Explicitly horizontal */
   appearance: auto;
+  /* Add some synthwave accents to sliders */
+  accent-color: var(--pink); /* Controls the thumb/track color in supporting browsers */
 }
 .global-controls {
   display: flex;
@@ -305,6 +414,7 @@ button:hover {
 .global-controls button {
   width: 50%;
   min-width: 120px;
+  /* Button styles already handled globally */
 }
 
 /* Style Modulation Index Slider as Vertical */
@@ -317,26 +427,36 @@ button:hover {
   cursor: pointer;
   margin-top: 5px; /* Add space below label */
   margin-bottom: 5px; /* Add space above number input */
+  accent-color: var(--teal); /* Teal accent for vertical sliders */
 }
 
 /* --- Algorithm Matrix Styling --- */
 .algorithm-matrix {
   display: grid;
   grid-template-columns: min-content;
-  flex-shrink: 1;
-  flex-grow: 0;
+  margin-left: auto;
+  margin-right: auto;
+  justify-content: center;
+  box-shadow: 0 0 7px 1px var(--teal);
+  border-radius: var(--border-radius);
 }
 
 .algorithm-matrix table {
   border-spacing: 0;
   max-width: fit-content;
-  border: solid 3px #111;
+  /* border: solid 3px #111; */
+  /* border: solid 2px var(--purple); /* Purple border */
   border-bottom: none;
-  border-radius: 5px 5px 0 0;
-
+  border-radius: var(--border-radius) var(--border-radius) 0 0;
+  background-color: var(--bg); /* Dark background */
 }
 .algorithm-matrix th {
   padding: 0 0.3rem;
+  color: var(--teal); /* Teal headers */
+  text-shadow: 0 1px 2px var(--pink);
+}
+.algorithm-matrix thead th:last-child {
+  border-top-right-radius: 5px;
 }
 .algorithm-matrix tr th:last-child,
 .algorithm-matrix tr td:last-child {
@@ -346,12 +466,15 @@ button:hover {
     /* padding: 0.5em; */
     /* width: 40px; */
     height: 40px;
-    border-right: 1px solid #111;
-    border-bottom: 1px solid #111;
+    /* border-right: 1px solid #111; */
+    /* border-bottom: 1px solid #111; */
+    border-right: 1px solid var(--purple); /* Purple grid lines */
+    border-bottom: 1px solid var(--purple);
     text-align: center;
     vertical-align: middle;
     cursor: pointer; /* All cells clickable */
     box-sizing: border-box; /* Include border in width/height */
+    transition: background-color 0.2s ease;
 }
 .algorithm-matrix td {
   min-width: 40px;
@@ -360,67 +483,82 @@ button:hover {
   margin: auto;
 }
 .algorithm-matrix td:hover {
-  background-color: #333;
+  /* background-color: #333; */
+  background-color: var(--purple); /* Purple hover */
 }
 .algorithm-matrix td.feedback-cell:hover {
-  background-color: #444;
+  /* background-color: #444; */
+  background-color: var(--purple); /* Purple hover */
 }
 .algorithm-matrix td.output-cell:hover {
-  background-color: #444;
+  /* background-color: #444; */
+  background-color: var(--purple); /* Purple hover */
 }
 /* Style the added OUT cells */
 .algorithm-matrix td.output-cell, .algorithm-matrix th.out-header {
-    background-color: rgba(255,255,255,0.1); /* Light background for the whole column */
+    /* background-color: rgba(255,255,255,0.1); */
+    background-color: rgba(var(--teal-rgb), 0.1); /* Use teal for OUT column hint */
 }
 
 /* Style the connection point within OUT cells */
 .algorithm-matrix td.output-cell .output-point {
-    width: 15px;
-    height: 15px;
-    background-color: #333; /* Default off color */
-    border: 1px solid #111;
-    transition: background-color 0.1s ease;
+    width: 19px;
+    height: 19px;
+    /* background-color: #333; */
+    background-color: var(--purple); /* Default off color */
+    box-shadow: inset 0 0 2px 1px var(--yellow);
+    transition: background-color 0.1s ease, box-shadow 0.1s ease;
 }
 
 /* Style the connection point when the OUT cell is active */
 .algorithm-matrix td.output-cell.active .output-point {
-    background-color: #28a745; /* Green for output active */
-    border-color: #1e7e34;
+    /* background-color: #28a745; */
+    background-color: var(--yellow); /* Yellow for output active */
+    border-color: var(--yellow);
+    box-shadow: 0 0 13px -3px var(--yellow); /* Glow */
 }
 
 /* Style the feedback cells (diagonal) */
 .algorithm-matrix td.feedback-cell {
-  background-color: #333;
+  /* background-color: #333; */
+  background-color: rgba(var(--purple-rgb), 0.7); /* Slightly different background */
 }
 .connection-point {
   border-radius: 50%;
 }
 /* Style the connection point INSIDE feedback cells (default state) */
 .algorithm-matrix td.feedback-cell .connection-point {
-     width: 15px;
-     height: 15px;
-     background-color: #b8a94e; /* Darker khaki */
-     border: 1px solid #9e8f3e;
-     transition: background-color 0.1s ease; /* Add transition */
+     width: 19px;
+     height: 19px;
+     /* background-color: #b8a94e; */
+     background-color: var(--purple); /* Darker feedback point */
+     /* border: 1px solid #9e8f3e; */
+     box-shadow: inset 0 0 2px 1px var(--pink);
+     transition: background-color 0.1s ease, box-shadow 0.1s ease; /* Add transition */
 }
 /* Style the connection point INSIDE feedback cells WHEN ACTIVE */
-/* Make this selector specific */
 .algorithm-matrix td.feedback-cell.active .connection-point {
-     background-color: #ff4500 !important; /* OrangeRed when active - use !important as a test if needed */
-     border-color: #cc3700 !important;
+     /* background-color: #ff4500 !important; */
+     background-color: var(--pink) !important; /* Hot pink when active */
+     border-color: var(--pink) !important;
+     box-shadow: 0 0 13px -3px var(--pink); /* Pink glow */
 }
 
 /* Connection points (non-feedback, non-output) */
 .algorithm-matrix td:not(.feedback-cell):not(.output-cell) .connection-point {
-    width: 15px;
-    height: 15px;
-    background-color: #666;
-    border: 1px solid #bbb;
-    transition: background-color 0.1s ease;
+    width: 19px;
+    height: 19px;
+    /* background-color: #666; */
+    background-color: var(--purple); /* Default off */
+    /* border: 1px solid #bbb; */
+    box-shadow: inset 0 0 2px 1px var(--teal);
+    transition: background-color 0.1s ease, box-shadow 0.1s ease;
 }
 .algorithm-matrix td:not(.feedback-cell):not(.output-cell).active .connection-point {
-    background-color: #007bff; /* Blue */
-    border-color: #0056b3;
+    /* background-color: #007bff; */
+    background-color: var(--teal); /* Teal for connection active */
+    border-color: var(--teal);
+    box-shadow: 0 0 13px -3px var(--teal); /* Teal glow */
 }
 
 .carrier-selectors { /* Removed .feedback-selectors */
@@ -431,21 +569,31 @@ button:hover {
 .carrier-selectors span {
     font-weight: bold;
     margin-right: 10px;
+    color: var(--teal); /* Teal label */
 }
 .carrier-selectors label {
     margin-right: 15px;
     cursor: pointer;
+    color: var(--light-text);
+}
+/* Add visual indicator for checked radio/checkbox if needed */
+.carrier-selectors input[type="radio"]:checked + label {
+    color: var(--pink); /* Pink text for selected carrier */
+    text-shadow: 0 0 3px var(--pink);
 }
 
 /* --- Hover Info Box Styling --- */
 .matrix-info-box {
     padding: 0.5em;
     font-size: 0.9em;
-    color: #eee;
-    background-color: #444;
-    border: 3px solid #111;
+    /* color: #eee; */
+    color: var(--light-text);
+    /* background-color: #444; */
+    background-color: var(--purple); /* Purple background */
+    /* border: 3px solid #111; */
+    border: 2px solid var(--purple); /* Match matrix border */
     border-top: none;
-    border-radius: 0 0 3px 3px;
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
     text-align: center;
 }
 
@@ -454,9 +602,11 @@ button:hover {
   width: 5%;
   margin: 0;
   padding: 0;
-  background-color: #777;
-  border: 0;
+  /* background-color: #777; */
+  background-color: var(--purple); /* Match other controls */
   border-radius: 3px;
+  box-shadow: 0px 0px 5px 0px var(--teal);
+  color: var(--teal); /* Teal text/icon inside */
 }
 
 .crossfader-container {
@@ -466,107 +616,115 @@ button:hover {
   margin: 5px 10px; /* Add some spacing */
 }
 
-.crossfader-label {
-  margin-top: 0.5em; /* Space above label */
-  margin-bottom: 0.5em; /* Space between label and slider */
-}
 .crossfader-track-container {
   display:flex;
   width: 60px;
   flex-direction:column;
   align-items:center;
-  background: repeating-linear-gradient(
+  /* background: repeating-linear-gradient(
     0deg,
     #222 4%,
     #111 7%,
     #222 10%
-  );
-  box-shadow: 0px 0px 0px 1px black;
+  ); */
+  background: repeating-linear-gradient(
+    0deg,
+    var(--purple) 4%,
+    var(--bg) 7%,
+    var(--purple) 10%
+  ); /* Use theme colors */
+  /* box-shadow: 0px 0px 0px 1px black; */
+  box-shadow: 0px 0px 5px 0px var(--pink); /* Teal outline */
+  border-radius: 3px;
 }
 .crossfader-track {
   position: relative; /* Needed for absolute positioning of the thumb */
   height: 100px;
   width: 12px;
-  background: linear-gradient(90deg, black, #111, black);
+  /* background: linear-gradient(90deg, black, #111, black); */
+  background: linear-gradient(90deg, var(--bg), var(--purple), var(--bg)); /* Theme gradient */
   cursor: pointer;
 }
-
+h3 {
+  color: var(--yellow);
+  text-shadow: 0 0 1px var(--yellow), 0 0 5px var(--pink); /* Yellow glow */
+}
+@property --thumb-transition {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: #e9d625;
+}
 .crossfader-thumb {
   position: absolute;
   width: 60px; /* Thumb wider than track */
   height: 30px; /* Short thumb */
-  background-color: #393939; /* Lighter thumb color */
-  box-shadow: inset 0 0 3px 2px #191919, 0 0px 3px 0px rgba(0,0,0,0.5);
-  border-radius: 5%;
+  /* background-color: #393939; */
+  background-color: var(--purple); /* Purple thumb */
+  /* box-shadow: inset 0 0 3px 2px #191919, 0 0px 3px 0px rgba(0,0,0,0.5); */
+  box-shadow: inset 0 0 3px 2px var(--bg), 0 0px 3px 0px rgba(0,0,0,0.5), 0 0px 4px 1px var(--thumb-transition);
+  border-radius: var(--border-radius-sm);
   cursor: grab; /* Indicate draggable */
   left: 50%; /* Start positioning from the center */
   transform: translateX(-50%); /* Center the thumb horizontally */
+  transition: --thumb-transition 1s ease;
   /* 'top' style will be set by JavaScript */
 }
 .crossfader-thumb-stripe {
-  background-color: #fff;
-  box-shadow: 0px 0px 2px 2px #222, inset 0 0 1px 0px #111;
+  /* background-color: #fff; */
+  background-color: var(--yellow); /* Pink stripe */
+  /* box-shadow: 0px 0px 2px 2px #222, inset 0 0 1px 0px #111; */
+  box-shadow: 0px 0px 4px 0px var(--pink); /* Pink glow for stripe */
+  /* height: 4px; /* Make stripe visible */
+  /* width: 80%; */
+  /* margin: auto; */
+  /* position: absolute; */
+  /* top: 50%; */
+  /* left: 50%; */
+  /* transform: translate(-50%, -50%); */
+  border-radius: 3px;
 }
 .crossfader-input {
   width: 3em;
   margin-top: 5px;
   text-align: center;
+  background-color: var(--purple); /* Match controls */
+  border: 1px solid var(--teal);
+  color: var(--light-text);
 }
 
 .crossfader-thumb.dragging {
   cursor: grabbing;
+  /* box-shadow: inset 0 0 3px 2px var(--bg), 0 0px 8px 2px var(--pink); /* Enhanced pink glow when dragging */
+  --thumb-transition: var( --pink );
 }
-.d-flex {
-  display: flex !important;
-}
-.flex-col {
-  flex-direction: column !important;
-}
-.flex-row {
-  flex-direction: row !important;
-}
-.justify-content-center {
-  justify-content: center;
-}
+
+/* --- Utility classes (keep as is) --- */
+.d-flex { display: flex !important; }
+.flex-col { flex-direction: column !important; }
+.flex-row { flex-direction: row !important; }
+.justify-content-center { justify-content: center; }
 @media (min-width: 575px) {
-  .flex-sm-col {
-    flex-direction: column !important;
-  }
-  .flex-sm-row {
-    flex-direction: row !important;
-  }
+  .flex-sm-col { flex-direction: column !important; }
+  .flex-sm-row { flex-direction: row !important; }
 }
 @media (min-width: 768px) {
-  .flex-sm-col, .flex-md-col {
-    flex-direction: column !important;
-  }
-  .flex-sm-row, .flex-md-row {
-    flex-direction: row !important;
+  .flex-sm-col, .flex-md-col { flex-direction: column !important; }
+  .flex-sm-row, .flex-md-row { flex-direction: row !important; }
+  .operator-control {
+    margin: 0 2px;
   }
 }
 @media (min-width: 992px) {
-  .flex-sm-col, .flex-md-col, .flex-lg-col {
-    flex-direction: column !important;
-  }
-  .flex-sm-row, .flex-md-row, .flex-lg-row {
-    flex-direction: row !important;
-  }
+  .flex-sm-col, .flex-md-col, .flex-lg-col { flex-direction: column !important; }
+  .flex-sm-row, .flex-md-row, .flex-lg-row { flex-direction: row !important; }
 }
 @media (min-width: 1200px) {
-  .flex-sm-col, .flex-md-col, .flex-lg-col, .flex-xl-col {
-    flex-direction: column !important;
-  }
-  .flex-sm-row, .flex-md-row, .flex-lg-row, .flex-xl-row {
-    flex-direction: row !important;
-  }
+  .flex-sm-col, .flex-md-col, .flex-lg-col, .flex-xl-col { flex-direction: column !important; }
+  .flex-sm-row, .flex-md-row, .flex-lg-row, .flex-xl-row { flex-direction: row !important; }
 }
 @media (min-width: 1500px) {
-  .flex-sm-col, .flex-md-col, .flex-lg-col, .flex-xl-col, .flex-xxl-col {
-    flex-direction: column !important;
-  }
-  .flex-sm-row, .flex-md-row, .flex-lg-row, .flex-xl-row, .flex-xxl-row {
-    flex-direction: row !important;
-  }
+  .flex-sm-col, .flex-md-col, .flex-lg-col, .flex-xl-col, .flex-xxl-col { flex-direction: column !important; }
+  .flex-sm-row, .flex-md-row, .flex-lg-row, .flex-xl-row, .flex-xxl-row { flex-direction: row !important; }
 }
 /* @media (min-width: 1200px) { */
 /*   #operator-controls { */

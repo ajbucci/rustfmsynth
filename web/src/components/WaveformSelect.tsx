@@ -9,7 +9,7 @@ interface WaveformProps {
 const WaveformSelect: Component<WaveformProps> = (props) => {
   return (
     <div class="parameter-container">
-      <label for={`waveform-${props.operatorIndex}`}>Waveform</label>
+      <label class="parameter-title" for={`waveform-${props.operatorIndex}`}>Waveform</label>
       <select
         id={`waveform-${props.operatorIndex}`}
         //* disabled={!isActive()} */
