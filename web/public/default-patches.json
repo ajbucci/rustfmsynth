@@ -132,52 +132,52 @@
     "name": "Classic E-Piano",
     "state": {
       "algorithm": [
-        [0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 1],
-        [0, 1, 0, 0, 0, 0, 0],
-        [0, 0, 1, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0],
+        [1, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 1],
+        [0, 0, 0, 0, 0, 0, 1],
+        [0, 0, 0, 1, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0]
       ],
       "operators": [
         {
           "ratio": 1.0,
           "fixedFrequency": 0.0,
-          "modulationIndex": 0.0,
+          "modulationIndex": 0.24,
           "waveform": 0,
-          "envelope": { "attack": 0.01, "decay": 0.1, "sustain": 0.0, "release": 0.1 },
+          "envelope": { "attack": 0.01, "decay": 0.4, "sustain": 0.0, "release": 0.5 },
           "filters": []
         },
         {
-          "ratio": 1.0,
+          "ratio": 15.0,
           "fixedFrequency": 0.0,
-          "modulationIndex": 0.85,
+          "modulationIndex": 2.16,
           "waveform": 0,
-          "envelope": { "attack": 0.005, "decay": 0.7, "sustain": 0.0, "release": 0.5 },
+          "envelope": { "attack": 0.01, "decay": 0.4, "sustain": 0.0, "release": 0.5 },
           "filters": []
         },
         {
-          "ratio": 1.0,
+          "ratio": 0.990,
           "fixedFrequency": 0.0,
-          "modulationIndex": 1.2,
+          "modulationIndex": 1.0,
           "waveform": 0,
-          "envelope": { "attack": 0.002, "decay": 0.4, "sustain": 0.0, "release": 0.3 },
+          "envelope": { "attack": 0.01, "decay": 0.1, "sustain": 0.8, "release": 0.7 },
           "filters": []
         },
         {
           "ratio": 5.1,
-          "fixedFrequency": 0.0,
-          "modulationIndex": 0.22,
+          "fixedFrequency": 1.0,
+          "modulationIndex": 0.76,
           "waveform": 0,
-          "envelope": { "attack": 0.001, "decay": 0.2, "sustain": 0.0, "release": 0.2 },
+          "envelope": { "attack": 0.01, "decay": 0.1, "sustain": 0.8, "release": 0.7 },
           "filters": []
         },
         {
-          "ratio": 1.0,
+          "ratio": 1.01,
           "fixedFrequency": 0.0,
-          "modulationIndex": 0.0,
+          "modulationIndex": 3.24,
           "waveform": 0,
-          "envelope": { "attack": 0.01, "decay": 0.1, "sustain": 0.0, "release": 0.1 },
+          "envelope": { "attack": 0.01, "decay": 0.1, "sustain": 0.8, "release": 0.7 },
           "filters": []
         },
         {
