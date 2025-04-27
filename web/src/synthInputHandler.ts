@@ -64,6 +64,17 @@ export function setOperatorRatio(operatorIndex: number, ratio: number): void {
     console.error("SynthInputHandler: Error setting ratio:", e);
   }
 }
+export function setOperatorFixedFrequency(operatorIndex: number, frequency: number): void {
+  if (!processorPort) {
+    console.warn("SynthInputHandler: Port not connected, cannot set fixed frequency.");
+    return;
+  }
+  try {
+    processorPort.postMessage({ type: 'set_operator_fixed_frequency', operatorIndex, frequency });
+  } catch (e) {
+    console.error("SynthInputHandler: Error setting fixed frequency:", e);
+  }
+}
 export function setOperatorModIndex(operatorIndex: number, modIndex: number): void {
   if (!processorPort) {
     console.warn("SynthInputHandler: Port not connected, cannot set modulation index.");
@@ -142,6 +153,9 @@ export function setSynthState(appState: AppState): void {
 
     // Set basic parameters
     setOperatorRatio(index, opState.ratio);
+    if (opState.fixedFrequency !== 0) {
+      setOperatorFixedFrequency(index, opState.fixedFrequency);
+    }
     setOperatorModIndex(index, opState.modulationIndex);
     setOperatorWaveform(index, opState.waveform);
 

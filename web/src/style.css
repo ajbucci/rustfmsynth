@@ -1003,3 +1003,109 @@ h3 {
 .patch-list-container::-webkit-scrollbar-thumb:hover {
   background-color: var(--lighter-purple); /* Lighter purple on hover */
 }
+.mode-toggle-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: 6px; /* Space below the toggle */
+}
+
+/* The visible label acting as the interactive element */
+.mode-toggle-label {
+  display: inline-flex; /* Align text and switch horizontally */
+  align-items: center;
+  gap: 10px; /* Space between text and the pill switch */
+  cursor: pointer;
+  user-select: none;
+  padding: 5px;
+  border-radius: var(--border-radius); /* Match button radius */
+  transition: background-color 0.15s ease;
+}
+/* Optional hover effect */
+.mode-toggle-label:hover {
+    background-color: rgba(var(--lighter-purple-rgb, 50, 26, 95), 0.9); /* Use lighter purple with alpha */
+}
+
+/* Style for the text part ("Ratio" / "Fixed") */
+.mode-label-text {
+  min-width: 40px; /* Ensure space */
+  margin: 0;
+  text-align: right;
+}
+
+/* Container for the visual pill switch */
+.mode-switch-visual {
+  margin-left: 8px;
+  display: inline-block;
+  overflow: visible;
+  position: relative; /* Context for the absolute indicator */
+  width: 20px; /* Width of the pill track */
+  height: 10px; /* Height of the pill track */
+  background-color: var(--dark-purple); /* Dark background for the track */
+  border-radius: 999px; 
+  border: 1px solid var(--purple); /* Subtle border */
+  box-shadow: inset 0 1px 3px rgba(var(--bg-rgb), 0.6); /* Inner shadow */
+}
+
+/* The sliding, oversized, glowing indicator */
+.mode-switch-indicator {
+  position: absolute;
+  width: 15px; /* Larger than pill height */
+  height: 15px; /* Larger than pill height */
+  border-radius: 50%; /* Circle */
+  top: 50%; /* Vertical centering */
+  /* Start positioned left for 'ratio' mode */
+  left: 0;
+  transform: translate(-6px, -50%); /* Pull left slightly to overflow & center vertically */
+  background-color: var(--pink); /* Default to pink (Ratio) */
+  box-shadow: 0 0 10px 2px var(--pink); /* Pink glow */
+  transition: left 0.3s ease-in-out,
+              transform 0.3s ease-in-out,
+              background-color 0.3s ease-in-out,
+              box-shadow 0.3s ease-in-out;
+  z-index: 1;
+  /* Optional: Add subtle texture or gradient */
+  /* background-image: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3), transparent 70%); */
+}
+
+/* --- Mode-Specific Styles for the Indicator --- */
+
+/* When mode is 'fixedFrequency' (data-mode="fixedFrequency" on the label) */
+.mode-toggle-label[data-mode="fixedFrequency"] .mode-switch-indicator {
+  left: 100%; /* Move reference point to the right edge */
+  transform: translate(calc(-100% + 6px), -50%); /* Pull back to overflow right & center */
+  background-color: var(--teal); /* Change color to teal */
+  box-shadow: 0 0 10px 2px var(--teal); /* Teal glow */
+}
+
+
+/* --- Accessibility: Hide Checkbox, Style Focus --- */
+
+/* Visually hide the actual checkbox but keep it accessible */
+.mode-toggle-checkbox {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+}
+
+/* Style focus state *on the label* when the hidden checkbox receives focus */
+/* Using :focus-visible for better keyboard navigation focus */
+.mode-toggle-checkbox:focus-visible + .mode-toggle-label {
+  /* outline: 2px solid var(--yellow); /* Use yellow for focus outline */
+  outline-offset: 2px;
+  background-color: rgba(var(--yellow-rgb), 0.1); /* Subtle yellow background focus */
+}
+/* Fallback for browsers not supporting :focus-visible (less ideal) */
+.mode-toggle-checkbox:focus + .mode-toggle-label {
+  /* outline: 2px solid var(--yellow); */
+  outline-offset: 2px;
+  background-color: rgba(var(--yellow-rgb), 0.1);
+}

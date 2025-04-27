@@ -1,37 +1,46 @@
-import { Component, createSignal, createEffect, onMount, onCleanup, JSX, Accessor, untrack } from 'solid-js';
+import { Show, Component, createSignal, createEffect, onMount, onCleanup, JSX, Accessor, untrack, createMemo } from 'solid-js';
 import { clampValue } from '../utils'; // Assuming a clamp utility exists or create one
-
 import '../style.css'; // Or Dial.css
 
 // --- Constants and Types ---
 const MIN_ROTATION = -135;
 const MAX_ROTATION = 135;
 const TOTAL_ROTATION_RANGE = MAX_ROTATION - MIN_ROTATION;
-const SUB_STEPS_PER_INTERVAL = 100; // For fine mode calculation
-const FINE_MODE_SENSITIVITY = 0.3; // Multiplier for fine dragging
+const SUB_STEPS_PER_INTERVAL = 100; // For fine mode calculation ('ratio' mode)
+const FINE_MODE_SENSITIVITY = 0.3; // Multiplier for fine dragging (affects both modes)
 const RADIUS = 35;
 
 const INDICATOR_HEIGHT = RADIUS / 1.3;
 const INDICATOR_WIDTH = 4;
 const INDICATOR_INSET = 0;
+
+// Define component modes
+export type DialMode = 'ratio' | 'fixedFrequency';
+
 // Define required and optional props
 interface DialProps {
-  value: Accessor<number>;             // Reactive getter for the current value
-  onChange: (newValue: number) => void; // Callback to report value changes
+  mode: Accessor<DialMode>;              // NEW: Determines the behavior ('ratio' or 'fixedFrequency')
+  onModeChange: (newMode: DialMode) => void;
+  value: Accessor<number>;             // Reactive getter for the current value (ratio OR frequency)
+  onChange: (newValue: number) => void; // Callback to report value changes (ratio OR frequency)
+
   isActive?: Accessor<boolean>;       // Reactive getter for active state (e.g., carrier)
-  isFineModeActive: Accessor<boolean>;      // Reactive getter for global fine mode state
+  isFineModeActive: Accessor<boolean>; // Reactive getter for global fine mode state (affects drag sensitivity)
 
   // Configuration for value mapping and display
-  // Passed directly or derived from a config object prop
-  minVal: number;
-  maxVal: number;
-  step?: number; // Optional, maybe used for snapping or text input step
-  defaultValue?: number;
-  coarseValues: number[]; // Array of predefined coarse snap points/values
+  minVal: number;                       // Used as the minimum for 'fixedFrequency' mode
+  maxVal: number;                       // Used as the maximum for 'fixedFrequency' mode
+  step?: number;                        // Optional step for snapping ('fixedFrequency') or input step
 
-  // Optional props for ARIA, IDs etc.
+  // --- Props specific to 'ratio' mode ---
+  coarseValues?: number[];              // Array of predefined coarse snap points/values for 'ratio' mode
+  // Required if mode is 'ratio'
+
+  // --- General props ---
+  defaultValue?: number;                // Initial value if needed (less critical with reactive value)
   id?: string;
-  label?: string; // For accessibility
+  label?: string;                       // For accessibility
+  valueDisplayFormatter?: (value: number, mode: DialMode) => string; // Optional custom formatter
 }
 
 const Dial: Component<DialProps> = (props) => {
@@ -39,96 +48,161 @@ const Dial: Component<DialProps> = (props) => {
   // --- Internal State ---
   const [isDragging, setIsDragging] = createSignal(false);
   const [visualRotation, setVisualRotation] = createSignal(0);
-  // Store the angle where the drag started relative to the rotation applied
   const [dragStartAngleOffset, setDragStartAngleOffset] = createSignal(0);
 
-  // Derived constants from props
-  const numCoarseIntervals = () => props.coarseValues.length - 1;
-  const coarseMin = () => props.coarseValues[0];
-  const coarseMax = () => props.coarseValues[props.coarseValues.length - 1];
-
-  // Refs for DOM elements if needed for direct manipulation (e.g., focus)
+  // Refs for DOM elements
   let dialElement: HTMLDivElement | undefined;
   let inputElement: HTMLInputElement | undefined;
 
+  // --- Derived State and Validation ---
 
-  // --- Value / Rotation Conversion Logic (Adapted from original) ---
-  // Memoize conversions if they become complex or called frequently in effects
+  // Memoize the current effective range based on the mode
+  const currentMin = createMemo(() => {
+    if (props.mode() === 'ratio') {
+      if (!props.coarseValues || props.coarseValues.length === 0) {
+        console.warn("Dial: 'coarseValues' prop is required and must not be empty when mode is 'ratio'.");
+        return 0; // Fallback
+      }
+      return props.coarseValues[0];
+    } else { // 'fixedFrequency' mode
+      return props.minVal;
+    }
+  });
+
+  const currentMax = createMemo(() => {
+    if (props.mode() === 'ratio') {
+      if (!props.coarseValues || props.coarseValues.length === 0) {
+        // Warning already shown in currentMin
+        return 1; // Fallback
+      }
+      return props.coarseValues[props.coarseValues.length - 1];
+    } else { // 'fixedFrequency' mode
+      return props.maxVal;
+    }
+  });
+
+  // Memoize ratio mode specific calculations
+  const numCoarseIntervals = createMemo(() => {
+    if (props.mode() === 'ratio' && props.coarseValues && props.coarseValues.length > 1) {
+      return props.coarseValues.length - 1;
+    }
+    return 0; // Not applicable or invalid
+  });
+
+  // --- Value / Rotation Conversion Logic ---
+
   const valueToRotation = (value: number): number => {
-    const clampedValue = clampValue(value, coarseMin(), coarseMax()); // Clamp to overall range
-    let lowerIndex = 0;
-    const intervals = numCoarseIntervals();
-    const coarseVals = props.coarseValues;
+    const mode = props.mode();
+    const min = currentMin();
+    const max = currentMax();
+    const clampedValue = clampValue(value, min, max);
 
-    // Find the coarse interval the value falls into
-    for (let i = 0; i < intervals; i++) {
-      if (clampedValue >= coarseVals[i] && clampedValue <= coarseVals[i + 1]) {
-        lowerIndex = i;
-        break;
+    if (mode === 'ratio') {
+      // --- Ratio Mode Logic ---
+      if (!props.coarseValues || numCoarseIntervals() <= 0) return MIN_ROTATION; // Handle invalid state
+
+      const coarseVals = props.coarseValues;
+      const intervals = numCoarseIntervals();
+      let lowerIndex = 0;
+
+      // Find the coarse interval the value falls into
+      for (let i = 0; i < intervals; i++) {
+        if (clampedValue >= coarseVals[i] && clampedValue <= coarseVals[i + 1]) {
+          lowerIndex = i;
+          break;
+        }
+        if (i === intervals - 1 && clampedValue === coarseVals[i + 1]) {
+          lowerIndex = i + 1;
+          break;
+        }
       }
-      // Handle edge case where value is exactly the max
-      if (i === intervals - 1 && clampedValue === coarseVals[i + 1]) {
-        lowerIndex = i + 1; // Assign to the last index if it's the max value
-        break;
+      if (clampedValue === coarseVals[0]) {
+        lowerIndex = 0;
       }
-    }
-    // Handle case where value might be exactly the min (loop doesn't catch index 0 if starting there)
-    if (clampedValue === coarseVals[0]) {
-      lowerIndex = 0;
-    }
 
+      const valLower = coarseVals[lowerIndex];
+      const valUpper = coarseVals[Math.min(lowerIndex + 1, intervals)];
 
-    const valLower = coarseVals[lowerIndex];
-    const valUpper = coarseVals[Math.min(lowerIndex + 1, intervals)];
+      let fraction = 0;
+      if (valUpper > valLower) {
+        fraction = (clampedValue - valLower) / (valUpper - valLower);
+      } // else fraction remains 0
 
-    let fraction = 0;
-    if (valUpper > valLower) {
-      fraction = (clampedValue - valLower) / (valUpper - valLower);
-    } else if (clampedValue === valLower) { // Handle interval where lower === upper
-      fraction = 0;
+      const normalizedPosition = lowerIndex + fraction;
+      return MIN_ROTATION + (normalizedPosition / intervals) * TOTAL_ROTATION_RANGE;
+
     } else {
-      // Should not happen with clamping, but default to 0
-      fraction = 0;
-    }
+      // --- Fixed Frequency Mode Logic ---
+      const range = max - min;
+      if (range <= 0) return MIN_ROTATION; // Handle zero range
 
-    const normalizedPosition = lowerIndex + fraction; // Position within the total coarse intervals
-    return MIN_ROTATION + (normalizedPosition / intervals) * TOTAL_ROTATION_RANGE;
+      const normalizedValue = (clampedValue - min) / range;
+      return MIN_ROTATION + normalizedValue * TOTAL_ROTATION_RANGE;
+    }
   };
 
   const rotationToValue = (rotation: number): number => {
+    const mode = props.mode();
+    const min = currentMin();
+    const max = currentMax();
+    const fineDragMode = props.isFineModeActive(); // Fine mode affects drag sensitivity, not value mapping here
+
     const clampedRotation = clampValue(rotation, MIN_ROTATION, MAX_ROTATION);
-    const intervals = numCoarseIntervals();
-    const coarseVals = props.coarseValues;
-    const fineMode = props.isFineModeActive(); // Read reactive prop
+    const normalizedRotation = (clampedRotation - MIN_ROTATION) / TOTAL_ROTATION_RANGE;
 
-    const normalizedPosition = ((clampedRotation - MIN_ROTATION) / TOTAL_ROTATION_RANGE) * intervals;
+    if (mode === 'ratio') {
+      // --- Ratio Mode Logic ---
+      if (!props.coarseValues || numCoarseIntervals() <= 0) return min; // Handle invalid state
 
-    const lowerIndex = clampValue(Math.floor(normalizedPosition), 0, intervals - 1);
-    const upperIndex = Math.min(intervals, lowerIndex + 1); // Ensure upperIndex doesn't exceed bounds
+      const coarseVals = props.coarseValues;
+      const intervals = numCoarseIntervals();
+      const normalizedPosition = normalizedRotation * intervals;
 
-    const fraction = normalizedPosition - lowerIndex;
+      const lowerIndex = clampValue(Math.floor(normalizedPosition), 0, intervals - 1);
+      const upperIndex = Math.min(intervals, lowerIndex + 1);
 
-    const valLower = coarseVals[lowerIndex];
-    const valUpper = coarseVals[upperIndex];
+      const fraction = normalizedPosition - lowerIndex;
+      const valLower = coarseVals[lowerIndex];
+      const valUpper = coarseVals[upperIndex];
 
-    let targetValue: number;
+      let targetValue: number;
 
-    if (!fineMode) { // Coarse Mode Snapping
-      const targetCoarseIndex = clampValue(Math.round(normalizedPosition), 0, intervals);
-      targetValue = coarseVals[targetCoarseIndex];
-    } else { // Fine Mode Sub-stepping
-      const intervalRange = valUpper - valLower;
-      if (intervalRange <= 0) {
-        targetValue = valLower; // If interval has no range, stick to lower value
-      } else {
-        // Calculate sub-step based on fraction within the interval
-        const subStepIndex = Math.round(fraction * SUB_STEPS_PER_INTERVAL);
-        const subStepIncrement = intervalRange / SUB_STEPS_PER_INTERVAL;
-        targetValue = valLower + subStepIndex * subStepIncrement;
+      // Fine mode for ratio means interpolating *between* coarse steps
+      // Coarse mode snaps *to* coarse steps
+      if (!fineDragMode) { // Coarse Mode Snapping (Ratio specific)
+        const targetCoarseIndex = clampValue(Math.round(normalizedPosition), 0, intervals);
+        targetValue = coarseVals[targetCoarseIndex];
+      } else { // Fine Mode Sub-stepping (Ratio specific)
+        const intervalRange = valUpper - valLower;
+        if (intervalRange <= 0) {
+          targetValue = valLower;
+        } else {
+          // Interpolate smoothly within the interval based on the fractional position
+          // Note: Using sub-steps was one way, direct interpolation is simpler here
+          targetValue = valLower + fraction * intervalRange;
+
+          // Optional: Keep sub-step logic if discrete fine steps are desired
+          // const subStepIndex = Math.round(fraction * SUB_STEPS_PER_INTERVAL);
+          // const subStepIncrement = intervalRange / SUB_STEPS_PER_INTERVAL;
+          // targetValue = valLower + subStepIndex * subStepIncrement;
+        }
       }
+      // Final clamp for ratio mode
+      return clampValue(targetValue, min, max);
+
+    } else {
+      // --- Fixed Frequency Mode Logic ---
+      const range = max - min;
+      let rawValue = min + normalizedRotation * range;
+
+      // Apply step snapping if step is provided for this mode
+      if (props.step && props.step > 0) {
+        rawValue = Math.round(rawValue / props.step) * props.step;
+      }
+
+      // Final clamp for fixed frequency mode
+      return clampValue(rawValue, min, max);
     }
-    // Final clamp to ensure value stays within the absolute min/max defined by coarseValues
-    return clampValue(targetValue, coarseMin(), coarseMax());
   };
 
 
@@ -136,28 +210,29 @@ const Dial: Component<DialProps> = (props) => {
 
   // Effect to update visual rotation when the EXTERNAL value prop changes
   createEffect(() => {
-    const externalValue = props.value(); // Track the external value prop
-    // Use untrack to prevent this effect from triggering itself via setVisualRotation
+    const externalValue = props.value();
+    // Untrack mode and range calculations inside here, as they are dependencies
+    // of valueToRotation, which we don't want triggering this effect directly.
     untrack(() => {
       const newRotation = valueToRotation(externalValue);
-      // Only update if significantly different to avoid jitter? Or always sync?
-      // Let's always sync for now.
       setVisualRotation(newRotation);
-      // console.log(`Effect: External value ${externalValue} -> Rotation ${newRotation}`);
     });
   });
 
+
   // Effect to update body cursor and user-select during drag
   createEffect(() => {
-    if (isDragging()) {
+    const dragging = isDragging();
+    const fineMode = props.isFineModeActive(); // Track global fine mode for cursor
+    if (dragging) {
       document.body.classList.add('dial-dragging-active');
       document.body.style.userSelect = 'none';
-      document.body.style.cursor = props.isFineModeActive() ? 'cell' : 'grabbing';
+      document.body.style.cursor = fineMode ? 'cell' : 'grabbing';
     } else {
       document.body.classList.remove('dial-dragging-active');
       document.body.style.userSelect = '';
-      // Reset cursor only if *this* drag ended, respect global fine mode state
-      document.body.style.cursor = props.isFineModeActive() ? 'cell' : '';
+      // Reset cursor only if *this* drag ended, respect global fine mode state elsewhere
+      document.body.style.cursor = fineMode ? 'cell' : '';
     }
   });
 
@@ -168,20 +243,32 @@ const Dial: Component<DialProps> = (props) => {
     const rect = dialElement.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
-    // Calculate angle relative to vertical (top = 0 deg), clockwise positive
-    const angleRad = Math.atan2(clientX - centerX, centerY - clientY); // Note Y is inverted
-    return angleRad * (180 / Math.PI); // Convert to degrees
+    const angleRad = Math.atan2(clientX - centerX, centerY - clientY);
+    return angleRad * (180 / Math.PI);
   };
 
-
+  const handleModeToggle = () => {
+    const currentMode = props.mode();
+    const nextMode = currentMode === 'ratio' ? 'fixedFrequency' : 'ratio';
+    props.onModeChange(nextMode); // Call the callback passed by the parent
+    // Optional: Focus input after mode switch for quicker editing
+    inputElement?.focus();
+    inputElement?.select();
+  };
+  const handleModeCheckboxChange = (event: Event) => {
+    const checkbox = event.currentTarget as HTMLInputElement;
+    const isChecked = checkbox.checked; // Checkbox 'checked' means 'fixedFrequency' mode
+    const newMode = isChecked ? 'fixedFrequency' : 'ratio';
+    props.onModeChange(newMode); // Call the callback passed by the parent
+  };
   const handleInteractionStart = (clientX: number, clientY: number) => {
     if (!dialElement) return;
     setIsDragging(true);
-    const currentRotation = visualRotation(); // Use current visual rotation
+    // Use untracked visual rotation to prevent signal loops if effect runs mid-drag
+    const currentRotation = untrack(visualRotation);
     const startAngle = getAngleFromEvent(clientX, clientY);
-    setDragStartAngleOffset(currentRotation - startAngle); // Store difference
+    setDragStartAngleOffset(currentRotation - startAngle);
 
-    // Add temporary listeners to document/window for move/end
     window.addEventListener('mousemove', handleInteractionMove);
     window.addEventListener('mouseup', handleInteractionEnd);
     window.addEventListener('touchmove', handleInteractionMove, { passive: false });
@@ -191,48 +278,35 @@ const Dial: Component<DialProps> = (props) => {
 
   const handleInteractionMove = (event: MouseEvent | TouchEvent) => {
     if (!isDragging()) return;
-
-    event.preventDefault(); // Prevent scrolling on touch devices
+    event.preventDefault();
 
     const isTouchEvent = !!(event as TouchEvent).touches;
     const clientX = isTouchEvent ? (event as TouchEvent).touches[0].clientX : (event as MouseEvent).clientX;
     const clientY = isTouchEvent ? (event as TouchEvent).touches[0].clientY : (event as MouseEvent).clientY;
 
     const currentAngle = getAngleFromEvent(clientX, clientY);
-    let newRotation = currentAngle + dragStartAngleOffset(); // Apply offset
+    const lastRot = untrack(visualRotation); // Read current rotation without tracking
+    let targetRotation = currentAngle + dragStartAngleOffset();
 
-    // Handle angle wrapping
-    // (This simple offset logic might need refinement for perfect wrap-around behavior,
-    // depending on how getAngleFromEvent behaves near 180/-180)
-
-    // Apply fine mode sensitivity DURING drag calculation if needed
-    // (Alternative: Apply sensitivity to delta as in original - let's try that)
-    // ---> Reverting to delta calculation like original:
-
-    const lastRot = visualRotation(); // Get rotation BEFORE this move
-    let targetRotation = currentAngle + dragStartAngleOffset(); // Target based on angle
-
-    // Calculate delta from *last* rotation, handling wrap-around
+    // Calculate delta with wrap-around handling
     let delta = targetRotation - lastRot;
     while (delta <= -180) delta += 360;
     while (delta > 180) delta -= 360;
 
-
+    // Apply fine mode sensitivity GLOBALLY to the drag delta
     const effectiveDelta = props.isFineModeActive() ? (delta * FINE_MODE_SENSITIVITY) : delta;
-    let finalRotation = lastRot + effectiveDelta; // Apply potentially scaled delta
+    let finalRotation = lastRot + effectiveDelta;
 
-
-    // Clamp rotation to min/max limits
     finalRotation = clampValue(finalRotation, MIN_ROTATION, MAX_ROTATION);
 
     // Update visual rotation immediately
     setVisualRotation(finalRotation);
 
-    // Calculate new value based on rotation
+    // Calculate new value based on rotation and CURRENT mode
     const newValue = rotationToValue(finalRotation);
 
     // Call onChange prop if value *actually* changed
-    // Use untrack to avoid onChange causing loops if parent passes value back immediately
+    // Use untrack on props.value() to avoid self-triggering loops
     if (newValue !== untrack(props.value)) {
       props.onChange(newValue);
     }
@@ -242,16 +316,15 @@ const Dial: Component<DialProps> = (props) => {
     if (!isDragging()) return;
     setIsDragging(false);
 
-    // Remove temporary listeners
     window.removeEventListener('mousemove', handleInteractionMove);
     window.removeEventListener('mouseup', handleInteractionEnd);
     window.removeEventListener('touchmove', handleInteractionMove);
     window.removeEventListener('touchend', handleInteractionEnd);
     window.removeEventListener('touchcancel', handleInteractionEnd);
 
-    // Snap visual rotation to the final value after drag ends
-    // This ensures it aligns correctly if coarse snapping was applied in rotationToValue
-    setVisualRotation(valueToRotation(props.value()));
+    // Snap visual rotation to the final value's rotation AFTER drag ends
+    // Use untracked props.value() in case onChange triggered an update
+    setVisualRotation(valueToRotation(untrack(props.value)));
   };
 
 
@@ -261,52 +334,81 @@ const Dial: Component<DialProps> = (props) => {
     let newValue = parseFloat(target.value);
 
     if (!isNaN(newValue)) {
-      // Clamp input value to allowed range
-      newValue = clampValue(newValue, coarseMin(), coarseMax());
-      if (newValue !== props.value()) { // Check if value actually changed
+      // Clamp input value to the current mode's allowed range
+      const min = currentMin(); // Use memoized range
+      const max = currentMax();
+      newValue = clampValue(newValue, min, max);
+
+      if (newValue !== props.value()) {
         props.onChange(newValue);
-        // Visual rotation will update via the effect watching props.value()
       } else {
-        // If clamped value is same as current, maybe reset input display
-        // Use untrack to avoid infinite loop if parent updates prop immediately
-        target.value = formatValueForInput(untrack(props.value));
+        // If clamped value is same as current, reset input display to formatted current value
+        target.value = formatValueForDisplay(untrack(props.value));
       }
     } else {
       // Reset input display to current value if input is invalid
-      target.value = formatValueForInput(props.value());
+      target.value = formatValueForDisplay(props.value());
     }
   };
 
-  // Helper to format value for text input
-  const formatValueForInput = (value: number): string => {
-    // Add more sophisticated formatting if needed (e.g., based on magnitude)
-    const numDecimalPlaces = props.isFineModeActive() ? 4 : 3; // More precision in fine mode?
-    // Adjust decimal places based on value magnitude if needed
-    // if (value < 0.1) numDecimalPlaces = 5; else if (value < 1) ...
-    return value.toFixed(numDecimalPlaces);
-  }
+  // Helper to format value for text input/display
+  // Uses optional prop formatter or default logic
+  const formatValueForDisplay = (value: number): string => {
+    const mode = props.mode();
+    if (props.valueDisplayFormatter) {
+      return props.valueDisplayFormatter(value, mode);
+    }
+
+    // Default formatting logic
+    if (mode === 'ratio') {
+      // Ratios often benefit from more precision
+      const numDecimalPlaces = props.isFineModeActive() ? 4 : 3;
+      return value.toFixed(numDecimalPlaces);
+    } else { // 'fixedFrequency'
+      // Frequencies might be whole numbers or have fewer decimals
+      // Add Hz/kHz logic if needed based on value range
+      if (value >= 1000) {
+        return (value / 1000).toFixed(2) + 'k'; // Example kHz formatting
+      }
+      // Basic formatting with fewer decimals for frequency
+      return value.toFixed(value < 10 ? 2 : (value < 100 ? 1 : 0));
+    }
+  };
 
   // --- Tooltip Text ---
+  // Tooltip can remain generic about fine/coarse DRAG sensitivity
   const tooltipText = () => props.isFineModeActive()
-    ? "Drag for fine detail (Release Shift for coarse steps)"
+    ? "Drag for fine detail (Release Shift for less sensitivity)"
     : "Drag to adjust (Hold Shift for fine detail)";
 
 
+  const uniqueCheckboxId = createMemo(() => `mode-toggle-${props.id || props.label?.replace(/\s+/g, '-') || Math.random().toString(36).substring(7)}`);
   // --- Render ---
   return (
-    <div class="parameter-container" // Use isActive prop
-      ref={dialElement} // Assign ref for calculations
+    <div class="parameter-container"
+      ref={dialElement}
       role="slider"
-      aria-valuemin={props.minVal} // Use minVal/maxVal for ARIA
-      aria-valuemax={props.maxVal}
+      // ARIA values reflect the effective range of the *current* mode
+      aria-valuemin={currentMin()}
+      aria-valuemax={currentMax()}
       aria-valuenow={props.value()}
       aria-label={props.label || 'Dial Control'}
-      title={tooltipText()} // Dynamic tooltip
-      onMouseDown={(e) => handleInteractionStart(e.clientX, e.clientY)}
+      aria-valuetext={formatValueForDisplay(props.value())} // Provide human-readable value text
+      title={tooltipText()}
+      onMouseDown={(e) => {
+        // Prevent starting drag if click is on the toggle button itself
+        if ((e.target as HTMLElement)?.closest('.mode-toggle-switch')) {
+          return;
+        }
+        handleInteractionStart(e.clientX, e.clientY);
+      }}
       on:touchstart={{
-        passive: false, // Set listener options directly
-        handleEvent: (event: TouchEvent) => { // Define the handleEvent method
-          // Call original handler, keyDataWithStyle is available via closure
+        passive: false,
+        handleEvent: (event: TouchEvent) => {
+          // Prevent starting drag if touch is on the toggle button itself
+          if ((event.target as HTMLElement)?.closest('.mode-toggle-switch')) {
+            return;
+          }
           event.preventDefault();
           handleInteractionStart(event.touches[0].clientX, event.touches[0].clientY);
         }
@@ -315,14 +417,37 @@ const Dial: Component<DialProps> = (props) => {
         cursor: isDragging() ? (props.isFineModeActive() ? 'cell' : 'grabbing') : 'grab'
       }}
     >
-      <label class="parameter-title" for={props.id ? `${props.id}-input` : undefined}>
-        {props.label || 'Dial'}: {/* Use prop label */}
-      </label>
+      <div class="mode-toggle-container">
+        <input
+          type="checkbox"
+          id={uniqueCheckboxId()}
+          class="mode-toggle-checkbox" // Visually hidden
+          checked={props.mode() === 'fixedFrequency'}
+          onChange={handleModeCheckboxChange}
+          aria-label="Toggle frequency mode (Ratio/Fixed)"
+        />
+        {/* Label linked to checkbox. Add data-mode here */}
+        <label
+          for={uniqueCheckboxId()}
+          class="mode-toggle-label"
+          data-mode={props.mode()} // Pass mode for CSS targeting
+        >
+          {/* Text part */}
+          <span class="mode-label-text parameter-title">
+            {props.mode() === 'ratio' ? 'Ratio' : 'Fixed'}
+          </span>
+          {/* Visual pill switch part */}
+          <div class="mode-switch-visual">
+            {/* The sliding indicator circle */}
+            <div class="mode-switch-indicator"></div>
+          </div>
+        </label>
+      </div>
       <div class={`dial ${props.isActive?.() ? 'active' : ''}`}
         style={{
           width: `${RADIUS * 2}px`,
           height: `${RADIUS * 2}px`,
-          transform: `rotate(${visualRotation()}deg)`
+          transform: `rotate(${visualRotation()}deg)` // Use signal for rotation
         }}
       >
         <div class="dial-indicator" style={{
@@ -336,16 +461,17 @@ const Dial: Component<DialProps> = (props) => {
           "transform-origin": `center ${RADIUS - INDICATOR_INSET}px`
         }}></div>
       </div>
-      {/* Consider hiding input visually and using it mainly for accessibility/form submission */}
       <input
         ref={inputElement}
-        type="text" // Or number with step? Text allows more flexible formatting display
+        type="text" // Text allows more flexible formatting (like 'k' for kHz)
         class="dial-input"
         id={props.id ? `${props.id}-input` : undefined}
-        value={formatValueForInput(props.value())} // Display formatted value based on prop
-        onBlur={handleInputChange} // Update on blur to avoid excessive updates during typing
-        onChange={handleInputChange} // Or update on change? Blur is often safer.
-        onKeyDown={(e) => { if (e.key === 'Enter') handleInputChange(e); }} // Update on Enter
+        // Use a derived signal or function for the displayed value
+        value={formatValueForDisplay(props.value())}
+        onBlur={handleInputChange}
+        onKeyDown={(e) => { if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur(); }} // Trigger blur/update on Enter
+      // Prevent direct typing from updating the core value immediately, use blur/enter
+      // Consider adding specific keydown handlers for arrow keys later if needed
       />
     </div >
   );

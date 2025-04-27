@@ -33,6 +33,7 @@ export type FilterState =
   | PitchedCombFilterState;
 export interface OperatorState {
   ratio: number;
+  fixedFrequency: number;
   modulationIndex: number;
   waveform: WaveformId;
   envelope: EnvelopeState;
