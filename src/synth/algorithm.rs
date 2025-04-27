@@ -83,11 +83,11 @@ impl Algorithm {
             .iter()
             .all(|&carrier| context.operators[carrier].finished(context))
     }
-    /// Sets the algorithm structure based on a combined matrix from the UI,
-    /// defining connections/carriers for the first `ui_op_count` operators
-    /// and clearing connections/carriers/feedback rules for all operators >= `ui_op_count`.
-    /// Matrix format: `ui_op_count x (ui_op_count + 1)`, where the last column indicates carriers.
-    /// Expects input matrix values to be 0 or 1.
+    /// Expects `combined_matrix_from_ui` where:
+    /// - `[source_index][target_index]` (for `target_index < ui_op_count`) indicates
+    ///   if Source operator modulates Target operator (value >= 1 means connected).
+    /// - `[source_index][ui_op_count]` indicates if Source operator is a carrier/output
+    ///   (value >= 1 means it is).
     pub fn set_matrix(&mut self, combined_matrix_from_ui: &[Vec<u32>]) -> Result<(), String> {
         let ui_op_count = combined_matrix_from_ui.len();
         let synth_op_count = self.matrix.len();
@@ -155,7 +155,7 @@ impl Algorithm {
         if from_operator >= self.matrix.len() || to_operator >= self.matrix.len() {
             return Err("Operator index out of bounds.".to_string());
         }
-        self.matrix[to_operator][from_operator] = Some(params);
+        self.matrix[from_operator][to_operator] = Some(params);
         self.rebuild_unrolled_graph();
         Ok(())
     }
@@ -184,7 +184,7 @@ impl Algorithm {
             return Self::default_simple(num_operators);
         }
         let mut matrix = vec![vec![None; num_operators]; num_operators];
-        matrix[0][1] = Some(ConnectionParams::default());
+        matrix[1][0] = Some(ConnectionParams::default());
         Self::new(matrix, vec![0])
     }
     pub fn default_fanout_feedback(num_operators: usize) -> Result<Self, String> {
@@ -192,9 +192,9 @@ impl Algorithm {
             return Self::default_simple(num_operators);
         }
         let mut matrix = vec![vec![None; num_operators]; num_operators];
-        matrix[0][3] = Some(ConnectionParams::default()); // Mod → A
-        matrix[1][3] = Some(ConnectionParams::default()); // Mod → B
-        matrix[1][2] = Some(ConnectionParams::default()); // Extra mod → B
+        matrix[3][0] = Some(ConnectionParams::default()); // Mod → A
+        matrix[3][1] = Some(ConnectionParams::default()); // Mod → B
+        matrix[2][1] = Some(ConnectionParams::default()); // Extra mod → B
         let mut algo = Self::new(matrix, vec![0, 1])?;
         algo.add_repeat_rule(3, 3, 1);
         Ok(algo)
@@ -204,8 +204,8 @@ impl Algorithm {
             return Self::default_simple(num_operators);
         }
         let mut matrix = vec![vec![None; num_operators]; num_operators];
-        matrix[0][2] = Some(ConnectionParams::default()); // Modulator A -> Carrier A
-        matrix[1][3] = Some(ConnectionParams::default()); // Modulator B -> Carrier B
+        matrix[2][0] = Some(ConnectionParams::default()); // Modulator A -> Carrier A
+        matrix[3][1] = Some(ConnectionParams::default()); // Modulator B -> Carrier B
         Self::new(matrix, vec![0, 1])
     }
     pub fn default_fanout(num_operators: usize) -> Result<Self, String> {
@@ -213,8 +213,8 @@ impl Algorithm {
             return Self::default_simple(num_operators);
         }
         let mut matrix = vec![vec![None; num_operators]; num_operators];
-        matrix[0][2] = Some(ConnectionParams::default());
-        matrix[1][2] = Some(ConnectionParams::default());
+        matrix[2][0] = Some(ConnectionParams::default());
+        matrix[2][1] = Some(ConnectionParams::default());
         Self::new(matrix, vec![0, 1])
     }
     pub fn stack_3_feedback(num_operators: usize) -> Result<Self, String> {
@@ -222,8 +222,8 @@ impl Algorithm {
             return Self::default_simple(num_operators);
         }
         let mut matrix = vec![vec![None; num_operators]; num_operators];
-        matrix[1][0] = Some(ConnectionParams::default()); // A → B
-        matrix[2][1] = Some(ConnectionParams::default()); // B → C
+        matrix[0][1] = Some(ConnectionParams::default()); // A → B
+        matrix[1][2] = Some(ConnectionParams::default()); // B → C
 
         let carriers = vec![2]; // Output is C
         let mut algo = Self::new(matrix, carriers)?;
@@ -344,8 +344,8 @@ impl Algorithm {
 
             if let Some(Some(conn)) = self
                 .matrix
-                .get(target_op_original_idx)
-                .and_then(|row| row.get(source_op_original_idx))
+                .get(source_op_original_idx)
+                .and_then(|row| row.get(target_op_original_idx))
             {
                 let scale = conn.scale;
                 for i in 0..buffer_size {
@@ -429,7 +429,7 @@ impl Algorithm {
         // Iterate through potential sources (columns) for the target operator (row)
         for source_idx in 0..matrix.len() {
             // Check the connection from source_idx to target_op_idx
-            if matrix[target_op_idx][source_idx].is_some() {
+            if matrix[source_idx][target_op_idx].is_some() {
                 // Recursively build the input node
                 match Self::build_node_recursive(matrix, source_idx, nodes, visited_path) {
                     Ok(Some(input_node_idx)) => {

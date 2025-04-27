@@ -4,50 +4,47 @@ import { produce } from 'solid-js/store';
 import * as SynthInputHandler from '../synthInputHandler';
 import { AlgorithmSetterArg } from '../state';
 import '../style.css';
+
 interface AlgorithmMatrixProps {
   numOperators: number;
-  // Pass the algorithm part of the store and its setter
-  algorithm: Store<number[][]>; // The reactive matrix state
-  setAlgorithmState: (valueOrUpdater: AlgorithmSetterArg) => void; // Function to update the store
+  algorithm: Store<number[][]>;
+  setAlgorithmState: (valueOrUpdater: AlgorithmSetterArg) => void;
 }
 
 const AlgorithmMatrix: Component<AlgorithmMatrixProps> = (props) => {
   const [hoverText, setHoverText] = createSignal<string>('Hover over a cell...');
-  const numOps = () => props.numOperators; // Make prop access reactive if needed later
+  const numOps = () => props.numOperators;
 
-  // --- Click Handler ---
   const handleCellClick = (event: MouseEvent) => {
     const target = event.target as HTMLElement;
     const cell = target.closest('td');
     if (!cell) return;
 
-    // Use produce for the update
     props.setAlgorithmState(produce(matrix => {
-      // 'matrix' is the draft proxy here
-
-      // --- Perform modifications on the draft proxy 'matrix' ---
       if (cell.dataset.outputOp) {
         const opIndex = parseInt(cell.dataset.outputOp) - 1;
         const outColIndex = numOps();
-        if (opIndex >= 0 && opIndex < numOps() && matrix[opIndex]) { // Add row check
-          // Toggle value in the draft
-          matrix[opIndex][outColIndex] = 1 - (matrix[opIndex][outColIndex] || 0); // Handle potential undefined
+        // Ensure row and column exist before access
+        if (opIndex >= 0 && opIndex < numOps() && matrix[opIndex] && matrix[opIndex].length > outColIndex) {
+          matrix[opIndex][outColIndex] = 1 - (matrix[opIndex][outColIndex] || 0);
+        } else {
+          console.warn(`AlgorithmMatrix: Invalid output access: row ${opIndex}, col ${outColIndex}`);
         }
       } else if (cell.dataset.modulator && cell.dataset.modulated) {
         const modulatorRowUI = parseInt(cell.dataset.modulator);
         const modulatedColUI = parseInt(cell.dataset.modulated);
-        const modulatorIndex = modulatorRowUI - 1;
-        const modulatedIndex = modulatedColUI - 1;
+        const sourceIndex = modulatorRowUI - 1;   // Modulator is the Source
+        const targetIndex = modulatedColUI - 1;   // Modulated is the Target
 
-        if (modulatorIndex >= 0 && modulatorIndex < numOps() &&
-          modulatedIndex >= 0 && modulatedIndex < numOps() &&
-          matrix[modulatedIndex]) // Add row check
-        {
-          // Toggle value in the draft
-          matrix[modulatedIndex][modulatorIndex] = 1 - (matrix[modulatedIndex][modulatorIndex] || 0); // Handle potential undefined
+        // Ensure row and column exist before access
+        if (sourceIndex >= 0 && sourceIndex < numOps() &&
+          targetIndex >= 0 && targetIndex < numOps() &&
+          matrix[sourceIndex] && matrix[sourceIndex].length > targetIndex) {
+          matrix[sourceIndex][targetIndex] = 1 - (matrix[sourceIndex][targetIndex] || 0);
+        } else {
+          console.warn(`AlgorithmMatrix: Invalid op-op access: row ${sourceIndex}, col ${targetIndex}`);
         }
       }
-      // 'produce' implicitly returns the next immutable state based on draft modifications.
     }));
 
     SynthInputHandler.setAlgorithm(unwrap(props.algorithm));
@@ -74,14 +71,14 @@ const AlgorithmMatrix: Component<AlgorithmMatrixProps> = (props) => {
   };
   const handleMouseOut = (event: MouseEvent) => {
     const matrixElement = (event.currentTarget as HTMLElement);
+    // Check if the mouse moved outside the table entirely
     if (!matrixElement.contains(event.relatedTarget as Node)) {
       setHoverText('Hover over a cell...');
     }
   };
 
 
-  // --- Rendering ---
-  const operatorIndices = () => Array.from({ length: numOps() }, (_, i) => i + 1); // 1-based for labels
+  const operatorIndices = () => Array.from({ length: numOps() }, (_, i) => i + 1);
 
   return (
     <div class="algorithm-matrix" onMouseOver={handleMouseOver} onMouseOut={handleMouseOut}>
@@ -94,38 +91,40 @@ const AlgorithmMatrix: Component<AlgorithmMatrixProps> = (props) => {
           </tr>
         </thead>
         <tbody>
-          <For each={operatorIndices()}>{(modulatorOpNum) => // Row loop (Modulator)
+          <For each={operatorIndices()}>{(modulatorOpNum) => // Row loop (Source)
             <tr>
               <th>{modulatorOpNum}</th>
-              <For each={operatorIndices()}>{(modulatedOpNum) => { // Cell loop (Modulated)
+              <For each={operatorIndices()}>{(modulatedOpNum) => { // Cell loop (Target)
                 const isFeedbackCell = modulatorOpNum === modulatedOpNum;
+                const sourceIndex = modulatorOpNum - 1;
+                const targetIndex = modulatedOpNum - 1;
                 const isActive = () => {
-                  const modIndex = modulatorOpNum - 1;
-                  const modulatedIndex = modulatedOpNum - 1;
-                  return props.algorithm[modulatedIndex]?.[modIndex] === 1;
+                  // Add bounds check for safety during render
+                  return props.algorithm[sourceIndex]?.[targetIndex] === 1;
                 };
                 return (
                   <td
                     data-modulator={modulatorOpNum}
                     data-modulated={modulatedOpNum}
                     class={isFeedbackCell ? 'feedback-cell' : ''}
-                    classList={{ active: isActive() }} // Reactive class
+                    classList={{ active: isActive() }}
                     onClick={handleCellClick}
                   >
                     <div class="connection-point"></div>
                   </td>
                 );
               }}</For>
-              {/* Output Cell */}
-              {(() => { // Use IIFE or helper for complex conditional logic
-                const opIndex = modulatorOpNum - 1; // 0-based row index
+              {(() => {
+                const opIndex = modulatorOpNum - 1; // Source row index
                 const outColIndex = numOps();
-                const isOutputActive = () => props.algorithm[opIndex]?.[outColIndex] === 1;
+                const isOutputActive = () => {
+                  return props.algorithm[opIndex]?.[outColIndex] === 1;
+                };
                 return (
                   <td
                     data-output-op={modulatorOpNum}
                     class="output-cell"
-                    classList={{ active: isOutputActive() }} // Reactive class
+                    classList={{ active: isOutputActive() }}
                     onClick={handleCellClick}
                   >
                     <div class="connection-point output-point"></div>
