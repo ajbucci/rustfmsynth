@@ -81,6 +81,11 @@ impl WasmSynth {
     }
 
     #[wasm_bindgen]
+    pub fn set_operator_fixed_frequency(&mut self, operator_index: usize, frequency: f32) {
+        self.synth
+            .set_operator_fixed_frequency(operator_index, frequency);
+    }
+    #[wasm_bindgen]
     pub fn set_operator_filter(&mut self, operator_index: usize, params_bytes: &[u8]) {
         let filter_params: FilterParams = serde_json::from_slice(params_bytes)
             .expect("PANIC: Tagged JSON deserialize FilterParams failed");

@@ -39,8 +39,8 @@ impl Default for OperatorState {
 
 pub struct Operator {
     pub waveform_generator: WaveformGenerator,
-    frequency_ratio: f32, // Ratio relative to the voice's base frequency
-    pub fixed_frequency: Option<f32>, // Optional fixed frequency in Hz
+    frequency_ratio: f32,         // Ratio relative to the voice's base frequency
+    fixed_frequency: Option<f32>, // Optional fixed frequency in Hz
     pub envelope: EnvelopeGenerator, // Operator-specific envelope (optional)
     pub modulation_index: f32,
     pub gain: f32, // Output gain of this operator
@@ -208,11 +208,21 @@ impl Operator {
     }
     pub fn set_ratio(&mut self, ratio: f32) {
         println!("Operator frequency ratio set to: {}", ratio);
+        self.fixed_frequency = None;
         if ratio < 0.0 {
             eprintln!("Frequency ratio must be non-negative. Frequency clamped to 0.0");
             self.frequency_ratio = 0.0;
         } else {
             self.frequency_ratio = ratio;
+        }
+    }
+    pub fn set_fixed_frequency(&mut self, frequency: f32) {
+        println!("Operator fixed frequency set to: {}", frequency);
+        if frequency < 0.0 {
+            eprintln!("Fixed frequency must be non-negative. Frequency clamped to 0.0");
+            self.fixed_frequency = Some(0.0);
+        } else {
+            self.fixed_frequency = Some(frequency);
         }
     }
 
