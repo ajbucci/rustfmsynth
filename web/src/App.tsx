@@ -17,6 +17,7 @@ import { MidiInputHandler } from './midiHandlers';
 import KeyboardUI from './components/KeyboardUI';
 import AlgorithmMatrix from './components/AlgorithmMatrix';
 import OperatorControl from './components/OperatorControl';
+import PatchManager from './components/PatchManager';
 
 import './style.css';
 import { createDefaultAppState } from './defaults';
@@ -167,12 +168,13 @@ const App: Component = () => {
       </div>
       <div id="synth-container">
         <div class="controls-container d-flex flex-col flex-xxl-row">
-          <div class="controls-top-row d-flex flex-col">
+          <div class="controls-top-row d-flex flex-col flex-md-row flex-xxl-col">
             <AlgorithmMatrix
               numOperators={NUM_OPERATORS}
               algorithm={appStore.algorithm}
               setAlgorithmState={(updater: AlgorithmSetterArg) => setAppStore('algorithm', updater)}
             />
+            <PatchManager />
           </div>
           <div id="operator-controls"> {/* Wrapper for layout */}
             <For each={operatorIndices()}>

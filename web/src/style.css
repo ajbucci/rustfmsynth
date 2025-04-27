@@ -101,6 +101,10 @@ button:hover {
     padding-left: 5px;
     padding-right: 5px;
 }
+.controls-top-row {
+  justify-content: space-between;
+  gap: 15px;
+}
 
 /* Style for when fine mode is active */
 #fine-mode-toggle.active {
@@ -725,6 +729,10 @@ h3 {
 @media (min-width: 1500px) {
   .flex-sm-col, .flex-md-col, .flex-lg-col, .flex-xl-col, .flex-xxl-col { flex-direction: column !important; }
   .flex-sm-row, .flex-md-row, .flex-lg-row, .flex-xl-row, .flex-xxl-row { flex-direction: row !important; }
+
+  .controls-top-row {
+    flex-direction: column !important;
+  }
 }
 /* @media (min-width: 1200px) { */
 /*   #operator-controls { */
@@ -738,3 +746,260 @@ h3 {
 /*     gap: var(--gap-lg); */
 /*   } */
 /* } */
+.patch-manager {
+  /* border: 1px solid var(--purple); /* Use purple border */
+  box-shadow: 0 0 7px 1px var(--yellow); /* Teal glow */
+  padding: 15px;
+  background-color: var(--bg); /* Darker purple background */
+  color: var(--light-text); /* Use light text */
+  border-radius: var(--border-radius); /* Use theme border radius */
+  min-width: 250px;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  gap: 15px;
+}
+
+.patch-manager h3 {
+  margin: 0;
+  text-align: center;
+  font-size: 1.7rem;
+  color: var(--yellow); /* Use yellow for titles */
+  text-shadow: 0 0 5px var(--pink); /* Pink glow */
+  font-family: "Caveat", cursive;
+}
+
+.patch-actions {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.patch-actions button,
+.save-as-new-form button {
+   /* Inherits from global button styles */
+   padding: 8px 10px;
+   margin: 0; /* Reset margin if global button style has one */
+}
+
+.patch-actions button:disabled {
+  /* Keep disabled style distinct, maybe desaturated */
+  background-image: none;
+  background-color: var(--purple);
+  box-shadow: none;
+  border: 1px solid var(--lighter-purple);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Specific overrides for Save As New confirm/cancel */
+.save-as-new-form button:first-of-type { /* Confirm */
+     /* Maybe slightly different base color? Or just rely on hover */
+     /* Example: background-image: linear-gradient(var(--deg-transition), var(--teal) 0%, var(--dark-purple) 100%); */
+}
+.save-as-new-form button:last-of-type { /* Cancel */
+     background-image: linear-gradient(var(--deg-transition), var(--pink) 0%, var(--dark-purple) 100%);
+}
+.save-as-new-form button:last-of-type:hover {
+     box-shadow: 0 0 8px 1px var(--pink); /* Ensure pink glow */
+}
+
+
+.save-as-new-form {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.save-as-new-form input[type="text"] {
+    padding: 8px;
+    border: 1px solid var(--purple); /* Purple border */
+    background-color: var(--bg); /* Deep background */
+    color: var(--light-text);
+    border-radius: var(--border-radius-sm);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    flex-grow: 1;
+}
+.save-as-new-form input[type="text"]:focus {
+    outline: none;
+    border-color: var(--yellow);
+    box-shadow: 0 0 5px var(--yellow); /* Yellow glow on focus */
+}
+
+
+.patch-list-container {
+  flex-grow: 1;
+  overflow-y: auto;
+  border: 1px solid var(--purple); /* Purple border */
+  border-radius: var(--border-radius-sm); /* Smaller radius for inner list */
+  background-color: var(--bg); /* Deep background for list area */
+}
+
+.patch-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.patch-section-header {
+  padding: 5px 0;
+  font-size: 0.9rem;
+  background-color: var(--dark-purple); /* Purple header background */
+  color: var(--teal); /* Teal header text */
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  text-shadow: 0 1px 3px var(--pink); /* Subtle pink glow */
+}
+.patch-list li:first-child.patch-section-header {
+    border-top: none;
+}
+
+
+.patch-item {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--purple); /* Purple divider */
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background-color 0.15s ease;
+  color: var(--teal-fg); /* Lighter teal for default item text */
+}
+.patch-item:last-child {
+    border-bottom: none;
+}
+
+.patch-item:hover {
+  background-color: var(--lighter-purple); /* Lighter purple on hover */
+  color: var(--light-text); /* Brighter text on hover */
+}
+
+.patch-item.selected {
+  background-color: var(--teal); /* Teal highlight */
+  color: var(--bg); /* Dark text on highlight */
+  font-weight: bold;
+}
+.patch-item.selected:hover {
+    background-color: color-mix(in srgb, var(--teal) 90%, white); /* Slightly lighter teal */
+}
+
+/* Optional visual cues for patch types */
+/* may want to use if we allow users to put custom patches under other 'tags' */
+.patch-item.patch-default .patch-name::before {
+   /* content: 'D'; */
+   /* font-weight: bold; */
+   /* color: var(--teal); */
+   /* margin-right: 6px; */
+   /* opacity: 0.7; */
+}
+.patch-item.patch-user .patch-name::before {
+   /* content: 'U'; */
+   /* font-weight: bold; */
+   /* color: var(--pink); */
+   /* margin-right: 6px; */
+   /* opacity: 0.7; */
+}
+.patch-name {
+    flex-grow: 1;
+    margin-right: 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
+.patch-item-actions {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    opacity: 0.5;
+    transition: opacity 0.2s ease;
+}
+.patch-item:hover .patch-item-actions,
+.patch-item.selected .patch-item-actions,
+.patch-item.editing .patch-item-actions {
+    opacity: 1;
+}
+
+
+.patch-item-actions button {
+    /* Use global button styling? Maybe too much. Keep simple */
+  margin: 0;
+    background: none;
+    border: none;
+    color: var(--light-text); /* Default light text */
+    cursor: pointer;
+    font-size: 0.8rem;
+    padding: 0px;
+    transition: color 0.2s ease, text-shadow 0.2s ease;
+    box-shadow: none;
+}
+/* Specific hover colors */
+.patch-item-actions button:hover {
+    color: var(--pink); /* Pink for delete hover */
+    text-shadow: 0 0 5px var(--pink);
+}
+.patch-item-actions .edit-btn:hover {
+    color: var(--yellow); /* Yellow for edit hover */
+    text-shadow: 0 0 5px var(--yellow);
+}
+
+/* Adjust colors when row is selected */
+.patch-item.selected .patch-item-actions button {
+    color: var(--bg); /* Dark buttons on selected background */
+    text-shadow: none;
+}
+.patch-item.selected .patch-item-actions button:hover {
+    color: var(--pink); /* Pink delete hover on selected */
+}
+.patch-item.selected .patch-item-actions .edit-btn:hover {
+     color: var(--purple); /* Dark purple edit hover on selected */
+}
+
+
+.edit-name-container {
+    display: flex;
+    width: 100%;
+    gap: 5px;
+    align-items: center;
+}
+.edit-name-container input[type="text"] {
+    flex-grow: 1;
+    padding: 4px 6px;
+    border: 1px solid var(--teal); /* Highlight border */
+    background-color: var(--dark-purple); /* Darker input background */
+    color: var(--light-text);
+    border-radius: var(--border-radius-sm);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.edit-name-container input[type="text"]:focus {
+     outline: none;
+     border-color: var(--yellow);
+     box-shadow: 0 0 5px var(--yellow); /* Yellow glow on focus */
+}
+
+
+.error {
+    color: var(--pink); /* Use pink for errors */
+    padding: 8px 12px;
+    font-weight: bold;
+}
+
+/* Scrollbar styling using theme colors */
+.patch-list-container::-webkit-scrollbar {
+  width: 8px;
+}
+.patch-list-container::-webkit-scrollbar-track {
+  background: var(--bg); /* Deep background track */
+  border-radius: var(--border-radius-sm);
+}
+.patch-list-container::-webkit-scrollbar-thumb {
+  background-color: var(--purple); /* Purple thumb */
+  border-radius: var(--border-radius-sm);
+  border: 2px solid var(--bg); /* Match track background */
+}
+.patch-list-container::-webkit-scrollbar-thumb:hover {
+  background-color: var(--lighter-purple); /* Lighter purple on hover */
+}

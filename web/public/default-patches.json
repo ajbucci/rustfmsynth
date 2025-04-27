@@ -1,0 +1,234 @@
+[
+  {
+    "section": "Pads",
+    "name": "Warm Pad",
+    "state": {
+      "algorithm": [
+        [0, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0]
+      ],
+      "operators": [
+        {
+          "ratio": 1.0,
+          "modulationIndex": 0.8,
+          "waveform": 0,
+          "envelope": { "attack": 0.8, "decay": 1.5, "sustain": 0.7, "release": 2.5 },
+          "filters": []
+        },
+        {
+          "ratio": 0.5,
+          "modulationIndex": 2.5,
+          "waveform": 0,
+          "envelope": { "attack": 1.2, "decay": 1.0, "sustain": 0.8, "release": 2.0 },
+          "filters": []
+        },
+        {
+          "ratio": 1.0,
+          "modulationIndex": 0.0,
+          "waveform": 0,
+          "envelope": { "attack": 0.01, "decay": 0.1, "sustain": 0.0, "release": 0.1 },
+          "filters": []
+        },
+        {
+          "ratio": 1.0,
+          "modulationIndex": 0.0,
+          "waveform": 0,
+          "envelope": { "attack": 0.01, "decay": 0.1, "sustain": 0.0, "release": 0.1 },
+          "filters": []
+        },
+        {
+          "ratio": 1.0,
+          "modulationIndex": 0.0,
+          "waveform": 0,
+          "envelope": { "attack": 0.01, "decay": 0.1, "sustain": 0.0, "release": 0.1 },
+          "filters": []
+        },
+        {
+          "ratio": 1.0,
+          "modulationIndex": 0.0,
+          "waveform": 0,
+          "envelope": { "attack": 0.01, "decay": 0.1, "sustain": 0.0, "release": 0.1 },
+          "filters": []
+        }
+      ]
+    }
+  },
+  {
+    "section": "Leads",
+    "name": "Bright Lead",
+    "state": {
+      "algorithm": [
+        [0, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0]
+      ],
+      "operators": [
+        {
+          "ratio": 1.0,
+          "modulationIndex": 1.0,
+          "waveform": 0,
+          "envelope": { "attack": 0.02, "decay": 0.1, "sustain": 0.9, "release": 0.4 },
+          "filters": [{"type": "LowPass", "params": {"cutoff": 5000, "q": 1.5}}]
+        },
+        {
+          "ratio": 2.0,
+          "modulationIndex": 5.0,
+          "waveform": 3,
+          "envelope": { "attack": 0.01, "decay": 0.2, "sustain": 0.1, "release": 0.3 },
+          "filters": []
+        },
+        {
+          "ratio": 1.0,
+          "modulationIndex": 0.0,
+          "waveform": 0,
+          "envelope": { "attack": 0.01, "decay": 0.1, "sustain": 0.0, "release": 0.1 },
+          "filters": []
+        },
+        {
+          "ratio": 1.0,
+          "modulationIndex": 0.0,
+          "waveform": 0,
+          "envelope": { "attack": 0.01, "decay": 0.1, "sustain": 0.0, "release": 0.1 },
+          "filters": []
+        },
+        {
+          "ratio": 1.0,
+          "modulationIndex": 0.0,
+          "waveform": 0,
+          "envelope": { "attack": 0.01, "decay": 0.1, "sustain": 0.0, "release": 0.1 },
+          "filters": []
+        },
+        {
+          "ratio": 1.0,
+          "modulationIndex": 0.0,
+          "waveform": 0,
+          "envelope": { "attack": 0.01, "decay": 0.1, "sustain": 0.0, "release": 0.1 },
+          "filters": []
+        }
+      ]
+    }
+  },
+  {
+    "section": "Keys",
+    "name": "Classic E-Piano",
+    "state": {
+      "algorithm": [
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 1],
+        [0, 1, 0, 0, 0, 0, 0],
+        [0, 0, 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0]
+      ],
+      "operators": [
+        {
+          "ratio": 1.0,
+          "modulationIndex": 0.0,
+          "waveform": 0,
+          "envelope": { "attack": 0.01, "decay": 0.1, "sustain": 0.0, "release": 0.1 },
+          "filters": []
+        },
+        {
+          "ratio": 1.0,
+          "modulationIndex": 0.85,
+          "waveform": 0,
+          "envelope": { "attack": 0.005, "decay": 0.7, "sustain": 0.0, "release": 0.5 },
+          "filters": []
+        },
+        {
+          "ratio": 1.0,
+          "modulationIndex": 1.2,
+          "waveform": 0,
+          "envelope": { "attack": 0.002, "decay": 0.4, "sustain": 0.0, "release": 0.3 },
+          "filters": []
+        },
+        {
+          "ratio": 5.1,
+          "modulationIndex": 0.22,
+          "waveform": 0,
+          "envelope": { "attack": 0.001, "decay": 0.2, "sustain": 0.0, "release": 0.2 },
+          "filters": []
+        },
+        {
+          "ratio": 1.0,
+          "modulationIndex": 0.0,
+          "waveform": 0,
+          "envelope": { "attack": 0.01, "decay": 0.1, "sustain": 0.0, "release": 0.1 },
+          "filters": []
+        },
+        {
+          "ratio": 1.0,
+          "modulationIndex": 0.0,
+          "waveform": 0,
+          "envelope": { "attack": 0.01, "decay": 0.1, "sustain": 0.0, "release": 0.1 },
+          "filters": []
+        }
+      ]
+    }
+  },
+    {
+    "section": "Bass",
+    "name": "Simple FM Bass",
+    "state": {
+      "algorithm": [
+        [0, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0]
+      ],
+      "operators": [
+        {
+          "ratio": 0.5,
+          "modulationIndex": 1.0,
+          "waveform": 0,
+          "envelope": { "attack": 0.01, "decay": 0.3, "sustain": 0.05, "release": 0.2 },
+          "filters": []
+        },
+        {
+          "ratio": 1.0,
+          "modulationIndex": 1.5,
+          "waveform": 0,
+          "envelope": { "attack": 0.005, "decay": 0.2, "sustain": 0.0, "release": 0.15 },
+          "filters": []
+        },
+        {
+          "ratio": 1.0,
+          "modulationIndex": 0.0,
+          "waveform": 0,
+          "envelope": { "attack": 0.01, "decay": 0.1, "sustain": 0.0, "release": 0.1 },
+          "filters": []
+        },
+        {
+          "ratio": 1.0,
+          "modulationIndex": 0.0,
+          "waveform": 0,
+          "envelope": { "attack": 0.01, "decay": 0.1, "sustain": 0.0, "release": 0.1 },
+          "filters": []
+        },
+        {
+          "ratio": 1.0,
+          "modulationIndex": 0.0,
+          "waveform": 0,
+          "envelope": { "attack": 0.01, "decay": 0.1, "sustain": 0.0, "release": 0.1 },
+          "filters": []
+        },
+        {
+          "ratio": 1.0,
+          "modulationIndex": 0.0,
+          "waveform": 0,
+          "envelope": { "attack": 0.01, "decay": 0.1, "sustain": 0.0, "release": 0.1 },
+          "filters": []
+        }
+      ]
+    }
+  }
+]
