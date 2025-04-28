@@ -81,7 +81,10 @@ export function setOperatorModIndex(operatorIndex: number, modIndex: number): vo
     return;
   }
   try {
-    processorPort.postMessage({ type: 'set_operator_modulation_index', operatorIndex, modIndex });
+    // lets try scaling modIndex to make the knob more musical
+    let modScaler = 2.0;
+    let modScaled = 10.0 * Math.pow(modIndex / 10.0, modScaler);
+    processorPort.postMessage({ type: 'set_operator_modulation_index', operatorIndex, modIndex: modScaled });
   } catch (e) {
     console.error("SynthInputHandler: Error setting modulation index:", e);
   }
