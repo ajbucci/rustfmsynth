@@ -323,6 +323,7 @@ const PatchManager: Component = () => {
             value={newPatchName()}
             onInput={(e) => setNewPatchName(e.currentTarget.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSaveAsNew()}
+            data-ignore-synth="true"
           />
           <button onClick={handleSaveAsNew}>Confirm</button>
           <button onClick={() => setIsSavingAsNew(false)}>Cancel</button>
@@ -367,6 +368,7 @@ const PatchManager: Component = () => {
                             onKeyDown={(e) => handleEditKeyDown(patch, e)}
                             onClick={e => e.stopPropagation()} // Prevent li click handler
                             onBlur={() => handleConfirmEditName(patch)} // Save on blur
+                            data-ignore-synth="true"
                           />
                           {/* <button class="edit-confirm-btn" onClick={(e) => handleConfirmEditName(patch, e)} title="Confirm rename">✓</button>
                             <button class="edit-cancel-btn" onClick={handleCancelEditName} title="Cancel rename">✕</button> */}

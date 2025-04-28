@@ -99,6 +99,11 @@ const KeyboardUI: Component<KeyboardUIProps> = (props) => {
   };
   const handlePhysicalKeyDown = (event: KeyboardEvent): void => {
     if (event.repeat) return;
+    const target = event.target as HTMLElement;
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') && target.hasAttribute('data-ignore-synth')) {
+      // If it's an input/textarea we want to ignore, do nothing further with synth logic
+      return;
+    }
     const keyCode = event.code;
     const keyData = layoutData().keys.find(k => k.keyCode === keyCode);
     const velocity = 100;
