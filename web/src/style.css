@@ -102,7 +102,7 @@ button:hover {
     padding-right: 5px;
 }
 .controls-top-row {
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 15px;
 }
 
@@ -589,6 +589,9 @@ button:hover {
 
 /* --- Hover Info Box Styling --- */
 .matrix-info-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     padding: 0.5em;
     font-size: 0.9em;
     /* color: #eee; */
@@ -654,6 +657,8 @@ button:hover {
 h3 {
   color: var(--yellow);
   text-shadow: 0 0 1px var(--yellow), 0 0 5px var(--pink); /* Yellow glow */
+  margin-top: 10px;
+  margin-bottom: 5px;
 }
 @property --thumb-transition {
   syntax: "<color>";
@@ -756,6 +761,7 @@ h3 {
   color: var(--light-text); /* Use light text */
   border-radius: var(--border-radius); /* Use theme border radius */
   min-width: 250px;
+  max-height: 450px;
   display: flex;
   flex-direction: column;
   flex-grow: 1;
@@ -765,7 +771,7 @@ h3 {
 .patch-manager h3 {
   margin: 0;
   text-align: center;
-  font-size: 1.7rem;
+  font-size: 1.85rem;
   color: var(--yellow); /* Use yellow for titles */
   text-shadow: 0 0 5px var(--pink); /* Pink glow */
   font-family: "Caveat", cursive;
