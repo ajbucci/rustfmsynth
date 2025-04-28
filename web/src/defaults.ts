@@ -2,10 +2,10 @@ import { AppState, EnvelopeState, OperatorState } from './state';
 import { NUM_OPERATORS } from './config';
 
 export const DEFAULT_ENVELOPE_STATE: EnvelopeState = {
-  attack: 0.01,
-  decay: 0.1,
-  sustain: 0.8,
-  release: 0.5,
+  attack: 0.001,
+  decay: 1.0,
+  sustain: 0.6,
+  release: 0.1,
 };
 
 
