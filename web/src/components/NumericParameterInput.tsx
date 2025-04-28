@@ -84,7 +84,51 @@ const NumericParameterInput: Component<NumericParameterInputProps> = (props) => 
       props.onCommit(clampedFinalValue);
     }
   };
+  const handleWheel = (event: WheelEvent) => {
+    // Ignore if disabled or no valid step is provided
+    if (props.disabled?.() || props.step === undefined || props.step <= 0 || event.target !== document.activeElement) {
+      return;
+    }
 
+    // Prevent the default page scrolling behavior
+    event.preventDefault();
+
+    const currentValue = props.numericValue() ?? props.min;
+    const step = props.step; // Safe to use now
+
+    let change = 0;
+    if (event.deltaY < 0) { // Wheel scroll up
+      change = step;
+    } else if (event.deltaY > 0) { // Wheel scroll down
+      change = -step;
+    } else {
+      return; // No vertical scroll detected
+    }
+
+    // Calculate the potential new value
+    // Handle potential floating point inaccuracies by rounding based on step's precision
+    const stepString = String(step);
+    const decimalPlaces = stepString.includes('.') ? stepString.split('.')[1].length : 0;
+    const multiplier = Math.pow(10, decimalPlaces);
+    const newValue = (Math.round(currentValue * multiplier) + Math.round(change * multiplier)) / multiplier;
+
+
+    // Clamp the new value
+    const clampedNewValue = clampValue(newValue, props.min, props.max);
+
+    // Commit the change if the value actually changed
+    if (!numbersAreEqual(clampedNewValue, currentValue)) {
+      // console.log(`Committing Wheel: ${clampedNewValue}`);
+      props.onCommit(clampedNewValue);
+
+      // If the input is currently focused, update its display value immediately
+      // Otherwise, the createEffect will handle it when the prop updates
+      if (isFocused()) {
+        const formattedNewValue = formatNumberToMinDecimals(clampedNewValue, displayMinDecimalPlaces());
+        setInputValue(formattedNewValue);
+      }
+    }
+  };
   return (
     <div class={`param param-${props.id}`}>
       <label for={props.id}>
@@ -100,6 +144,7 @@ const NumericParameterInput: Component<NumericParameterInputProps> = (props) => 
         onInput={handleInput}
         onBlur={handleBlur}
         onFocus={handleFocus}
+        onWheel={handleWheel}
         autocomplete="off"
         disabled={props.disabled ? props.disabled() : false}
         class="number-input"

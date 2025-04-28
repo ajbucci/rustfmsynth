@@ -1033,6 +1033,10 @@ h3 {
   text-align: right;
 }
 
+.number-input:focus{
+  cursor: ns-resize;
+}
+
 /* Container for the visual pill switch */
 .mode-switch-visual {
   margin-left: 8px;

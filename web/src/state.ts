@@ -87,10 +87,10 @@ export type EnvelopeParamInfo = {
 };
 export const envelopeParamsInfo: ReadonlyArray<EnvelopeParamInfo> = [
   // Each object matches the EnvelopeParamInfo structure:
-  { key: 'attack', label: 'Attack:', min: 0, max: 10, step: .001, minDecimals: 2, },
-  { key: 'decay', label: 'Decay:', min: 0, max: 10, step: .001, minDecimals: 2, },
-  { key: 'sustain', label: 'Sustain:', min: 0, max: 1, step: .001, minDecimals: 2, },
-  { key: 'release', label: 'Release:', min: 0, max: 10, step: .001, minDecimals: 2, },
+  { key: 'attack', label: 'Attack:', min: 0, max: 10, step: .01, minDecimals: 2, },
+  { key: 'decay', label: 'Decay:', min: 0, max: 10, step: .01, minDecimals: 2, },
+  { key: 'sustain', label: 'Sustain:', min: 0, max: 1, step: .01, minDecimals: 2, },
+  { key: 'release', label: 'Release:', min: 0, max: 10, step: .01, minDecimals: 2, },
 ] as const;
 
 export type FilterParamInfo = {
