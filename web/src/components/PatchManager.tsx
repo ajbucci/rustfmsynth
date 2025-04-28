@@ -146,7 +146,11 @@ const PatchManager: Component = () => {
 
   const handleSelectPatch = (patch: Patch) => {
     batch(() => {
-      setAppStore(unwrap(patch.state)); // Load the state
+      // NOTE: was previously using unwrap(patch.state) here,
+      // but it was causing edits to be saved into the patch,
+      // so now using a deep clone
+      const stateToLoad = JSON.parse(JSON.stringify(patch.state));
+      setAppStore(stateToLoad); // Load the deep-cloned state
       setSelectedPatchId(patch.id);
       setIsSavingAsNew(false); // Close save as new if open
       setEditName(null); // Close name editing if open
