@@ -24,7 +24,7 @@ const RATIO_COARSE_VALUES = RATIO_COARSE_STRINGS.map(v => {
 });
 const RATIO_MIN = RATIO_COARSE_VALUES[0];
 const RATIO_MAX = RATIO_COARSE_VALUES[RATIO_COARSE_VALUES.length - 1];
-const FIXED_FREQ_MIN = 0.0;
+const FIXED_FREQ_MIN = 0.0001;
 const FIXED_FREQ_MAX = 20000.0; // Example
 const DEFAULT_FIXED_FREQ_ON_SWITCH = 440.0; // Default value when switching to fixed frequency mode
 

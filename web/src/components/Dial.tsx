@@ -431,6 +431,13 @@ const Dial: Component<DialProps> = (props) => {
           for={uniqueCheckboxId()}
           class="mode-toggle-label"
           data-mode={props.mode()} // Pass mode for CSS targeting
+          onClick={(e) => {
+            const checkbox = document.getElementById(uniqueCheckboxId()) as HTMLInputElement | null;
+            if (checkbox) {
+              checkbox.click();
+              e.preventDefault();
+            }
+          }}
         >
           {/* Text part */}
           <span class="mode-label-text parameter-title">
