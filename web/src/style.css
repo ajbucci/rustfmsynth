@@ -198,6 +198,7 @@ button:hover {
 }
 .dial {
   border-radius: 50%;
+  margin: 5px 0;
   /* background: #444; */
   background: var(--purple); /* Purple dial base */
   background-image: repeating-radial-gradient(rgba(0,0,0,0.0) 2px, rgba(0,0,0,0.1) 5px, rgba(0,0,0,0.2) 1px,rgba(0,0,0,0.1) 5px);
@@ -623,6 +624,7 @@ button:hover {
 .crossfader-track-container {
   display:flex;
   width: 60px;
+  margin-bottom: 5px;
   flex-direction:column;
   align-items:center;
   /* background: repeating-linear-gradient(
@@ -646,7 +648,7 @@ button:hover {
   height: 100px;
   width: 12px;
   /* background: linear-gradient(90deg, black, #111, black); */
-  background: linear-gradient(90deg, var(--bg), var(--purple), var(--bg)); /* Theme gradient */
+  background: linear-gradient(90deg, var(--purple), var(--bg), var(--purple)); /* Theme gradient */
   cursor: pointer;
 }
 h3 {

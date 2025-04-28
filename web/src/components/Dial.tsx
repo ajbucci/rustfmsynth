@@ -247,14 +247,6 @@ const Dial: Component<DialProps> = (props) => {
     return angleRad * (180 / Math.PI);
   };
 
-  const handleModeToggle = () => {
-    const currentMode = props.mode();
-    const nextMode = currentMode === 'ratio' ? 'fixedFrequency' : 'ratio';
-    props.onModeChange(nextMode); // Call the callback passed by the parent
-    // Optional: Focus input after mode switch for quicker editing
-    inputElement?.focus();
-    inputElement?.select();
-  };
   const handleModeCheckboxChange = (event: Event) => {
     const checkbox = event.currentTarget as HTMLInputElement;
     const isChecked = checkbox.checked; // Checkbox 'checked' means 'fixedFrequency' mode
@@ -395,24 +387,6 @@ const Dial: Component<DialProps> = (props) => {
       aria-label={props.label || 'Dial Control'}
       aria-valuetext={formatValueForDisplay(props.value())} // Provide human-readable value text
       title={tooltipText()}
-      onMouseDown={(e) => {
-        // Prevent starting drag if click is on the toggle button itself
-        if ((e.target as HTMLElement)?.closest('.mode-toggle-switch')) {
-          return;
-        }
-        handleInteractionStart(e.clientX, e.clientY);
-      }}
-      on:touchstart={{
-        passive: false,
-        handleEvent: (event: TouchEvent) => {
-          // Prevent starting drag if touch is on the toggle button itself
-          if ((event.target as HTMLElement)?.closest('.mode-toggle-switch')) {
-            return;
-          }
-          event.preventDefault();
-          handleInteractionStart(event.touches[0].clientX, event.touches[0].clientY);
-        }
-      }}
       style={{
         cursor: isDragging() ? (props.isFineModeActive() ? 'cell' : 'grabbing') : 'grab'
       }}
@@ -451,6 +425,16 @@ const Dial: Component<DialProps> = (props) => {
         </label>
       </div>
       <div class={`dial ${props.isActive?.() ? 'active' : ''}`}
+        onMouseDown={(e) => {
+          handleInteractionStart(e.clientX, e.clientY);
+        }}
+        on:touchstart={{
+          passive: false,
+          handleEvent: (event: TouchEvent) => {
+            event.preventDefault();
+            handleInteractionStart(event.touches[0].clientX, event.touches[0].clientY);
+          }
+        }}
         style={{
           width: `${RADIUS * 2}px`,
           height: `${RADIUS * 2}px`,
