@@ -70,7 +70,7 @@ body {
   inherits: false;
   initial-value: 145deg;
 }
-button {
+button, .button {
   margin: 10px;
   padding: 10px;
   /* color: aliceblue; */
@@ -83,7 +83,7 @@ button {
   border-radius: var(--border-radius-sm);
   transition: --deg-transition 2s ease, box-shadow 0.3s ease; /* Smooth transition */
 }
-button:hover {
+button:hover, .button:hover{
   /* background-color: #555; */
   /* background-image: linear-gradient(var(--deg-end), var(--lighter-purple) 0%, var(--dark-purple) 100%); /* Purple buttons */
   --deg-transition: -145deg;
@@ -502,11 +502,9 @@ hr {
 
 /* --- Algorithm Matrix Styling --- */
 .algorithm-matrix {
-  display: grid;
-  grid-template-columns: min-content;
   margin-left: auto;
   margin-right: auto;
-  justify-content: center;
+  margin-top: auto;
   box-shadow: 0 0 7px 1px var(--teal);
   border-radius: var(--border-radius);
 }
@@ -809,6 +807,9 @@ h3 {
   .controls-top-row {
     flex-direction: column !important;
   }
+  .algorithm-matrix {
+    margin-top: 0;
+  }
 }
 /* @media (min-width: 1200px) { */
 /*   #operator-controls { */
@@ -848,14 +849,17 @@ h3 {
 
 .patch-actions {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
 .patch-actions button,
-.save-as-new-form button {
+.save-as-new-form button,
+.patch-actions .button {
    /* Inherits from global button styles */
    padding: 8px 10px;
+   font-size: 0.85rem;
    margin: 0; /* Reset margin if global button style has one */
 }
 

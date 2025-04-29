@@ -55,6 +55,17 @@ const saveUserPatches = (patches: Patch[]) => {
   }
 };
 
+const exportPatch = () => {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(appStore, null, 2)], {
+    type: "text/plain"
+  }));
+  a.setAttribute("download", "rustfmsynth_patch.json");
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
 // --- Component ---
 
 const PatchManager: Component = () => {
@@ -302,7 +313,29 @@ const PatchManager: Component = () => {
     alert("Synth reset to initial default state.");
   };
 
+  const handleImportPatch = (e: Event) => {
+    const target = e.target as HTMLInputElement;
+    const file = target.files?.[0];
+    if (!file) return;
 
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const result = event.target?.result;
+        if (typeof result === 'string') {
+          const parsed = JSON.parse(result);
+          setAppStore(parsed);
+          setSelectedPatchId(null); // De-select any patch
+          SynthInputHandler.setSynthState(unwrap(parsed)); // Update synth state
+        } else {
+          console.error('Unexpected file reader result type');
+        }
+      } catch (err) {
+        console.error('Invalid JSON', err);
+      }
+    };
+    reader.readAsText(file);
+  };
   // --- Render ---
   return (
     <div class="patch-manager">
@@ -400,6 +433,15 @@ const PatchManager: Component = () => {
             <li>No patches found.</li>
           </Show>
         </ul>
+      </div>
+      <div class="patch-actions">
+        <input type="file" id="file-input" accept=".json" style={{ display: "none" }} onChange={handleImportPatch} />
+        <label for="file-input" class="button">
+          Import...
+        </label>
+        <button onClick={exportPatch}>
+          Export...
+        </button>
       </div>
     </div>
   );
