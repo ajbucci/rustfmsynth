@@ -993,7 +993,7 @@ h3 {
 
 .patch-item-actions {
     display: flex;
-    gap: 5px;
+    gap: 10px;
     align-items: center;
     opacity: 0.5;
     transition: opacity 0.2s ease;
@@ -1003,19 +1003,25 @@ h3 {
 .patch-item.editing .patch-item-actions {
     opacity: 1;
 }
+.patch-item {
+  display:flex;
+  align-items:center;
+}
 
 
 .patch-item-actions button {
-    /* Use global button styling? Maybe too much. Keep simple */
+  /* Use global button styling? Maybe too much. Keep simple */
+  display: flex;
+  align-items: center;
   margin: 0;
-    background: none;
-    border: none;
-    color: var(--light-text); /* Default light text */
-    cursor: pointer;
-    font-size: 0.8rem;
-    padding: 0px;
-    transition: color 0.2s ease, text-shadow 0.2s ease;
-    box-shadow: none;
+  background: none;
+  border: none;
+  color: var(--light-text); /* Default light text */
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0px;
+  transition: color 0.2s ease, text-shadow 0.2s ease;
+  box-shadow: none;
 }
 /* Specific hover colors */
 .patch-item-actions button:hover {
