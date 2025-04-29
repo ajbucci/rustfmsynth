@@ -4,7 +4,7 @@ import { AppState } from '../state'; // Adjust path as needed
 import { appStore, setAppStore } from '../App'; // Adjust path as needed
 import { createDefaultAppState } from '../defaults'; // Adjust path as needed
 import * as SynthInputHandler from '../synthInputHandler'; // Adjust path as needed
-
+import { deserializeState, serializeState } from '../urlState';
 // --- Interfaces ---
 
 interface PatchDefinition {
@@ -77,6 +77,7 @@ const PatchManager: Component = () => {
   const [newPatchName, setNewPatchName] = createSignal("");
   const [editName, setEditName] = createSignal<string | null>(null); // Track which user patch name is being edited
   const [editingValue, setEditingValue] = createSignal(""); // Temporary value during edit
+  const [copied, setCopied] = createSignal(false);
 
   // --- Resources ---
   const [defaultPatchesResource] = createResource<Patch[], string>(
@@ -336,6 +337,18 @@ const PatchManager: Component = () => {
     };
     reader.readAsText(file);
   };
+  const handleShareUrl = async () => {
+    try {
+      const encoded = serializeState(appStore);
+      const url = `${window.location.origin}${window.location.pathname}#${encoded}`;
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000); // Reset copied state after 2 seconds
+      console.log('Share URL copied!');
+    } catch (err) {
+      console.error('Failed to copy share URL', err);
+    }
+  };
   // --- Render ---
   return (
     <div class="patch-manager">
@@ -441,6 +454,9 @@ const PatchManager: Component = () => {
         </label>
         <button onClick={exportPatch}>
           Export...
+        </button>
+        <button onClick={handleShareUrl}>
+          {copied() ? "Copied!" : "Share URL"}
         </button>
       </div>
     </div>

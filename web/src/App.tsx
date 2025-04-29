@@ -21,14 +21,14 @@ import PatchManager from './components/PatchManager';
 
 import './style.css';
 import { createDefaultAppState } from './defaults';
-import { createUrlStatePersistence } from './urlState';
+import { deserializeState } from './urlState';
 
-export const [appStore, _setAppStoreOriginal] = createStore<AppState>(createDefaultAppState());
-export const setAppStore = createUrlStatePersistence(
-  appStore,
-  _setAppStoreOriginal as SetStoreFunction<AppState>, // Pass original setter
-  { debounceMs: 500 }
-);
+export const [appStore, setAppStore] = createStore<AppState>(createDefaultAppState());
+// export const setAppStore = createUrlStatePersistence(
+//   appStore,
+//   _setAppStoreOriginal as SetStoreFunction<AppState>, // Pass original setter
+//   { debounceMs: 500 }
+// );
 
 const [isFineModeActive, setIsFineModeActive] = createSignal(false);
 // Main App Component
@@ -155,6 +155,18 @@ const App: Component = () => {
     if (!ready) {
       console.log("App: Skipping synth update, synth not ready.");
       return; // Don't send update yet
+    }
+    const hash = window.location.hash.slice(1);
+    if (hash) {
+      try {
+        const decoded = deserializeState(hash);
+        if (decoded) {
+          setAppStore(decoded);
+          history.replaceState(null, '', window.location.pathname);
+        }
+      } catch (err) {
+        console.error('Failed to parse URL state', err);
+      }
     }
     SynthInputHandler.setSynthState(unwrap(appStore));
   });
