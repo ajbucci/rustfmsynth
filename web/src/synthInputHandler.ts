@@ -75,6 +75,17 @@ export function setOperatorFixedFrequency(operatorIndex: number, frequency: numb
     console.error("SynthInputHandler: Error setting fixed frequency:", e);
   }
 }
+export function setOperatorDetune(operatorIndex: number, detune: number): void {
+  if (!processorPort) {
+    console.warn("SynthInputHandler: Port not connected, cannot set detune.");
+    return;
+  }
+  try {
+    processorPort.postMessage({ type: 'set_operator_detune', operatorIndex, detune });
+  } catch (e) {
+    console.error("SynthInputHandler: Error setting fixed frequency:", e);
+  }
+}
 export function setOperatorModIndex(operatorIndex: number, modIndex: number): void {
   if (!processorPort) {
     console.warn("SynthInputHandler: Port not connected, cannot set modulation index.");

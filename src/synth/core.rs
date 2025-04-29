@@ -83,6 +83,13 @@ impl Synth {
             eprintln!("Operator index out of bounds");
         }
     }
+    pub fn set_operator_detune(&mut self, op_index: usize, detune: f32) {
+        if op_index < self.operators.len() {
+            self.operators[op_index].set_detune(detune);
+        } else {
+            eprintln!("Operator index out of bounds");
+        }
+    }
     pub fn set_operator_modulation_index(&mut self, op_index: usize, modulation_index: f32) {
         if op_index < self.operators.len() {
             self.operators[op_index].set_modulation_index(modulation_index);

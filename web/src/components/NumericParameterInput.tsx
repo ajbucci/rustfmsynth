@@ -5,10 +5,12 @@ const DEFAULT_MIN_DECIMAL_PLACES = 0;
 interface NumericParameterInputProps {
   label: string;
   id: string;
+  category?: string;
   numericValue: Accessor<number>; // The source of truth from the parent
   onCommit: (newValue: number) => void;
   min: number;
   max: number;
+  default?: number;
   step?: number;
   unit?: string;
   minDecimalPlaces?: number;
@@ -30,8 +32,9 @@ const NumericParameterInput: Component<NumericParameterInputProps> = (props) => 
     // This effect *only* syncs the input display when it's NOT focused.
     const focused = untrack(isFocused);
 
+    const propNumValue = props.numericValue() ?? props.default ?? props.min;
+
     if (!focused) {
-      const propNumValue = props.numericValue() ?? props.min;
       const formattedPropStringValue = formatNumberToMinDecimals(propNumValue, displayMinDecimalPlaces());
       const currentInputString = untrack(inputValue);
 
@@ -54,7 +57,7 @@ const NumericParameterInput: Component<NumericParameterInputProps> = (props) => 
       const numericValue = parseFloat(currentString);
       if (!isNaN(numericValue)) {
         const valueToCommit = clampValue(numericValue, props.min, props.max);
-        const currentPropValue = props.numericValue() ?? props.min;
+        const currentPropValue = props.numericValue() ?? props.default ?? props.min;
 
         if (!numbersAreEqual(valueToCommit, currentPropValue)) {
           // console.log(`Committing: ${valueToCommit} (from input ${currentString})`);
@@ -70,14 +73,15 @@ const NumericParameterInput: Component<NumericParameterInputProps> = (props) => 
 
   const handleBlur = () => {
     setIsFocused(false);
+    // console.log('Blur: Committing value');
     // On blur, always format the definitive prop value using the helper.
-    const finalNumericValue = props.numericValue() ?? props.min;
+    const finalNumericValue = props.numericValue() ?? props.default ?? props.min;
     const finalFormattedStringValue = formatNumberToMinDecimals(finalNumericValue, displayMinDecimalPlaces());
     // console.log(`Blur: Setting input to ${finalFormattedStringValue}`);
     setInputValue(finalFormattedStringValue);
 
     // Optional: Re-commit clamped value on blur if needed
-    const currentPropValue = props.numericValue() ?? props.min;
+    const currentPropValue = props.numericValue() ?? props.default ?? props.min;
     const clampedFinalValue = clampValue(finalNumericValue, props.min, props.max);
     if (!numbersAreEqual(clampedFinalValue, currentPropValue)) {
       // console.log(`Blur commit: ${clampedFinalValue}`);
@@ -93,7 +97,7 @@ const NumericParameterInput: Component<NumericParameterInputProps> = (props) => 
     // Prevent the default page scrolling behavior
     event.preventDefault();
 
-    const currentValue = props.numericValue() ?? props.min;
+    const currentValue = props.numericValue() ?? props.default ?? props.min;
     const step = props.step; // Safe to use now
 
     let change = 0;
@@ -130,7 +134,7 @@ const NumericParameterInput: Component<NumericParameterInputProps> = (props) => 
     }
   };
   return (
-    <div class={`param param-${props.id}`}>
+    <div class={`param param-${props.id} ${props.category ? 'param-' + props.category : ''}`}>
       <label for={props.id}>
         {props.label}{" "}
         {props.unit && `(${props.unit})`}

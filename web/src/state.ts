@@ -34,6 +34,7 @@ export type FilterState =
 export interface OperatorState {
   ratio: number;
   fixedFrequency: number;
+  detune: number;
   modulationIndex: number;
   waveform: WaveformId;
   envelope: EnvelopeState;

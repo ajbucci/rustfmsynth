@@ -36,6 +36,7 @@ const OperatorControl: Component<OperatorControlProps> = (props) => {
   // --- Create local accessors/handlers using IMPORTED store/setter ---
   const ratioValue = () => appStore.operators[props.operatorIndex]?.ratio; // Read imported store
   const fixedFreqValue = () => appStore.operators[props.operatorIndex]?.fixedFrequency; // Read imported store
+  const detuneValue = () => appStore.operators[props.operatorIndex]?.detune; // Read imported store
   const modIndexValue = () => appStore.operators[props.operatorIndex]?.modulationIndex;
   const waveformValue = () => appStore.operators[props.operatorIndex]?.waveform;
   const envelopeValue = () => appStore.operators[props.operatorIndex]?.envelope;
@@ -65,6 +66,10 @@ const OperatorControl: Component<OperatorControlProps> = (props) => {
   const handleFixedFreqChange = (newValue: number) => {
     SynthInputHandler.setOperatorFixedFrequency(props.operatorIndex, newValue); // Call synth handler
     setAppStore('operators', props.operatorIndex, 'fixedFrequency', newValue);
+  };
+  const handleDetuneChange = (newValue: number) => {
+    SynthInputHandler.setOperatorDetune(props.operatorIndex, newValue); // Call synth handler
+    setAppStore('operators', props.operatorIndex, 'detune', newValue);
   };
   const handleModIndexChange = (newValue: number) => {
     SynthInputHandler.setOperatorModIndex(props.operatorIndex, newValue); // Call synth handler
@@ -136,6 +141,22 @@ const OperatorControl: Component<OperatorControlProps> = (props) => {
         maxVal={dialMode() === 'ratio' ? RATIO_MAX : FIXED_FREQ_MAX} // Pass max value based on mode
         coarseValues={RATIO_COARSE_VALUES}
       />
+      <NumericParameterInput
+        label="Detune"
+        id={`detune-` + props.operatorIndex}
+        numericValue={detuneValue}
+        onCommit={handleDetuneChange}
+        category="detune"
+        min={-1200}
+        max={1200}
+        default={0.0}
+        step={0.5} />
+      <hr
+        style={{
+          "border-top": "1px solid red;",
+          width: 100 + "%",
+        }}
+      />
       <Crossfader
         label={`Mod Index`}
         id={`mod-` + props.operatorIndex}
@@ -147,18 +168,21 @@ const OperatorControl: Component<OperatorControlProps> = (props) => {
         maxVal={MOD_INDEX_MAX}
         step={MOD_INDEX_STEP}
       />
+      <hr />
       <WaveformSelect
         value={waveformValue}
         onChange={handleWaveformChange}
         operatorIndex={props.operatorIndex}
       //{/* isActive={isActive} // Pass isActive to disable the select */}
       />
+      <hr />
       <EnvelopeControl
         operatorIndex={props.operatorIndex} // Still needed for IDs maybe? Or just for context?
         //isActive={isActive}
         value={envelopeValue} // Pass the accessor for the whole envelope object
         onParamChange={handleEnvelopeParamChange} // Pass the single handler
       />
+      <hr />
       <FilterManager
         operatorIndex={props.operatorIndex}
       />

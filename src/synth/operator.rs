@@ -40,6 +40,7 @@ impl Default for OperatorState {
 pub struct Operator {
     pub waveform_generator: WaveformGenerator,
     frequency_ratio: f32,         // Ratio relative to the voice's base frequency
+    detune: f32,                  // Optional detune in cents
     fixed_frequency: Option<f32>, // Optional fixed frequency in Hz
     pub envelope: EnvelopeGenerator, // Operator-specific envelope (optional)
     pub modulation_index: f32,
@@ -93,7 +94,8 @@ impl Operator {
                 Some(fixed_freq) => fixed_freq,
                 None => context.base_frequency * current_smoothed_ratio,
             };
-            let phase_increment = TAU * actual_frequency / sample_rate;
+            let detuned_frequency = Operator::cents_to_hz(actual_frequency, self.detune);
+            let phase_increment = TAU * detuned_frequency / sample_rate;
             state.current_phase += phase_increment;
             state.current_phase %= TAU;
             let modulated_phase = state.current_phase + modulation[i];
@@ -150,6 +152,9 @@ impl Operator {
             attack, decay, sustain, release
         );
         self.envelope.set_params(attack, decay, sustain, release);
+    }
+    pub fn set_detune(&mut self, detune: f32) {
+        self.detune = detune.clamp(-1200.0, 1200.0);
     }
 
     pub fn cycle_waveform(&mut self, direction: CycleDirection) {
@@ -242,6 +247,9 @@ impl Operator {
 
         self.envelope.finished(time_since_off)
     }
+    fn cents_to_hz(base_frequency: f32, cents: f32) -> f32 {
+        base_frequency * 2f32.powf(cents / 1200.0)
+    }
 }
 
 // Implement Default trait for easy preallocation
@@ -251,6 +259,7 @@ impl Default for Operator {
             waveform_generator: WaveformGenerator::new(Waveform::Sine),
             frequency_ratio: 1.0,  // Target ratio
             fixed_frequency: None, // Default to using ratio
+            detune: 0.0,
             modulation_index: 1.0,
             envelope: EnvelopeGenerator::new(),
             gain: 1.0,
