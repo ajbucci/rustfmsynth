@@ -229,7 +229,7 @@ const Crossfader: Component<CrossfaderProps> = (props) => {
   return (
     <div class="parameter-container"> {/* Add specific class */}
       <label class="parameter-title" for={props.id ? `${props.id}-input` : undefined}>
-        {props.label || 'Fader'}: {/* Use prop label */}
+        {props.label || 'Fader'}{/* Use prop label */}
       </label>
       <div
         class="crossfader-track-container"

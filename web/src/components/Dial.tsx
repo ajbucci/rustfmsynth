@@ -1,4 +1,4 @@
-import { Show, Component, createSignal, createEffect, onMount, onCleanup, JSX, Accessor, untrack, createMemo } from 'solid-js';
+import { Component, createSignal, createEffect, Accessor, untrack } from 'solid-js';
 import { clampValue } from '../utils'; // Assuming a clamp utility exists or create one
 import '../style.css'; // Or Dial.css
 
@@ -19,8 +19,6 @@ export type DialMode = 'ratio' | 'fixedFrequency';
 
 // Define required and optional props
 interface DialProps {
-  mode: Accessor<DialMode>;              // NEW: Determines the behavior ('ratio' or 'fixedFrequency')
-  onModeChange: (newMode: DialMode) => void;
   value: Accessor<number>;             // Reactive getter for the current value (ratio OR frequency)
   onChange: (newValue: number) => void; // Callback to report value changes (ratio OR frequency)
 
@@ -32,15 +30,13 @@ interface DialProps {
   maxVal: number;                       // Used as the maximum for 'fixedFrequency' mode
   step?: number;                        // Optional step for snapping ('fixedFrequency') or input step
 
-  // --- Props specific to 'ratio' mode ---
-  coarseValues?: number[];              // Array of predefined coarse snap points/values for 'ratio' mode
-  // Required if mode is 'ratio'
+  coarseValues?: number[];              // Array of predefined snap points
 
   // --- General props ---
   defaultValue?: number;                // Initial value if needed (less critical with reactive value)
   id?: string;
   label?: string;                       // For accessibility
-  valueDisplayFormatter?: (value: number, mode: DialMode) => string; // Optional custom formatter
+  valueDisplayFormatter?: (value: number) => string; // Optional custom formatter
 }
 
 const Dial: Component<DialProps> = (props) => {
@@ -54,55 +50,16 @@ const Dial: Component<DialProps> = (props) => {
   let dialElement: HTMLDivElement | undefined;
   let inputElement: HTMLInputElement | undefined;
 
-  // --- Derived State and Validation ---
-
-  // Memoize the current effective range based on the mode
-  const currentMin = createMemo(() => {
-    if (props.mode() === 'ratio') {
-      if (!props.coarseValues || props.coarseValues.length === 0) {
-        console.warn("Dial: 'coarseValues' prop is required and must not be empty when mode is 'ratio'.");
-        return 0; // Fallback
-      }
-      return props.coarseValues[0];
-    } else { // 'fixedFrequency' mode
-      return props.minVal;
-    }
-  });
-
-  const currentMax = createMemo(() => {
-    if (props.mode() === 'ratio') {
-      if (!props.coarseValues || props.coarseValues.length === 0) {
-        // Warning already shown in currentMin
-        return 1; // Fallback
-      }
-      return props.coarseValues[props.coarseValues.length - 1];
-    } else { // 'fixedFrequency' mode
-      return props.maxVal;
-    }
-  });
-
-  // Memoize ratio mode specific calculations
-  const numCoarseIntervals = createMemo(() => {
-    if (props.mode() === 'ratio' && props.coarseValues && props.coarseValues.length > 1) {
-      return props.coarseValues.length - 1;
-    }
-    return 0; // Not applicable or invalid
-  });
-
   // --- Value / Rotation Conversion Logic ---
 
   const valueToRotation = (value: number): number => {
-    const mode = props.mode();
-    const min = currentMin();
-    const max = currentMax();
-    const clampedValue = clampValue(value, min, max);
+    const clampedValue = clampValue(value, props.minVal, props.maxVal);
 
-    if (mode === 'ratio') {
-      // --- Ratio Mode Logic ---
-      if (!props.coarseValues || numCoarseIntervals() <= 0) return MIN_ROTATION; // Handle invalid state
+    if (props.coarseValues && props.coarseValues.length > 0) {
+      if (!props.coarseValues || props.coarseValues.length - 1 <= 0) return MIN_ROTATION; // Handle invalid state
 
       const coarseVals = props.coarseValues;
-      const intervals = numCoarseIntervals();
+      const intervals = props.coarseValues.length - 1;
       let lowerIndex = 0;
 
       // Find the coarse interval the value falls into
@@ -132,30 +89,26 @@ const Dial: Component<DialProps> = (props) => {
       return MIN_ROTATION + (normalizedPosition / intervals) * TOTAL_ROTATION_RANGE;
 
     } else {
-      // --- Fixed Frequency Mode Logic ---
-      const range = max - min;
+      const range = props.maxVal - props.minVal;
       if (range <= 0) return MIN_ROTATION; // Handle zero range
 
-      const normalizedValue = (clampedValue - min) / range;
+      const normalizedValue = (clampedValue - props.minVal) / range;
       return MIN_ROTATION + normalizedValue * TOTAL_ROTATION_RANGE;
     }
   };
 
   const rotationToValue = (rotation: number): number => {
-    const mode = props.mode();
-    const min = currentMin();
-    const max = currentMax();
     const fineDragMode = props.isFineModeActive(); // Fine mode affects drag sensitivity, not value mapping here
 
     const clampedRotation = clampValue(rotation, MIN_ROTATION, MAX_ROTATION);
     const normalizedRotation = (clampedRotation - MIN_ROTATION) / TOTAL_ROTATION_RANGE;
 
-    if (mode === 'ratio') {
+    if (props.coarseValues && props.coarseValues.length > 0) {
       // --- Ratio Mode Logic ---
-      if (!props.coarseValues || numCoarseIntervals() <= 0) return min; // Handle invalid state
+      if (!props.coarseValues || props.coarseValues.length - 1 <= 0) return props.minVal; // Handle invalid state
 
       const coarseVals = props.coarseValues;
-      const intervals = numCoarseIntervals();
+      const intervals = props.coarseValues.length - 1;
       const normalizedPosition = normalizedRotation * intervals;
 
       const lowerIndex = clampValue(Math.floor(normalizedPosition), 0, intervals - 1);
@@ -188,12 +141,12 @@ const Dial: Component<DialProps> = (props) => {
         }
       }
       // Final clamp for ratio mode
-      return clampValue(targetValue, min, max);
+      return clampValue(targetValue, props.minVal, props.maxVal);
 
     } else {
       // --- Fixed Frequency Mode Logic ---
-      const range = max - min;
-      let rawValue = min + normalizedRotation * range;
+      const range = props.maxVal - props.minVal;
+      let rawValue = props.minVal + normalizedRotation * range;
 
       // Apply step snapping if step is provided for this mode
       if (props.step && props.step > 0) {
@@ -201,7 +154,7 @@ const Dial: Component<DialProps> = (props) => {
       }
 
       // Final clamp for fixed frequency mode
-      return clampValue(rawValue, min, max);
+      return clampValue(rawValue, props.minVal, props.maxVal);
     }
   };
 
@@ -247,12 +200,6 @@ const Dial: Component<DialProps> = (props) => {
     return angleRad * (180 / Math.PI);
   };
 
-  const handleModeCheckboxChange = (event: Event) => {
-    const checkbox = event.currentTarget as HTMLInputElement;
-    const isChecked = checkbox.checked; // Checkbox 'checked' means 'fixedFrequency' mode
-    const newMode = isChecked ? 'fixedFrequency' : 'ratio';
-    props.onModeChange(newMode); // Call the callback passed by the parent
-  };
   const handleInteractionStart = (clientX: number, clientY: number) => {
     if (!dialElement) return;
     setIsDragging(true);
@@ -326,10 +273,7 @@ const Dial: Component<DialProps> = (props) => {
     let newValue = parseFloat(target.value);
 
     if (!isNaN(newValue)) {
-      // Clamp input value to the current mode's allowed range
-      const min = currentMin(); // Use memoized range
-      const max = currentMax();
-      newValue = clampValue(newValue, min, max);
+      newValue = clampValue(newValue, props.minVal, props.maxVal);
 
       if (newValue !== props.value()) {
         props.onChange(newValue);
@@ -346,25 +290,13 @@ const Dial: Component<DialProps> = (props) => {
   // Helper to format value for text input/display
   // Uses optional prop formatter or default logic
   const formatValueForDisplay = (value: number): string => {
-    const mode = props.mode();
     if (props.valueDisplayFormatter) {
-      return props.valueDisplayFormatter(value, mode);
+      return props.valueDisplayFormatter(value);
     }
 
     // Default formatting logic
-    if (mode === 'ratio') {
-      // Ratios often benefit from more precision
-      const numDecimalPlaces = props.isFineModeActive() ? 4 : 3;
-      return value.toFixed(numDecimalPlaces);
-    } else { // 'fixedFrequency'
-      // Frequencies might be whole numbers or have fewer decimals
-      // Add Hz/kHz logic if needed based on value range
-      if (value >= 1000) {
-        return (value / 1000).toFixed(2) + 'k'; // Example kHz formatting
-      }
-      // Basic formatting with fewer decimals for frequency
-      return value.toFixed(value < 10 ? 2 : (value < 100 ? 1 : 0));
-    }
+    const numDecimalPlaces = props.isFineModeActive() ? 4 : 3;
+    return value.toFixed(numDecimalPlaces);
   };
 
   // --- Tooltip Text ---
@@ -374,15 +306,14 @@ const Dial: Component<DialProps> = (props) => {
     : "Drag to adjust (Hold Shift for fine detail)";
 
 
-  const uniqueCheckboxId = createMemo(() => `mode-toggle-${props.id || props.label?.replace(/\s+/g, '-') || Math.random().toString(36).substring(7)}`);
   // --- Render ---
   return (
-    <div class="parameter-container"
+    <div class="dial-container"
       ref={dialElement}
       role="slider"
       // ARIA values reflect the effective range of the *current* mode
-      aria-valuemin={currentMin()}
-      aria-valuemax={currentMax()}
+      aria-valuemin={props.minVal}
+      aria-valuemax={props.maxVal}
       aria-valuenow={props.value()}
       aria-label={props.label || 'Dial Control'}
       aria-valuetext={formatValueForDisplay(props.value())} // Provide human-readable value text
@@ -391,39 +322,6 @@ const Dial: Component<DialProps> = (props) => {
         cursor: isDragging() ? (props.isFineModeActive() ? 'cell' : 'grabbing') : 'grab'
       }}
     >
-      <div class="mode-toggle-container">
-        <input
-          type="checkbox"
-          id={uniqueCheckboxId()}
-          class="mode-toggle-checkbox" // Visually hidden
-          checked={props.mode() === 'fixedFrequency'}
-          onChange={handleModeCheckboxChange}
-          aria-label="Toggle frequency mode (Ratio/Fixed)"
-        />
-        {/* Label linked to checkbox. Add data-mode here */}
-        <label
-          for={uniqueCheckboxId()}
-          class="mode-toggle-label"
-          data-mode={props.mode()} // Pass mode for CSS targeting
-          onClick={(e) => {
-            const checkbox = document.getElementById(uniqueCheckboxId()) as HTMLInputElement | null;
-            if (checkbox) {
-              checkbox.click();
-              e.preventDefault();
-            }
-          }}
-        >
-          {/* Text part */}
-          <span class="mode-label-text parameter-title">
-            {props.mode() === 'ratio' ? 'Ratio' : 'Fixed'}
-          </span>
-          {/* Visual pill switch part */}
-          <div class="mode-switch-visual">
-            {/* The sliding indicator circle */}
-            <div class="mode-switch-indicator"></div>
-          </div>
-        </label>
-      </div>
       <div class={`dial ${props.isActive?.() ? 'active' : ''}`}
         onMouseDown={(e) => {
           handleInteractionStart(e.clientX, e.clientY);

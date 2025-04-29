@@ -1,16 +1,13 @@
-import { createEffect, Component, Accessor, For, createSignal } from 'solid-js';
-import { SetStoreFunction, Store } from 'solid-js/store'; // Import Store types if passing parts of store
-import { EnvelopeState, OperatorState, AppState, WAVEFORM_NAMES, WAVEFORM_NAME_TO_ID, WAVEFORM_ID_TO_NAME, WaveformName, WaveformId } from '../state'; // Import state types
+import { Component, Accessor } from 'solid-js';
+import { EnvelopeState, WaveformId } from '../state'; // Import state types
 import { appStore, setAppStore } from '../App'; // Import the app store and setter
-import Dial from './Dial'; // Import the Dial component
-import { DialMode } from './Dial'; // Import the DialMode type
+import FrequencyManager from './FrequencyManager'; // Import the FrequencyManager component
 import Crossfader from './Crossfader'; // Import the Crossfader component
 import WaveformSelect from './WaveformSelect'; // Import the WaveformSelect component
 import EnvelopeControl from './EnvelopeControl'; // Import the EnvelopeControl component
 import { NUM_OPERATORS } from '../config'; // Import the number of operators
 import * as SynthInputHandler from '../synthInputHandler'; // Import the synth input handler
 import FilterManager from './FilterManager';
-import NumericParameterInput from './NumericParameterInput';
 // Define props for the OperatorControl
 interface OperatorControlProps {
   operatorIndex: number;
@@ -33,6 +30,8 @@ const MOD_INDEX_MAX = 10.0; // Example
 const MOD_INDEX_STEP = 0.01;
 
 const OperatorControl: Component<OperatorControlProps> = (props) => {
+  // TODO: I may want to push this down to the individual component
+  //
   // --- Create local accessors/handlers using IMPORTED store/setter ---
   const ratioValue = () => appStore.operators[props.operatorIndex]?.ratio; // Read imported store
   const fixedFreqValue = () => appStore.operators[props.operatorIndex]?.fixedFrequency; // Read imported store
@@ -40,20 +39,8 @@ const OperatorControl: Component<OperatorControlProps> = (props) => {
   const modIndexValue = () => appStore.operators[props.operatorIndex]?.modulationIndex;
   const waveformValue = () => appStore.operators[props.operatorIndex]?.waveform;
   const envelopeValue = () => appStore.operators[props.operatorIndex]?.envelope;
-  let [dialMode, setDialMode] = createSignal('ratio' as DialMode); // Local state for dial mode
-  createEffect(() => {
-    const freq = fixedFreqValue();
-    // If fixed frequency is non-zero, set mode to fixedFrequency, otherwise ratio.
-    // This runs initially and whenever fixedFreqValue changes.
-    if (freq !== 0) {
-      setDialMode('fixedFrequency');
-    } else {
-      setDialMode('ratio');
-    }
-  });
   const handleRatioChange = (newValue: number) => {
     // Use imported setAppStore
-    console.log(`Setting ratio for ${props.operatorIndex}: ${newValue}`);
     SynthInputHandler.setOperatorRatio(props.operatorIndex, newValue); // Call synth handler
     setAppStore('operators', props.operatorIndex, 'ratio', newValue);
     // Reset Fixed Freq to 0 when Ratio is set
@@ -65,6 +52,16 @@ const OperatorControl: Component<OperatorControlProps> = (props) => {
   };
   const handleFixedFreqChange = (newValue: number) => {
     SynthInputHandler.setOperatorFixedFrequency(props.operatorIndex, newValue); // Call synth handler
+    if (newValue === 0) {
+      // If fixed frequency is being set to 0, it implies we are switching TO Ratio mode.
+      // We MUST explicitly tell the synth what the current ratio value is.
+      const currentRatio = appStore.operators[props.operatorIndex]?.ratio; // Read current ratio from store
+      if (currentRatio !== undefined) { // Ensure ratio value exists
+        SynthInputHandler.setOperatorRatio(props.operatorIndex, currentRatio);
+      } else {
+        SynthInputHandler.setOperatorRatio(props.operatorIndex, 1); // Default to 1 if undefined
+      }
+    }
     setAppStore('operators', props.operatorIndex, 'fixedFrequency', newValue);
   };
   const handleDetuneChange = (newValue: number) => {
@@ -95,62 +92,39 @@ const OperatorControl: Component<OperatorControlProps> = (props) => {
       console.error(`OperatorControl received invalid value for ${paramKey}: ${numericValue}`);
     }
   };
-  // Handler for the Dial's mode toggle button
-  const handleModeToggle = (newMode: DialMode) => {
-    if (newMode === 'fixedFrequency') {
-      // If switching TO fixed mode and current fixed freq is 0,
-      // set a default non-zero value.
-      if (fixedFreqValue() === 0) {
-        // Use handleFixedFreqChange to update store and synth
-        handleFixedFreqChange(DEFAULT_FIXED_FREQ_ON_SWITCH);
-        // Note: The createEffect will run because fixedFreqValue changed,
-        // setting the mode correctly. We don't strictly need setDialMode here,
-        // but it makes the immediate UI update slightly faster.
-        setDialMode('fixedFrequency');
-      } else {
-        // If fixed freq is already non-zero, just update the local mode state
-        setDialMode('fixedFrequency');
-      }
-    } else { // Switching to 'ratio' mode
-      // Ensure fixed frequency becomes 0 when explicitly switching to ratio mode
-      if (fixedFreqValue() !== 0) {
-        handleFixedFreqChange(0); // This updates store+synth, effect handles mode
-        handleRatioChange(ratioValue()); // Ensure ratio is set correctly
-      } else {
-        // If fixed freq is already 0, just update the local mode state
-        setDialMode('ratio');
-      }
-    }
-  };
   const isActive = () => appStore.algorithm[props.operatorIndex]?.[NUM_OPERATORS] === 1; // Read imported store
   // ------------------------------------------------------------------
 
   return (
     <div class="operator-control" /* ... */>
       <h3>Operator {props.operatorIndex + 1}</h3>
-      <Dial
-        label={dialMode() === 'ratio' ? 'Ratio' : 'Fixed'}
-        id={`dial-` + props.operatorIndex}
-        mode={dialMode} // Pass local state
-        onModeChange={handleModeToggle} // Pass local setter
-        value={dialMode() === 'ratio' ? ratioValue : fixedFreqValue} // Pass local accessor
-        onChange={dialMode() === 'ratio' ? handleRatioChange : handleFixedFreqChange} // Pass local handler
+      <FrequencyManager
+        ratioLabel="Ratio"
+        ratioMin={RATIO_MIN}
+        ratioMax={RATIO_MAX}
+        ratioCoarseValues={RATIO_COARSE_VALUES}
+        ratioValue={ratioValue}
+        ratioOnChange={handleRatioChange}
+
+        fixedLabel="Fixed"
+        fixedMin={FIXED_FREQ_MIN}
+        fixedMax={FIXED_FREQ_MAX}
+        fixedValue={fixedFreqValue}
+        fixedOnChange={handleFixedFreqChange}
+        defaultFixedFrequencyOnSwitch={DEFAULT_FIXED_FREQ_ON_SWITCH}
+
+        detuneLabel="Detune:"
+        detuneValue={detuneValue}
+        detuneOnChange={handleDetuneChange}
+        detuneMin={-1200}
+        detuneMax={1200}
+        detuneDefault={0.0}
+        detuneStep={0.5}
+
+        id={`freq-manager-` + props.operatorIndex}
         isActive={isActive}
         isFineModeActive={props.isFineModeActive}
-        minVal={dialMode() === 'ratio' ? RATIO_MIN : FIXED_FREQ_MIN} // Pass min value based on mode
-        maxVal={dialMode() === 'ratio' ? RATIO_MAX : FIXED_FREQ_MAX} // Pass max value based on mode
-        coarseValues={RATIO_COARSE_VALUES}
       />
-      <NumericParameterInput
-        label="Detune"
-        id={`detune-` + props.operatorIndex}
-        numericValue={detuneValue}
-        onCommit={handleDetuneChange}
-        category="detune"
-        min={-1200}
-        max={1200}
-        default={0.0}
-        step={0.5} />
       <hr
         style={{
           "border-top": "1px solid red;",

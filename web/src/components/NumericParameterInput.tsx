@@ -1,4 +1,4 @@
-import { Component, Accessor, createSignal, createEffect, on, untrack } from 'solid-js';
+import { Component, Accessor, createSignal, createEffect, untrack, JSX } from 'solid-js';
 import { clampValue, formatNumberToMinDecimals } from '../utils';
 const DEFAULT_MIN_DECIMAL_PLACES = 0;
 
@@ -15,6 +15,7 @@ interface NumericParameterInputProps {
   unit?: string;
   minDecimalPlaces?: number;
   disabled?: Accessor<boolean>;
+  style?: JSX.CSSProperties;
 }
 const numbersAreEqual = (num1: number | undefined | null, num2: number | undefined | null): boolean => {
   if (num1 == null || num2 == null) return num1 === num2;
@@ -134,7 +135,8 @@ const NumericParameterInput: Component<NumericParameterInputProps> = (props) => 
     }
   };
   return (
-    <div class={`param param-${props.id} ${props.category ? 'param-' + props.category : ''}`}>
+    <div class={`param param-${props.id} ${props.category ? 'param-' + props.category : ''}`}
+      style={props.style}>
       <label for={props.id}>
         {props.label}{" "}
         {props.unit && `(${props.unit})`}
