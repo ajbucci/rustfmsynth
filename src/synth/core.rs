@@ -20,6 +20,8 @@ pub struct Synth {
     buffer_size: usize,
 }
 
+const MODULATION_INDEX_GAIN_OFFSET: f32 = 0.1;
+
 impl Synth {
     pub fn new() -> Self {
         Self::default()
@@ -185,7 +187,9 @@ impl Synth {
             }
         }
         for sample in output.iter_mut() {
-            *sample *= self.master_volume;
+            // Modulation Index is allowed to go from 0 to (1/MODULATION_INDEX_GAIN_OFFSET),
+            // back out that gain increase here
+            *sample *= self.master_volume * MODULATION_INDEX_GAIN_OFFSET;
         }
     }
     pub fn process_old(&mut self, output: &mut [f32], sample_rate: f32) {
