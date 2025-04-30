@@ -2,9 +2,9 @@ import { Component, createSignal, createResource, createMemo, Show, For, onMount
 import { unwrap } from 'solid-js/store';
 import { AppState } from '../state'; // Adjust path as needed
 import { appStore, setAppStore } from '../App'; // Adjust path as needed
-import { createDefaultAppState } from '../defaults'; // Adjust path as needed
+import { createDefaultAppState, fillMissingAppState } from '../defaults'; // Adjust path as needed
 import * as SynthInputHandler from '../synthInputHandler'; // Adjust path as needed
-import { deserializeState, serializeState } from '../urlState';
+import { serializeState } from '../urlState';
 // --- Interfaces ---
 
 interface PatchDefinition {
@@ -158,11 +158,8 @@ const PatchManager: Component = () => {
 
   const handleSelectPatch = (patch: Patch) => {
     batch(() => {
-      // NOTE: was previously using unwrap(patch.state) here,
-      // but it was causing edits to be saved into the patch,
-      // so now using a deep clone
-      const stateToLoad = JSON.parse(JSON.stringify(patch.state));
-      setAppStore(stateToLoad); // Load the deep-cloned state
+      const filledAppState = fillMissingAppState(unwrap(patch.state));
+      setAppStore(filledAppState);
       setSelectedPatchId(patch.id);
       setIsSavingAsNew(false); // Close save as new if open
       setEditName(null); // Close name editing if open

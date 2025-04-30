@@ -1,4 +1,4 @@
-import { Component, onMount, onCleanup, createEffect, createSignal, For } from 'solid-js';
+import { Component, onMount, onCleanup, createEffect, createSignal, For, on } from 'solid-js';
 import { createStore, unwrap, SetStoreFunction } from 'solid-js/store';
 
 import { AppState, AlgorithmSetterArg, MASTER_VOLUME_MIN, MASTER_VOLUME_MAX } from './state';
@@ -22,7 +22,6 @@ import PatchManager from './components/PatchManager';
 import './style.css';
 import { createDefaultAppState } from './defaults';
 import { deserializeState } from './urlState';
-import Crossfader from './components/Crossfader';
 import Dial from './components/Dial';
 
 export const [appStore, setAppStore] = createStore<AppState>(createDefaultAppState());
@@ -42,6 +41,11 @@ const App: Component = () => {
 
   const [isSynthReady, setIsSynthReady] = createSignal(false);
   const [masterVolume, setMasterVolume] = createSignal(appStore.masterVolume);
+
+  createEffect(() => {
+    setMasterVolume(appStore.masterVolume);
+  });
+
   // --- Initialization Logic ---
   const initializeAudioAndSynth = async () => {
     console.log("App: Initializing Audio and Synth...");
@@ -111,7 +115,7 @@ const App: Component = () => {
     }
   };
   const handleMasterVolumeChange = (newValue: number) => {
-    setMasterVolume(newValue);
+    setAppStore("masterVolume", newValue); // Update store directly
     SynthInputHandler.setMasterVolume(newValue); // Call synth handler
   }
   // --- Fine Mode Global Listeners --- 
