@@ -74,6 +74,10 @@ impl WasmSynth {
             self.synth.note_off(&event);
         }
     }
+    #[wasm_bindgen]
+    pub fn set_master_volume(&mut self, volume: f32) {
+        self.synth.set_master_volume(volume);
+    }
 
     #[wasm_bindgen]
     pub fn set_operator_ratio(&mut self, operator_index: usize, ratio: f32) {

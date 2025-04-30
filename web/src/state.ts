@@ -48,7 +48,10 @@ export interface Note {
 export interface AppState {
   algorithm: number[][];
   operators: OperatorState[];
+  masterVolume: number;
 }
+export const MASTER_VOLUME_MAX = 100;
+export const MASTER_VOLUME_MIN = 0;
 export type WaveformName = 'sine' | 'saw' | 'square' | 'triangle' | 'noise' | 'input';
 export const WAVEFORM_NAMES: ReadonlyArray<WaveformName> = ['sine', 'saw', 'square', 'triangle', 'noise', 'input'] as const;
 export const WAVEFORM_IDS = {

@@ -38,12 +38,16 @@ class SynthProcessor extends AudioWorkletProcessor {
         return;
       }
       try {
+        // console.log(data);
         switch (data.type) {
           case "note_on":
             synth.note_on(data.note, data.velocity);
             break;
           case "note_off":
             synth.note_off(data.note);
+            break;
+          case "set_master_volume":
+            synth.set_master_volume(data.volume);
             break;
           case "set_operator_ratio":
             synth.set_operator_ratio(data.operatorIndex, data.ratio);

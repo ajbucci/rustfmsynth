@@ -1,7 +1,7 @@
 import { Component, onMount, onCleanup, createEffect, createSignal, For } from 'solid-js';
 import { createStore, unwrap, SetStoreFunction } from 'solid-js/store';
 
-import { AppState, AlgorithmSetterArg } from './state';
+import { AppState, AlgorithmSetterArg, MASTER_VOLUME_MIN, MASTER_VOLUME_MAX } from './state';
 import { NUM_OPERATORS } from './config';
 
 import {
@@ -22,6 +22,7 @@ import PatchManager from './components/PatchManager';
 import './style.css';
 import { createDefaultAppState } from './defaults';
 import { deserializeState } from './urlState';
+import Crossfader from './components/Crossfader';
 
 export const [appStore, setAppStore] = createStore<AppState>(createDefaultAppState());
 // export const setAppStore = createUrlStatePersistence(
@@ -39,6 +40,7 @@ const App: Component = () => {
   let midiHandlerInstance: MidiInputHandler | null = null;
 
   const [isSynthReady, setIsSynthReady] = createSignal(false);
+  const [masterVolume, setMasterVolume] = createSignal(appStore.masterVolume);
   // --- Initialization Logic ---
   const initializeAudioAndSynth = async () => {
     console.log("App: Initializing Audio and Synth...");
@@ -107,6 +109,10 @@ const App: Component = () => {
       processorNode = null; // Ensure node ref is null on failure
     }
   };
+  const handleMasterVolumeChange = (newValue: number) => {
+    setMasterVolume(newValue);
+    SynthInputHandler.setMasterVolume(newValue); // Call synth handler
+  }
   // --- Fine Mode Global Listeners --- 
   const handleGlobalKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Shift" && !e.repeat && !isFineModeActive()) {
@@ -174,9 +180,16 @@ const App: Component = () => {
   const operatorIndices = () => Array.from({ length: NUM_OPERATORS }, (_, i) => i); // 0-based for array access
   return (
     <div class="app-container">
-      <div class="intro">
-        <span class="title">The Synth</span>
-        <p>Use your keyboard, MIDI, or click the keys below.</p>
+      <div class="d-flex flex-row"
+        style={{
+          "align-items": "center",
+          "justify-content": "center",
+        }}>
+        <div class="intro">
+          <span class="title">The Synth</span>
+          <p>Use your keyboard, MIDI, or click the keys below.</p>
+        </div>
+
       </div>
       <div id="synth-container">
         <div class="controls-container d-flex flex-col flex-xxl-row">
@@ -197,7 +210,19 @@ const App: Component = () => {
                 />
               )}
             </For>
+
           </div>
+
+          <Crossfader
+            label={`Master Volume`}
+            id={`master-volume-control`}
+            value={masterVolume}
+            onChange={handleMasterVolumeChange}
+            isFineModeActive={isFineModeActive} // Pass fine mode down
+            // Pass fader-specific config
+            minVal={MASTER_VOLUME_MIN}
+            maxVal={MASTER_VOLUME_MAX}
+          />
         </div>
         <KeyboardUI initialStartNote={48} />
       </div>

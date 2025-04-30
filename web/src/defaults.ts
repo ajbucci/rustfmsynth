@@ -55,5 +55,58 @@ export function createDefaultAppState(): AppState {
   return {
     algorithm: createDefaultAlgorithmMatrixState(),
     operators: Array(NUM_OPERATORS).fill(null).map(() => createDefaultOperatorState()),
+    masterVolume: 80.00,
   };
+}
+
+export function fillMissingAppState(partial: Partial<AppState>): AppState {
+  const defaultState = createDefaultAppState();
+
+  return {
+    algorithm: fillMatrix(partial.algorithm, defaultState.algorithm),
+    operators: fillOperators(partial.operators, defaultState.operators),
+    masterVolume: partial.masterVolume ?? defaultState.masterVolume,
+  };
+}
+
+function fillMatrix(
+  partialMatrix: number[][] | undefined,
+  defaultMatrix: number[][]
+): number[][] {
+  if (!Array.isArray(partialMatrix)) return defaultMatrix;
+
+  const filled: number[][] = [];
+  for (let r = 0; r < NUM_OPERATORS; r++) {
+    const defaultRow = defaultMatrix[r];
+    const row = partialMatrix[r] || [];
+    const filledRow = defaultRow.map((val, i) => row[i] ?? val);
+    filled.push(filledRow);
+  }
+  return filled;
+}
+
+function fillOperators(
+  partialOps: Partial<OperatorState>[] | undefined,
+  defaultOps: OperatorState[]
+): OperatorState[] {
+  const ops: OperatorState[] = [];
+  for (let i = 0; i < NUM_OPERATORS; i++) {
+    const partialOp = partialOps?.[i] ?? {};
+    const defaultOp = defaultOps[i];
+    ops.push({
+      ratio: partialOp.ratio ?? defaultOp.ratio,
+      fixedFrequency: partialOp.fixedFrequency ?? defaultOp.fixedFrequency,
+      detune: partialOp.detune ?? defaultOp.detune,
+      modulationIndex: partialOp.modulationIndex ?? defaultOp.modulationIndex,
+      waveform: partialOp.waveform ?? defaultOp.waveform,
+      filters: partialOp.filters ?? defaultOp.filters,
+      envelope: {
+        attack: partialOp.envelope?.attack ?? DEFAULT_ENVELOPE_STATE.attack,
+        decay: partialOp.envelope?.decay ?? DEFAULT_ENVELOPE_STATE.decay,
+        sustain: partialOp.envelope?.sustain ?? DEFAULT_ENVELOPE_STATE.sustain,
+        release: partialOp.envelope?.release ?? DEFAULT_ENVELOPE_STATE.release,
+      },
+    });
+  }
+  return ops;
 }

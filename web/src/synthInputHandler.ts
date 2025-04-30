@@ -1,6 +1,7 @@
 import { resumeAudioContext } from './audio'; // We'll put resumeAudioContext in App.tsx initially
 import { Note, WaveformId, AppState, FILTERS } from './state';
 import { objToJsonBytes, stringToBytes } from './utils';
+import { fillMissingAppState } from './defaults';
 
 let processorPort: MessagePort | null = null;
 
@@ -145,6 +146,20 @@ export function removeOperatorFilter(operatorIndex: number, filterType: Uint8Arr
     console.error("SynthInputHandler: Error removing filter:", e);
   }
 }
+export function setMasterVolume(volume: number): void {
+  if (!processorPort) {
+    console.warn("SynthInputHandler: Port not connected, cannot set volume.");
+    return;
+  }
+  try {
+    const rangeDb = -60;
+    const gainDb = rangeDb * (1 - volume / 100);
+    const scaledVolume = Math.pow(10, gainDb / 20);
+    processorPort.postMessage({ type: 'set_master_volume', volume: scaledVolume });
+  } catch (e) {
+    console.error("SynthInputHandler: Error setting volume:", e);
+  }
+}
 /**
  * Sends the entire application state to the synth worklet.
  * Assumes the synth worklet is ready and connected.
@@ -157,7 +172,10 @@ export function setSynthState(appState: AppState): void {
     console.error("SynthInputHandler: Cannot set full state, port not connected.");
     return;
   }
+  appState = fillMissingAppState(appState);
 
+  // 0. Set Master Volume
+  setMasterVolume(appState.masterVolume);
   // 1. Set Algorithm
   setAlgorithm(appState.algorithm);
 

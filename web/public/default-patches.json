@@ -269,7 +269,7 @@
       ],
       "operators": [
         {
-          "ratio": 1.001,
+          "ratio": 1.00,
           "fixedFrequency": 0.0,
           "modulationIndex": 1.8,
           "waveform": 0,
@@ -285,7 +285,8 @@
           "filters": []
         },
         {
-          "ratio": 1.001,
+          "ratio": 1.00,
+          "detune": -10,
           "fixedFrequency": 0.0,
           "modulationIndex": 2.7,
           "waveform": 0,
@@ -293,7 +294,8 @@
           "filters": []
         },
         {
-          "ratio": 1.001,
+          "ratio": 1.00,
+          "detune": -10,
           "fixedFrequency": 0.0,
           "modulationIndex": 3.4,
           "waveform": 0,
@@ -301,7 +303,8 @@
           "filters": []
         },
         {
-          "ratio": 0.999,
+          "ratio": 1.0,
+          "detune": 10,
           "fixedFrequency": 0.0,
           "modulationIndex": 2.7,
           "waveform": 0,
@@ -309,7 +312,8 @@
           "filters": []
         },
         {
-          "ratio": 0.999,
+          "ratio": 1.0,
+          "detune": 10,
           "fixedFrequency": 0.0,
           "modulationIndex": 3.4,
           "waveform": 0,

@@ -169,6 +169,26 @@ impl Synth {
     }
 
     pub fn process(&mut self, output: &mut [f32], sample_rate: f32) {
+        output.fill(0.0); // Clear output buffer before mixing
+        let mut temp_buffer = vec![0.0; output.len()];
+        for voice in self.voices.iter_mut().filter(|v| v.active) {
+            voice.process(
+                &self.algorithm,
+                &self.operators,
+                &mut temp_buffer,
+                sample_rate,
+            );
+
+            for i in 0..output.len() {
+                output[i] += temp_buffer[i];
+                temp_buffer[i] = 0.0; // Clear temp buffer for next voice
+            }
+        }
+        for sample in output.iter_mut() {
+            *sample *= self.master_volume;
+        }
+    }
+    pub fn process_old(&mut self, output: &mut [f32], sample_rate: f32) {
         let (total_energy, voice_buffers) = self.process_voices(output.len(), sample_rate);
 
         let energy_gain = if total_energy > 1e-9 {
