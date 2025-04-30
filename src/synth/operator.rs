@@ -240,6 +240,9 @@ impl Operator {
             self.modulation_index = modulation_index;
         }
     }
+    pub fn get_modulation_index(&self) -> f32 {
+        self.modulation_index
+    }
     pub fn finished(&self, context: &ProcessContext) -> bool {
         let time_since_off = context
             .note_off_sample_index

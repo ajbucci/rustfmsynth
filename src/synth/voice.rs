@@ -107,6 +107,7 @@ impl Voice {
         operators: &[Operator],
         output: &mut [f32],
         sample_rate: f32,
+        scaling_factor: f32,
     ) {
         let context = ProcessContext {
             sample_rate,
@@ -134,7 +135,7 @@ impl Voice {
 
             // let env_value = self.envelope.evaluate(time_on, time_off);
             // output[i] *= env_value * self.velocity_scale;
-            output[i] *= self.velocity_scale;
+            output[i] *= self.velocity_scale * scaling_factor;
         }
 
         self.samples_elapsed_since_trigger += buffer_len as u64;

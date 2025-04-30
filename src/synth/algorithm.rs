@@ -69,7 +69,9 @@ impl Algorithm {
         algo.rebuild_unrolled_graph();
         Ok(algo)
     }
-
+    pub fn get_carrier_indices(&self) -> &Vec<usize> {
+        &self.carriers
+    }
     pub fn add_repeat_rule(&mut self, from_node: usize, to_node: usize, count: usize) {
         self.repeat_rules.push(FeedbackLoop {
             from_node,
