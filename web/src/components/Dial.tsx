@@ -309,7 +309,6 @@ const Dial: Component<DialProps> = (props) => {
   // --- Render ---
   return (
     <div class="dial-container"
-      ref={dialElement}
       role="slider"
       // ARIA values reflect the effective range of the *current* mode
       aria-valuemin={props.minVal}
@@ -323,6 +322,7 @@ const Dial: Component<DialProps> = (props) => {
       }}
     >
       <div class={`dial ${props.isActive?.() ? 'active' : ''}`}
+        ref={dialElement}
         onMouseDown={(e) => {
           handleInteractionStart(e.clientX, e.clientY);
         }}
