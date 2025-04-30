@@ -35,7 +35,7 @@ interface DialProps {
   // --- General props ---
   defaultValue?: number;                // Initial value if needed (less critical with reactive value)
   id?: string;
-  label?: string;                       // For accessibility
+  label?: string;
   valueDisplayFormatter?: (value: number) => string; // Optional custom formatter
 }
 

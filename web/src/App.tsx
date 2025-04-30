@@ -23,6 +23,7 @@ import './style.css';
 import { createDefaultAppState } from './defaults';
 import { deserializeState } from './urlState';
 import Crossfader from './components/Crossfader';
+import Dial from './components/Dial';
 
 export const [appStore, setAppStore] = createStore<AppState>(createDefaultAppState());
 // export const setAppStore = createUrlStatePersistence(
@@ -194,11 +195,27 @@ const App: Component = () => {
       <div id="synth-container">
         <div class="controls-container d-flex flex-col flex-xxl-row">
           <div class="controls-top-row d-flex flex-col flex-md-row flex-xxl-col">
-            <AlgorithmMatrix
-              numOperators={NUM_OPERATORS}
-              algorithm={appStore.algorithm}
-              setAlgorithmState={(updater: AlgorithmSetterArg) => setAppStore('algorithm', updater)}
-            />
+            <div class="matrix-master-container">
+              <div class="parameter-container master-volume-container flex-row">
+                <label class="parameter-title">Master Volume</label>
+                <Dial
+                  label={`Master Volume`}
+                  id={`master-volume-control`}
+                  value={masterVolume}
+                  onChange={handleMasterVolumeChange}
+                  isFineModeActive={isFineModeActive} // Pass fine mode down
+                  // Pass fader-specific config
+                  minVal={MASTER_VOLUME_MIN}
+                  maxVal={MASTER_VOLUME_MAX}
+                  valueDisplayFormatter={(value) => value.toFixed(0) + "%"}
+                />
+              </div>
+              <AlgorithmMatrix
+                numOperators={NUM_OPERATORS}
+                algorithm={appStore.algorithm}
+                setAlgorithmState={(updater: AlgorithmSetterArg) => setAppStore('algorithm', updater)}
+              />
+            </div>
             <PatchManager />
           </div>
           <div id="operator-controls"> {/* Wrapper for layout */}
@@ -213,20 +230,10 @@ const App: Component = () => {
 
           </div>
 
-          <Crossfader
-            label={`Master Volume`}
-            id={`master-volume-control`}
-            value={masterVolume}
-            onChange={handleMasterVolumeChange}
-            isFineModeActive={isFineModeActive} // Pass fine mode down
-            // Pass fader-specific config
-            minVal={MASTER_VOLUME_MIN}
-            maxVal={MASTER_VOLUME_MAX}
-          />
         </div>
         <KeyboardUI initialStartNote={48} />
       </div>
-    </div>
+    </div >
   );
 };
 
