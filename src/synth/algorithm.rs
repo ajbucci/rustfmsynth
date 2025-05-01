@@ -72,6 +72,15 @@ impl Algorithm {
     pub fn get_carrier_indices(&self) -> &Vec<usize> {
         &self.carriers
     }
+    pub fn get_modulator_indices(&self, operator_index: usize) -> Vec<usize> {
+        let mut modulator_indices = Vec::new();
+        for (i, row) in self.matrix.iter().enumerate() {
+            if i != operator_index && row[operator_index].is_some() {
+                modulator_indices.push(i);
+            }
+        }
+        modulator_indices
+    }
     pub fn add_repeat_rule(&mut self, from_node: usize, to_node: usize, count: usize) {
         self.repeat_rules.push(FeedbackLoop {
             from_node,
@@ -147,6 +156,9 @@ impl Algorithm {
         self.rebuild_unrolled_graph();
 
         Ok(())
+    }
+    pub fn get_matrix(&self) -> &Vec<Vec<Option<ConnectionParams>>> {
+        &self.matrix
     }
     pub fn set_connection(
         &mut self,

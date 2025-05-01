@@ -1,4 +1,5 @@
 use super::context::ProcessContext;
+use super::core::MODULATION_INDEX_GAIN_OFFSET;
 use super::envelope::EnvelopeGenerator;
 use super::filter::{Filter, FilterType};
 use super::waveform::{Waveform, WaveformGenerator};
@@ -100,7 +101,8 @@ impl Operator {
             state.current_phase %= TAU;
             let modulated_phase = state.current_phase + modulation[i];
             let wave = if self.waveform_generator.waveform == Waveform::Input {
-                modulation[i]
+                // NOTE: if Input then use modulation index as a volume scaler, *not* an amplifier
+                modulation[i] * MODULATION_INDEX_GAIN_OFFSET
             } else {
                 self.waveform_generator.evaluate(modulated_phase)
             };
@@ -175,6 +177,9 @@ impl Operator {
     pub fn set_waveform(&mut self, waveform: Waveform) {
         println!("Operator waveform set to: {:?}", waveform);
         self.waveform_generator.set_waveform(waveform);
+    }
+    pub fn get_waveform(&self) -> Waveform {
+        self.waveform_generator.get_waveform()
     }
 
     pub fn set_gain(&mut self, gain: f32) {

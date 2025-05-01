@@ -98,4 +98,7 @@ impl WaveformGenerator {
     pub fn set_waveform(&mut self, waveform: Waveform) {
         self.waveform = waveform;
     }
+    pub fn get_waveform(&self) -> Waveform {
+        self.waveform
+    }
 }

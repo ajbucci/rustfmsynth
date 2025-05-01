@@ -19,7 +19,8 @@ pub struct Synth {
     buffer_size: usize,
 }
 
-const MODULATION_INDEX_GAIN_OFFSET: f32 = 0.1;
+const MAX_MODULATION_INDEX: f32 = 10.0;
+pub const MODULATION_INDEX_GAIN_OFFSET: f32 = 1.0 / MAX_MODULATION_INDEX;
 
 impl Synth {
     pub fn new() -> Self {
@@ -199,8 +200,20 @@ impl Synth {
         let mut total_modulation_index = 0.0;
         for carrier_idx in carrier_indices {
             let mod_index = self.operators[*carrier_idx].get_modulation_index();
-            max_modulation_index = max_modulation_index.max(mod_index);
-            total_modulation_index += mod_index;
+            if self.operators[*carrier_idx].get_waveform() == Waveform::Input {
+                // NOTE: if the operator is a pass through, sum the effective modulation indices of its Modulators
+                let modulator_indices = self.algorithm.get_modulator_indices(*carrier_idx);
+                for modulator_idx in modulator_indices {
+                    let modulator_effective_mod_index = mod_index
+                        * MODULATION_INDEX_GAIN_OFFSET
+                        * self.operators[modulator_idx].get_modulation_index();
+                    max_modulation_index = max_modulation_index.max(modulator_effective_mod_index);
+                    total_modulation_index += modulator_effective_mod_index;
+                }
+            } else {
+                max_modulation_index = max_modulation_index.max(mod_index);
+                total_modulation_index += mod_index;
+            }
         }
         max_modulation_index / total_modulation_index
     }
