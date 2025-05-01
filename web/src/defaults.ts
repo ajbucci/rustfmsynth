@@ -14,7 +14,7 @@ function createDefaultOperatorState(): OperatorState {
     ratio: 1.0,
     fixedFrequency: 0.0,
     detune: 0.0,
-    modulationIndex: 1.0,
+    modulationIndex: 10.0,
     waveform: 0,
     envelope: { ...DEFAULT_ENVELOPE_STATE },
     filters: [],

@@ -308,6 +308,7 @@ const PatchManager: Component = () => {
     const defaultState = createDefaultAppState();
     setAppStore(unwrap(defaultState));
     setSelectedPatchId(null); // De-select any patch
+    SynthInputHandler.setSynthState(unwrap(defaultState)); // Update synth state
     alert("Synth reset to initial default state.");
   };
 
