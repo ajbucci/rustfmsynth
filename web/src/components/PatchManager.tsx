@@ -176,7 +176,7 @@ const PatchManager: Component = () => {
 
     const updatedPatches = userPatches().map(p =>
       p.id === currentSelectedPatch.id
-        ? { ...p, state: unwrap(appStore) } // Update state of the selected user patch
+        ? { ...p, state: JSON.parse(JSON.stringify(appStore)) } // Update state of the selected user patch
         : p
     );
     batch(() => {
@@ -203,7 +203,7 @@ const PatchManager: Component = () => {
 
     const newPatch: Patch = {
       name: name,
-      state: unwrap(appStore),
+      state: JSON.parse(JSON.stringify(appStore)),
       type: 'user',
       id: `user-${name}` // Create a unique ID
     };
