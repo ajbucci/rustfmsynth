@@ -111,24 +111,6 @@ const FilterManager: Component<FilterManagerProps> = (props) => {
 
   return (
     <>
-      <div class="parameter-container">
-        <label class="parameter-title">Active Filters</label>
-        <div class="active-filters-display">
-          <For each={activeFilters()} fallback={'No filters active.'}>
-            {(filterState, index) => (
-              // Render the child component, passing state and handlers
-              <ActiveFilterDisplay
-                operatorIndex={opIndex}
-                filterState={filterState}
-                filterIndex={index()}
-                onParamCommit={handleActiveParamCommit} // Pass down the commit handler
-                onRemove={handleRemoveFilter}           // Pass down the remove handler
-              // isActive={props.isActive}           // Pass down if needed
-              />
-            )}
-          </For>
-        </div>
-      </div>
       <div class={`parameter-container`}>
         <label class="parameter-title">Add Filter</label>
         <select
@@ -184,6 +166,26 @@ const FilterManager: Component<FilterManagerProps> = (props) => {
           </button>
         </Show>
       </div>
+      <Show when={activeFilters()?.length > 0}>
+        <div class="parameter-container">
+          <label class="parameter-title">Active Filters</label>
+          <div class="active-filters-display">
+            <For each={activeFilters()} fallback={'No filters active.'}>
+              {(filterState, index) => (
+                // Render the child component, passing state and handlers
+                <ActiveFilterDisplay
+                  operatorIndex={opIndex}
+                  filterState={filterState}
+                  filterIndex={index()}
+                  onParamCommit={handleActiveParamCommit} // Pass down the commit handler
+                  onRemove={handleRemoveFilter}           // Pass down the remove handler
+                // isActive={props.isActive}           // Pass down if needed
+                />
+              )}
+            </For>
+          </div>
+        </div>
+      </Show>
     </>
   );
 };
