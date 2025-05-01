@@ -15,7 +15,7 @@
         {
           "ratio": 1.0,
           "fixedFrequency": 0.0,
-          "modulationIndex": 2.8,
+          "modulationIndex": 10.0,
           "waveform": 0,
           "envelope": { "attack": 0.8, "decay": 1.5, "sustain": 0.7, "release": 2.5 },
           "filters": []
@@ -79,7 +79,7 @@
         {
           "ratio": 1.0,
           "fixedFrequency": 0.0,
-          "modulationIndex": 2.0,
+          "modulationIndex": 9.1,
           "waveform": 0,
           "envelope": { "attack": 1.5, "decay": 2.0, "sustain": 0.9, "release": 3.0 },
           "filters": []
@@ -95,7 +95,7 @@
         {
           "ratio": 0.995,
           "fixedFrequency": 0.0,
-          "modulationIndex": 2.2,
+          "modulationIndex": 10.0,
           "waveform": 0,
           "envelope": { "attack": 1.8, "decay": 2.2, "sustain": 0.8, "release": 3.5 },
           "filters": []
@@ -143,7 +143,7 @@
         {
           "ratio": 1.0,
           "fixedFrequency": 0.0,
-          "modulationIndex": 3.0,
+          "modulationIndex": 10.0,
           "waveform": 0,
           "envelope": { "attack": 0.02, "decay": 0.1, "sustain": 0.9, "release": 0.4 },
           "filters": [{"type": "LowPass", "params": {"cutoff": 5000, "q": 1.5}}]
@@ -207,7 +207,7 @@
         {
           "ratio": 1.0,
           "fixedFrequency": 0.0,
-          "modulationIndex": 2.0,
+          "modulationIndex": 10.0,
           "waveform": 3,
           "envelope": { "attack": 0.01, "decay": 0.3, "sustain": 0.8, "release": 0.5 },
           "filters": [{"type": "LowPass", "params": {"cutoff": 8000, "q": 1.0}}]
@@ -223,7 +223,7 @@
         {
           "ratio": 1.005,
           "fixedFrequency": 0.0,
-          "modulationIndex": 2.0,
+          "modulationIndex": 10.0,
           "waveform": 3,
           "envelope": { "attack": 0.015, "decay": 0.3, "sustain": 0.8, "release": 0.5 },
           "filters": []
@@ -271,7 +271,7 @@
         {
           "ratio": 1.00,
           "fixedFrequency": 0.0,
-          "modulationIndex": 1.8,
+          "modulationIndex": 6.7,
           "waveform": 0,
           "envelope": { "attack": 0.001, "decay": 1.0, "sustain": 0.6, "release": 0.1 },
           "filters": []
@@ -288,7 +288,7 @@
           "ratio": 1.00,
           "detune": -10,
           "fixedFrequency": 0.0,
-          "modulationIndex": 2.7,
+          "modulationIndex": 10.0,
           "waveform": 0,
           "envelope": { "attack": 0.001, "decay": 1.0, "sustain": 0.6, "release": 0.1 },
           "filters": []
@@ -306,7 +306,7 @@
           "ratio": 1.0,
           "detune": 10,
           "fixedFrequency": 0.0,
-          "modulationIndex": 2.7,
+          "modulationIndex": 10.0,
           "waveform": 0,
           "envelope": { "attack": 0.001, "decay": 1.0, "sustain": 0.6, "release": 0.1 },
           "filters": []
@@ -339,7 +339,7 @@
         {
           "ratio": 1.0,
           "fixedFrequency": 0.0,
-          "modulationIndex": 4.7,
+          "modulationIndex": 10.0,
           "waveform": 0,
           "envelope": { "attack": 0.001, "decay": 1.0, "sustain": 0.0, "release": 0.1 },
           "filters": []
@@ -353,9 +353,10 @@
           "filters": []
         },
         {
-          "ratio": 0.990,
+          "ratio": 1.0,
+          "detune": -10,
           "fixedFrequency": 0.0,
-          "modulationIndex": 2.3,
+          "modulationIndex": 4.9,
           "waveform": 0,
           "envelope": { "attack": 0.01, "decay": 1.0, "sustain": 0.6, "release": 0.1 },
           "filters": []
@@ -363,13 +364,14 @@
         {
           "ratio": 1.0,
           "fixedFrequency": 1.0,
-          "modulationIndex": 1.6,
+          "modulationIndex": 3.4,
           "waveform": 0,
           "envelope": { "attack": 0.01, "decay": 1.0, "sustain": 0.6, "release": 0.1 },
           "filters": []
         },
         {
-          "ratio": 1.01,
+          "ratio": 1.0,
+          "detune": 10,
           "fixedFrequency": 0.0,
           "modulationIndex": 3.24,
           "waveform": 0,
@@ -403,7 +405,7 @@
         {
           "ratio": 1.0,
           "fixedFrequency": 0.0,
-          "modulationIndex": 1.5,
+          "modulationIndex": 10.0,
           "waveform": 0,
           "envelope": { "attack": 0.005, "decay": 0.25, "sustain": 0.0, "release": 0.3 },
           "filters": []
@@ -467,7 +469,7 @@
         {
           "ratio": 0.5,
           "fixedFrequency": 0.0,
-          "modulationIndex": 2.5,
+          "modulationIndex": 10.0,
           "waveform": 0,
           "envelope": { "attack": 0.01, "decay": 0.3, "sustain": 0.05, "release": 0.2 },
           "filters": []
@@ -531,7 +533,7 @@
         {
           "ratio": 0.5,
           "fixedFrequency": 0.0,
-          "modulationIndex": 2.5,
+          "modulationIndex": 10.0,
           "waveform": 0,
           "envelope": { "attack": 0.02, "decay": 0.4, "sustain": 0.6, "release": 0.3 },
           "filters": []
@@ -595,7 +597,7 @@
         {
           "ratio": 1.0,
           "fixedFrequency": 0.0,
-          "modulationIndex": 1.5,
+          "modulationIndex": 10.0,
           "waveform": 3,
           "envelope": { "attack": 0.05, "decay": 0.5, "sustain": 0.7, "release": 0.4 },
           "filters": [{"type": "LowPass", "params": {"cutoff": 6000, "q": 1.2}}]
@@ -611,7 +613,7 @@
         {
           "ratio": 0.995,
           "fixedFrequency": 0.0,
-          "modulationIndex": 1.5,
+          "modulationIndex": 10.0,
           "waveform": 3,
           "envelope": { "attack": 0.06, "decay": 0.5, "sustain": 0.7, "release": 0.4 },
           "filters": []
@@ -659,7 +661,7 @@
         {
           "ratio": 1.0,
           "fixedFrequency": 0.0,
-          "modulationIndex": 2.0,
+          "modulationIndex": 10.0,
           "waveform": 3,
           "envelope": { "attack": 0.03, "decay": 0.4, "sustain": 0.8, "release": 0.3 },
           "filters": []
@@ -723,7 +725,7 @@
         {
           "ratio": 1.0,
           "fixedFrequency": 0.0,
-          "modulationIndex": 3.0,
+          "modulationIndex": 10.0,
           "waveform": 0,
           "envelope": { "attack": 1.8, "decay": 1.0, "sustain": 0.9, "release": 2.5 },
           "filters": []
@@ -739,7 +741,7 @@
         {
           "ratio": 0.996,
           "fixedFrequency": 0.0,
-          "modulationIndex": 3.0,
+          "modulationIndex": 10.0,
           "waveform": 0,
           "envelope": { "attack": 1.9, "decay": 1.0, "sustain": 0.9, "release": 2.6 },
           "filters": []
@@ -787,7 +789,7 @@
         {
           "ratio": 0.5,
           "fixedFrequency": 0.0,
-          "modulationIndex": 2.0,
+          "modulationIndex": 10.0,
           "waveform": 2,
           "envelope": { "attack": 0.6, "decay": 1.2, "sustain": 0.7, "release": 1.0 },
           "filters": [{"type": "LowPass", "params": {"cutoff": 3500, "q": 1.0}}]
@@ -851,7 +853,7 @@
         {
           "ratio": 0.5,
           "fixedFrequency": 0.0,
-          "modulationIndex": 3.1,
+          "modulationIndex": 10.0,
           "waveform": 0,
           "envelope": { "attack": 0.001, "decay": 0.15, "sustain": 0.0, "release": 0.1 },
           "filters": []
@@ -915,7 +917,7 @@
         {
           "ratio": 1.414,
           "fixedFrequency": 0.0,
-          "modulationIndex": 2.0,
+          "modulationIndex": 10.0,
           "waveform": 0,
           "envelope": { "attack": 0.001, "decay": 0.3, "sustain": 0.0, "release": 0.5 },
           "filters": []
@@ -931,7 +933,7 @@
         {
           "ratio": 2.718,
           "fixedFrequency": 0.0,
-          "modulationIndex": 2.0,
+          "modulationIndex": 10.0,
           "waveform": 0,
           "envelope": { "attack": 0.001, "decay": 0.35, "sustain": 0.0, "release": 0.55 },
           "filters": []
@@ -979,7 +981,7 @@
         {
           "ratio": 0.1,
           "fixedFrequency": 0.0,
-          "modulationIndex": 5.0,
+          "modulationIndex": 10.0,
           "waveform": 0,
           "envelope": { "attack": 0.1, "decay": 0.1, "sustain": 1.0, "release": 0.5 },
           "filters": []
@@ -1043,7 +1045,7 @@
         {
           "ratio": 1.0,
           "fixedFrequency": 0.0,
-          "modulationIndex": 2.0,
+          "modulationIndex": 10.0,
           "waveform": 0,
           "envelope": { "attack": 0.001, "decay": 0.05, "sustain": 0.0, "release": 0.1 },
           "filters": []
@@ -1107,7 +1109,7 @@
         {
           "ratio": 1.0,
           "fixedFrequency": 0.0,
-          "modulationIndex": 1.0,
+          "modulationIndex": 5.0,
           "waveform": 0,
           "envelope": { "attack": 0.3, "decay": 0.5, "sustain": 0.8, "release": 0.8 },
           "filters": []
@@ -1115,7 +1117,7 @@
         {
           "ratio": 1.6,
           "fixedFrequency": 0.0,
-          "modulationIndex": 2.0,
+          "modulationIndex": 10.0,
           "waveform": 0,
           "envelope": { "attack": 0.3, "decay": 0.5, "sustain": 0.8, "release": 0.8 },
           "filters": []
@@ -1123,7 +1125,7 @@
         {
           "ratio": 2.4,
           "fixedFrequency": 0.0,
-          "modulationIndex": 0.9,
+          "modulationIndex": 4.5,
           "waveform": 0,
           "envelope": { "attack": 0.3, "decay": 0.5, "sustain": 0.8, "release": 0.8 },
           "filters": []
@@ -1171,7 +1173,7 @@
         {
           "ratio": 1.0,
           "fixedFrequency": 0.0,
-          "modulationIndex": 1.8,
+          "modulationIndex": 10.0,
           "waveform": 3,
           "envelope": { "attack": 0.02, "decay": 0.1, "sustain": 0.9, "release": 0.2 },
           "filters": []
@@ -1187,7 +1189,7 @@
         {
           "ratio": 1.01,
           "fixedFrequency": 0.0,
-          "modulationIndex": 1.8,
+          "modulationIndex": 10.0,
           "waveform": 2,
           "envelope": { "attack": 0.02, "decay": 0.1, "sustain": 0.9, "release": 0.2 },
           "filters": []
