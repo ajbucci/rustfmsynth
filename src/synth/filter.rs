@@ -157,43 +157,45 @@ impl FilterState for PitchedCombState {
         self.comb_state.reset();
     }
     fn process(&mut self, input: f32) -> f32 {
-        let state = &mut self.comb_state; // Get mutable ref to inner state
+        let state = &mut self.comb_state;
         let k = state.k;
 
+        // Safety checks
         if k == 0 || state.ys.len() != k {
             return input;
-        } // Safety checks
+        }
+        // Ensure index wraps correctly before use
         if state.ys_index >= k {
             state.ys_index = 0;
         }
 
-        // --- Karplus-Strong Damping Filter ---
-        // Read the current sample from the delay line (y[n-k])
+        // Read the delayed sample y[n-k] (value being read out / about to be overwritten)
         let current_delayed = state.ys[state.ys_index];
-        // Read the previous sample from the delay line (y[n-k-1])
-        // Need to handle buffer wrap-around for the previous index
-        let prev_index = (state.ys_index + k - 1) % k;
-        let prev_delayed = state.ys[prev_index];
 
-        // Apply the simple averaging low-pass filter
-        let filtered_feedback = (current_delayed + prev_delayed) * 0.5;
-        // --- End Damping Filter ---
+        // Calculate the core feedback loop signal based on input and delayed signal
+        // Alpha includes polarity (+/-) and decay (<1 magnitude, e.g., +/- 0.995)
+        let loop_signal = input + state.alpha * current_delayed;
 
-        // Calculate output: input + filtered & attenuated feedback
-        // For pure Karplus-Strong resonator, input is often 0 after initial excitation
-        let output = input + state.alpha * filtered_feedback;
+        // --- Apply KS-style Averaging Filter using y[n-1] ---
+        // Get the previously written value, y[n-1].
+        // It's located at the index *before* the current write index (ys_index).
+        // Need correct modulo arithmetic for wrap-around.
+        let prev_write_index = (state.ys_index + k - 1) % k;
+        let prev_written_value = state.ys[prev_write_index]; // This is y[n-1]
 
-        // --- Store the OUTPUT back into the delay line ---
-        // (This is slightly different from the basic comb where you store `output`)
-        // For Karplus-Strong string simulation, often the *filtered feedback* or the *output*
-        // is stored. Storing the output is common.
+        // Average the current loop signal with the previously written value (y[n-1])
+        // This acts as a low-pass filter applied *before* writing into the delay line
+        let output = (loop_signal + prev_written_value) * 0.5;
+
+        // Store the DAMPED value back into the delay line at the current index
         if !output.is_finite() {
-            self.reset();
+            eprintln!("Warning: Non-finite value detected. Resetting.");
+            self.reset(); // Ensure reset clears ys buffer appropriately
             return 0.0;
         }
-        state.ys[state.ys_index] = output; // Store the final output
+        state.ys[state.ys_index] = output; // Store y[n]
 
-        // Advance write index
+        // Advance write index for the next sample
         state.ys_index = (state.ys_index + 1) % k;
 
         output
