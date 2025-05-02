@@ -4,6 +4,7 @@ use super::filter::{Filter, FilterType};
 use super::note::NoteEvent;
 use super::operator::Operator;
 use super::operator::OperatorEvent;
+use super::reverb::Reverb;
 use super::voice::Voice;
 use super::voice_config::VoiceConfig;
 use super::waveform::Waveform;
@@ -137,6 +138,13 @@ impl Synth {
             eprintln!("Operator index out of bounds");
         }
     }
+    pub fn set_operator_reverb(&mut self, op_index: usize, reverb: Option<Reverb>) {
+        if op_index < self.operators.len() {
+            self.operators[op_index].set_reverb(reverb);
+        } else {
+            eprintln!("Operator index out of bounds");
+        }
+    }
     // TODO: Implement a better voice stealing strategy (e.g., oldest note, quietest voice)
     fn steal_voice(&mut self) -> &mut Voice {
         // Simple strategy: steal the first voice. Replace with a better heuristic.
@@ -234,7 +242,16 @@ impl Default for Synth {
             .collect();
 
         // Carrier A
+        let sr = 44100.0;
+        let delay_times_ms = [31.3, 41.1, 53.0, 67.7, 73.3, 80.9];
+        let delay_lengths: Vec<usize> = delay_times_ms
+            .iter()
+            .map(|&t| (t / 1000.0 * sr) as usize)
+            .collect();
+        println!("Delay lengths: {:?}", delay_lengths);
+        let reverb = Reverb::new_parallel_delay_feedback(&delay_lengths, 0.12, 0.5);
         operators[0].set_waveform(Waveform::Sine);
+        operators[0].set_reverb(Some(reverb));
         // operators[0].set_envelope(0.01, 1.0, 0.7, 0.5);
         // operators[0].set_gain(0.5);
         // operators[0].set_ratio(1.0);
@@ -283,7 +300,7 @@ impl Default for Synth {
             voice_config: VoiceConfig::default(), // Default voice config
             algorithm: default_algorithm,
             operators, // Store the operators
-            master_volume: 0.65,
+            master_volume: 0.8,
             buffer_size: 1024, // Default, can be updated by set_buffer_size
         }
     }

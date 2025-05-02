@@ -2,6 +2,7 @@ use super::context::ProcessContext;
 use super::core::MODULATION_INDEX_GAIN_OFFSET;
 use super::envelope::EnvelopeGenerator;
 use super::filter::{Filter, FilterType};
+use super::reverb::Reverb;
 use super::waveform::{Waveform, WaveformGenerator};
 use crate::synth::prelude::TAU;
 
@@ -26,6 +27,7 @@ pub struct OperatorState {
     current_ratio: Option<f32>,
     current_modulation_index: Option<f32>, // Add field for smoothed mod index
     filters: Option<Vec<Filter>>,
+    reverb: Option<Reverb>,
 }
 impl Default for OperatorState {
     fn default() -> Self {
@@ -34,6 +36,7 @@ impl Default for OperatorState {
             current_ratio: None,
             current_modulation_index: None, // Initialize as None
             filters: None,
+            reverb: None,
         }
     }
 }
@@ -47,6 +50,7 @@ pub struct Operator {
     pub modulation_index: f32,
     pub gain: f32, // Output gain of this operator
     pub filters: Option<Vec<Filter>>,
+    pub reverb: Option<Reverb>,
 }
 
 impl Operator {
@@ -78,7 +82,7 @@ impl Operator {
             .current_modulation_index
             .unwrap_or(self.modulation_index); // Get current smoothed mod index
 
-        self.manage_filter_states(state, context);
+        self.manage_states(state, context);
 
         // Generate the waveform using the WaveformGenerator
         for (i, sample) in output.iter_mut().enumerate() {
@@ -121,15 +125,21 @@ impl Operator {
                     .fold(raw_output, |acc, filter| filter.process(acc));
             }
             let env = self.envelope.evaluate(time_since_on, time_since_off);
+            let env_output = filtered_output * env;
+            let reverb_output = if let Some(reverb) = &mut state.reverb {
+                reverb.process(env_output)
+            } else {
+                env_output
+            };
 
-            *sample = filtered_output * env * self.gain;
+            *sample = reverb_output * self.gain;
         }
         // Store the final smoothed values back into the state
         state.current_ratio = Some(current_smoothed_ratio);
         state.current_modulation_index = Some(current_smoothed_modulation_index);
     }
 
-    fn manage_filter_states(&self, state: &mut OperatorState, context: &ProcessContext) {
+    fn manage_states(&self, state: &mut OperatorState, context: &ProcessContext) {
         if context.samples_elapsed_since_trigger == 0 {
             state.filters = self.filters.clone();
             if let Some(active_filters) = state.filters.as_mut() {
@@ -142,6 +152,7 @@ impl Operator {
                     }
                 }
             }
+            state.reverb = self.reverb.clone();
         }
     }
     pub fn set_amplitude(&mut self, amp: f32) {
@@ -187,6 +198,9 @@ impl Operator {
         self.gain = gain;
     }
 
+    pub fn set_reverb(&mut self, reverb: Option<Reverb>) {
+        self.reverb = reverb;
+    }
     pub fn set_filter(&mut self, filter: Filter) {
         // Get the type discriminant of the new filter
         let new_filter_type = filter.get_type();
@@ -268,10 +282,11 @@ impl Default for Operator {
             frequency_ratio: 1.0,  // Target ratio
             fixed_frequency: None, // Default to using ratio
             detune: 0.0,
-            modulation_index: 1.0,
+            modulation_index: 10.0,
             envelope: EnvelopeGenerator::new(),
             gain: 1.0,
             filters: None,
+            reverb: None,
         }
     }
 }
