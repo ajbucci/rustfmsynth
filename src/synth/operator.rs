@@ -2,7 +2,6 @@ use super::context::ProcessContext;
 use super::core::MODULATION_INDEX_GAIN_OFFSET;
 use super::envelope::EnvelopeGenerator;
 use super::filter::{Filter, FilterType};
-use super::reverb::Reverb;
 use super::waveform::{Waveform, WaveformGenerator};
 use crate::synth::prelude::TAU;
 
@@ -27,7 +26,6 @@ pub struct OperatorState {
     current_ratio: Option<f32>,
     current_modulation_index: Option<f32>, // Add field for smoothed mod index
     filters: Option<Vec<Filter>>,
-    reverb: Option<Reverb>,
     pub finished: bool,
 }
 impl Default for OperatorState {
@@ -37,7 +35,6 @@ impl Default for OperatorState {
             current_ratio: None,
             current_modulation_index: None, // Initialize as None
             filters: None,
-            reverb: None,
             finished: false,
         }
     }
@@ -52,7 +49,6 @@ pub struct Operator {
     pub modulation_index: f32,
     pub gain: f32, // Output gain of this operator
     pub filters: Option<Vec<Filter>>,
-    pub reverb: Option<Reverb>,
 }
 
 impl Operator {
@@ -129,16 +125,11 @@ impl Operator {
             }
             let env = self.envelope.evaluate(time_since_on, time_since_off);
             let env_output = filtered_output * env;
-            let reverb_output = if let Some(reverb) = &mut state.reverb {
-                reverb.process(env_output)
-            } else {
-                env_output
-            };
 
-            if reverb_output.abs() > 1.0e-9 {
+            if env_output.abs() > 1.0e-9 {
                 silent_buffer = false;
             }
-            *sample = reverb_output * self.gain;
+            *sample = env_output * self.gain;
         }
         // Store the final smoothed values back into the state
         state.current_ratio = Some(current_smoothed_ratio);
@@ -162,7 +153,6 @@ impl Operator {
                     }
                 }
             }
-            state.reverb = self.reverb.clone();
         }
     }
     pub fn set_amplitude(&mut self, amp: f32) {
@@ -208,9 +198,6 @@ impl Operator {
         self.gain = gain;
     }
 
-    pub fn set_reverb(&mut self, reverb: Option<Reverb>) {
-        self.reverb = reverb;
-    }
     pub fn set_filter(&mut self, filter: Filter) {
         // Get the type discriminant of the new filter
         let new_filter_type = filter.get_type();
@@ -296,7 +283,6 @@ impl Default for Operator {
             envelope: EnvelopeGenerator::new(),
             gain: 1.0,
             filters: None,
-            reverb: None,
         }
     }
 }

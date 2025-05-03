@@ -2,6 +2,7 @@ pub mod algorithm;
 pub mod config;
 pub mod context;
 pub mod core;
+pub mod effect;
 pub mod envelope;
 pub mod filter;
 pub mod note;

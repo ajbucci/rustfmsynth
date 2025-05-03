@@ -1,5 +1,6 @@
 use super::algorithm::Algorithm;
 use super::config::SynthConfig;
+use super::effect::{Effect, EffectType};
 use super::filter::{Filter, FilterType};
 use super::note::NoteEvent;
 use super::operator::Operator;
@@ -18,6 +19,8 @@ pub struct Synth {
     operators: Vec<Operator>,      // The set of operators shared by all voices
     master_volume: f32,
     buffer_size: usize,
+    effect: Option<Effect>,
+    sample_rate: f32,
 }
 
 const MAX_MODULATION_INDEX: f32 = 10.0;
@@ -138,12 +141,8 @@ impl Synth {
             eprintln!("Operator index out of bounds");
         }
     }
-    pub fn set_operator_reverb(&mut self, op_index: usize, reverb: Option<Reverb>) {
-        if op_index < self.operators.len() {
-            self.operators[op_index].set_reverb(reverb);
-        } else {
-            eprintln!("Operator index out of bounds");
-        }
+    pub fn set_effect(&mut self, effect: Effect) {
+        self.effect = Some(effect);
     }
     // TODO: Implement a better voice stealing strategy (e.g., oldest note, quietest voice)
     fn steal_voice(&mut self) -> &mut Voice {
@@ -179,6 +178,12 @@ impl Synth {
     }
 
     pub fn process(&mut self, output: &mut [f32], sample_rate: f32) {
+        if self.sample_rate != sample_rate {
+            self.sample_rate = sample_rate;
+            if let Some(effect) = self.effect.as_mut() {
+                effect.configure(sample_rate);
+            }
+        }
         output.fill(0.0); // Clear output buffer before mixing
         let mut temp_buffer = vec![0.0; output.len()];
         let voice_scaling_factor = self.get_voice_scaling_factor();
@@ -200,6 +205,9 @@ impl Synth {
             // Modulation Index is allowed to go from 0 to (1/MODULATION_INDEX_GAIN_OFFSET),
             // back out that gain increase here
             *sample *= self.master_volume * MODULATION_INDEX_GAIN_OFFSET;
+        }
+        if let Some(effect) = self.effect.as_mut() {
+            effect.apply(output);
         }
     }
     fn get_voice_scaling_factor(&self) -> f32 {
@@ -242,25 +250,23 @@ impl Default for Synth {
             .collect();
 
         // Carrier A
-        // let num_internal_channels = 4; // Power of 2
-        // let diffusion_steps = 4;
-        // let room_size_ms = 110.0;
-        // let rt60_seconds = 2.4; // Test short RT60 where decay was problematic
-        // let dry_wet_mix = 0.35; // Full wet to clearly see decay
+        let num_internal_channels = 8; // Power of 2
+        let diffusion_steps = 4;
+        let room_size_ms = 110.0;
+        let rt60_seconds = 2.4; // Test short RT60 where decay was problematic
+        let dry_wet_mix = 0.35; // Full wet to clearly see decay
 
         // --- Create and Configure ---
-        // let mut rng = rand::rng();
-        // let mut reverb = Reverb::new_signalsmith(
-        //     num_internal_channels,
-        //     diffusion_steps,
-        //     room_size_ms,
-        //     rt60_seconds,
-        //     dry_wet_mix,
-        //     &mut rng,
-        // );
-        // reverb.configure(44100.0, &mut rng);
+        let mut reverb = Reverb::new_signalsmith(
+            num_internal_channels,
+            diffusion_steps,
+            room_size_ms,
+            rt60_seconds,
+            dry_wet_mix,
+        );
+        reverb.configure(44100.0);
+        let effect = Some(Effect::new(EffectType::Reverb(reverb)));
         operators[0].set_waveform(Waveform::Sine);
-        // operators[0].set_reverb(Some(reverb));
         // operators[0].set_envelope(0.01, 1.0, 0.7, 0.5);
         // operators[0].set_gain(0.5);
         // operators[0].set_ratio(1.0);
@@ -311,6 +317,8 @@ impl Default for Synth {
             operators, // Store the operators
             master_volume: 0.8,
             buffer_size: 1024, // Default, can be updated by set_buffer_size
+            effect: effect,
+            sample_rate: 44100.0,
         }
     }
 }
