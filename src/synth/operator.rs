@@ -129,7 +129,16 @@ impl Operator {
             }
             let env = self.envelope.evaluate(time_since_on, time_since_off);
             let env_output = filtered_output * env;
-            *sample = env_output * self.gain;
+            let reverb_output = if let Some(reverb) = &mut state.reverb {
+                reverb.process(env_output)
+            } else {
+                env_output
+            };
+
+            if reverb_output.abs() > 1.0e-9 {
+                silent_buffer = false;
+            }
+            *sample = reverb_output * self.gain;
         }
         // Store the final smoothed values back into the state
         state.current_ratio = Some(current_smoothed_ratio);

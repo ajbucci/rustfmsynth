@@ -242,16 +242,25 @@ impl Default for Synth {
             .collect();
 
         // Carrier A
-        let sr = 44100.0;
-        let delay_times_ms = [31.3, 41.1, 53.0, 67.7, 73.3, 80.9];
-        let delay_lengths: Vec<usize> = delay_times_ms
-            .iter()
-            .map(|&t| (t / 1000.0 * sr) as usize)
-            .collect();
-        println!("Delay lengths: {:?}", delay_lengths);
-        let reverb = Reverb::new_parallel_delay_feedback(&delay_lengths, 0.12, 0.5);
+        // let num_internal_channels = 4; // Power of 2
+        // let diffusion_steps = 4;
+        // let room_size_ms = 110.0;
+        // let rt60_seconds = 2.4; // Test short RT60 where decay was problematic
+        // let dry_wet_mix = 0.35; // Full wet to clearly see decay
+
+        // --- Create and Configure ---
+        // let mut rng = rand::rng();
+        // let mut reverb = Reverb::new_signalsmith(
+        //     num_internal_channels,
+        //     diffusion_steps,
+        //     room_size_ms,
+        //     rt60_seconds,
+        //     dry_wet_mix,
+        //     &mut rng,
+        // );
+        // reverb.configure(44100.0, &mut rng);
         operators[0].set_waveform(Waveform::Sine);
-        operators[0].set_reverb(Some(reverb));
+        // operators[0].set_reverb(Some(reverb));
         // operators[0].set_envelope(0.01, 1.0, 0.7, 0.5);
         // operators[0].set_gain(0.5);
         // operators[0].set_ratio(1.0);
