@@ -28,6 +28,7 @@ pub struct OperatorState {
     current_modulation_index: Option<f32>, // Add field for smoothed mod index
     filters: Option<Vec<Filter>>,
     reverb: Option<Reverb>,
+    pub finished: bool,
 }
 impl Default for OperatorState {
     fn default() -> Self {
@@ -37,6 +38,7 @@ impl Default for OperatorState {
             current_modulation_index: None, // Initialize as None
             filters: None,
             reverb: None,
+            finished: false,
         }
     }
 }
@@ -85,6 +87,7 @@ impl Operator {
         self.manage_states(state, context);
 
         // Generate the waveform using the WaveformGenerator
+        let mut silent_buffer = true;
         for (i, sample) in output.iter_mut().enumerate() {
             // --- Smooth Ratio ---
             current_smoothed_ratio +=
@@ -126,17 +129,15 @@ impl Operator {
             }
             let env = self.envelope.evaluate(time_since_on, time_since_off);
             let env_output = filtered_output * env;
-            let reverb_output = if let Some(reverb) = &mut state.reverb {
-                reverb.process(env_output)
-            } else {
-                env_output
-            };
-
-            *sample = reverb_output * self.gain;
+            *sample = env_output * self.gain;
         }
         // Store the final smoothed values back into the state
         state.current_ratio = Some(current_smoothed_ratio);
         state.current_modulation_index = Some(current_smoothed_modulation_index);
+
+        if self.finished(context) && silent_buffer {
+            state.finished = true;
+        }
     }
 
     fn manage_states(&self, state: &mut OperatorState, context: &ProcessContext) {

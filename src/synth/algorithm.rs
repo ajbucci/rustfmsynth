@@ -89,10 +89,8 @@ impl Algorithm {
         });
         self.rebuild_unrolled_graph();
     }
-    pub fn finished(&self, context: &ProcessContext) -> bool {
-        self.carriers
-            .iter()
-            .all(|&carrier| context.operators[carrier].finished(context))
+    pub fn finished(&self, nodes: &[OperatorState]) -> bool {
+        self.carriers.iter().all(|&carrier| nodes[carrier].finished)
     }
     /// Expects `combined_matrix_from_ui` where:
     /// - `[source_index][target_index]` (for `target_index < ui_op_count`) indicates

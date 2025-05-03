@@ -119,7 +119,7 @@ impl Voice {
         };
 
         // If the voice is fully finished (inactive AND envelope done), skip processing.
-        if self.is_finished(algorithm, &context) {
+        if self.is_finished(algorithm) {
             self.reset();
             return;
         }
@@ -140,14 +140,14 @@ impl Voice {
 
         self.samples_elapsed_since_trigger += buffer_len as u64;
 
-        if self.releasing && self.is_finished(algorithm, &context) {
+        if self.releasing && self.is_finished(algorithm) {
             println!("Voice fully inactive (note {} released)", self.note_number);
             self.reset();
         }
     }
 
     /// Checks if the voice is completely finished (inactive and envelope has finished).
-    pub fn is_finished(&self, algorithm: &Algorithm, context: &ProcessContext) -> bool {
-        algorithm.finished(context)
+    pub fn is_finished(&self, algorithm: &Algorithm) -> bool {
+        algorithm.finished(&self.node_states)
     }
 }
