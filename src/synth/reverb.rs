@@ -8,16 +8,100 @@ use std::vec::Vec;
 pub enum ReverbType {
     FDN,
 }
+const MIN_CHANNELS: usize = 4;
+const MAX_CHANNELS: usize = 128;
+#[derive(Debug, Clone)]
+pub struct SchroederMultiStageAllpass {
+    coeff: f32,
+    stages: Vec<SchroederSingleStageState>,
+}
 
+#[derive(Debug, Clone)]
+struct SchroederSingleStageState {
+    delay_m: usize,   // M for this stage
+    buffer: Vec<f32>, // Single buffer for this stage's state s[k]
+    write_pos: usize, // Write position for this stage's buffer
+}
+
+impl SchroederMultiStageAllpass {
+    pub fn new(coeff: f32, stage_delay_sample_spacing: usize, num_stages: usize) -> Self {
+        let mut stages_vec = Vec::with_capacity(num_stages);
+
+        let delay_spacings = get_delay_samples_by_spacing(stage_delay_sample_spacing, num_stages);
+        for stage in 0..num_stages {
+            stages_vec.push(SchroederSingleStageState {
+                delay_m: delay_spacings[stage],
+                buffer: vec![0.0; delay_spacings[stage]],
+                write_pos: 0,
+            });
+        }
+
+        Self {
+            coeff: coeff.clamp(-0.99, 0.99),
+            stages: stages_vec,
+        }
+    }
+
+    #[inline]
+    pub fn process(&mut self, input: f32) -> f32 {
+        let mut current_signal = input;
+
+        for stage_state in self.stages.iter_mut() {
+            let delayed_state_val = stage_state.buffer[stage_state.write_pos];
+            let stage_output = self.coeff * current_signal + delayed_state_val;
+            let new_state_val_to_store = current_signal - self.coeff * stage_output;
+            stage_state.buffer[stage_state.write_pos] = new_state_val_to_store;
+            stage_state.write_pos = (stage_state.write_pos + 1) % stage_state.delay_m;
+            current_signal = stage_output;
+        }
+        current_signal // Final output after all stages
+    }
+
+    pub fn reset(&mut self) {
+        for stage_state in self.stages.iter_mut() {
+            stage_state.buffer.fill(0.0);
+            stage_state.write_pos = 0;
+        }
+    }
+
+    pub fn set_coeff(&mut self, coeff: f32) {
+        self.coeff = coeff.clamp(-0.99, 0.99);
+    }
+}
+fn get_channels_pow2(channels: usize) -> usize {
+    let clamped_val = channels.clamp(MIN_CHANNELS, MAX_CHANNELS);
+
+    if (clamped_val & (clamped_val - 1)) == 0 {
+        return clamped_val;
+    }
+
+    let upper_pow2 = clamped_val.next_power_of_two();
+    let lower_pow2 = upper_pow2 / 2;
+
+    if (clamped_val - lower_pow2) <= (upper_pow2 - clamped_val) {
+        lower_pow2
+    } else {
+        upper_pow2
+    }
+}
 // Delay times should be distributed exponentially between
 // a short delay amount and a long delay amount,
 // then rounded to the nearest distinct integer prime
-pub fn get_delay_times(
+pub fn get_delay_samples_by_spacing(sample_delay_spacing: usize, num_delays: usize) -> Vec<usize> {
+    get_delay_samples(
+        sample_delay_spacing,
+        sample_delay_spacing * (num_delays + 1),
+        0.0,
+        num_delays,
+    )
+}
+pub fn get_delay_samples(
     mut min_delay_samples: usize,
     mut max_delay_samples: usize,
+    curve: f32, // shape from linear (0) to exponential (1)
     num_delays: usize,
 ) -> Vec<usize> {
-    if num_delays < 2 || num_delays > 16 {
+    if num_delays < MIN_CHANNELS || num_delays > MAX_CHANNELS {
         return Vec::new();
     }
 
@@ -34,10 +118,12 @@ pub fn get_delay_times(
     let ratio =
         (max_delay_samples as f32 / min_delay_samples as f32).powf(1.0 / (num_delays - 1) as f32);
 
+    let increment = (max_delay_samples - min_delay_samples) as f32 / num_delays as f32;
+    let increment = increment as usize;
     // Determine Sieve limit: needs to cover max_delay_samples, and potentially a bit more
     // if last_prime_found pushes targets higher. For num_delays=16, this won't be excessive.
     let sieve_limit =
-        (max_delay_samples + (num_delays as usize * 100)).min(PRACTICAL_MAX_INPUT_DELAY + 2000); // Heuristic
+        (max_delay_samples * 2 + (num_delays as usize * 100)).min(PRACTICAL_MAX_INPUT_DELAY + 2000); // Heuristic
 
     let mut is_composite = vec![false; sieve_limit as usize + 1];
 
@@ -68,10 +154,16 @@ pub fn get_delay_times(
                 result_primes.push(p);
                 last_prime_found = p;
                 if result_primes.len() < num_delays {
-                    current_target_f *= ratio;
-                    if current_target_f <= last_prime_found as f32 {
-                        current_target_f = (last_prime_found + 1) as f32;
-                    }
+                    // current_target_f *= ratio;
+                    // if current_target_f <= last_prime_found as f32 {
+                    //     current_target_f = (last_prime_found + 1) as f32;
+                    // }
+                    let linear_target = (last_prime_found + increment) as f32;
+                    let exponential_target = last_prime_found as f32 * ratio;
+
+                    let blended_target = (1.0 - curve) * linear_target + curve * exponential_target;
+
+                    current_target_f = blended_target.max((last_prime_found + 1) as f32);
                 }
             }
         }
@@ -85,16 +177,6 @@ pub fn get_delay_times(
     }
     result_primes
 }
-const HADAMARD_8: [[i32; 8]; 8] = [
-    [1, 1, 1, 1, 1, 1, 1, 1],
-    [1, -1, 1, -1, 1, -1, 1, -1],
-    [1, 1, -1, -1, 1, 1, -1, -1],
-    [1, -1, -1, 1, 1, -1, -1, 1],
-    [1, 1, 1, 1, -1, -1, -1, -1],
-    [1, -1, 1, -1, -1, 1, -1, 1],
-    [1, 1, -1, -1, -1, -1, 1, 1],
-    [1, -1, -1, 1, -1, 1, 1, -1],
-];
 #[derive(Clone, Debug)]
 struct DelayLine {
     buffer: Vec<f32>,
@@ -123,36 +205,65 @@ impl DelayLine {
 // Input -> delay lines -> output AND delay filters (if I implement) -> feedback matrix -> mix w/ input ->
 // repeat
 #[derive(Clone, Debug)]
-struct FDN {
-    rt60: f32,
-    mix: f32,
+struct Fdn {
+    wet_mix: f32,
     delay_lines: Vec<DelayLine>,
-    decay_coeffs: [f32; NUM_LINES],
-    feedback: [f32; NUM_LINES],
-    delay_outputs: [f32; NUM_LINES],
+    decay_coeffs: Vec<f32>,
+    feedback: Vec<f32>,
+    feedback_mix_buffer: Vec<f32>,
+    channels: usize,
+    delay_outputs: Vec<f32>,
+    allpass_filters: Vec<SchroederMultiStageAllpass>,
     sample_rate: f32,
 }
-const NUM_LINES: usize = 8;
-impl FDN {
-    fn new(delay_time_seconds: f32, sample_rate: f32) -> Self {
-        let delay_samples = sample_rate * delay_time_seconds;
-        let delay_spread_seconds = 0.25;
-        let delay_spread_samples = sample_rate * delay_spread_seconds;
-        let delays = get_delay_times(
-            delay_samples as usize,
-            (delay_samples + delay_spread_samples) as usize,
-            NUM_LINES,
+const SPEED_OF_SOUND: f32 = 343.0; // m/s
+const GOLDEN_RATIO: f32 = 1.6180339887;
+
+impl Fdn {
+    fn new(
+        predelay_ms: f32,
+        spread_ms: f32,
+        decay_ms: f32,
+        channels: usize,
+        diffusion_steps: usize, // number of allpass stages before mixing
+        wet_mix: f32,
+        sample_rate: f32,
+    ) -> Self {
+        let predelay = predelay_ms / 1000.0;
+        let spread = spread_ms / 1000.0;
+        let rt60 = decay_ms / 1000.0;
+
+        let channels = get_channels_pow2(channels);
+
+        let predelay_samples = sample_rate * predelay;
+        let delay_spread_samples = sample_rate * spread;
+        let delay_samples = get_delay_samples(
+            predelay_samples as usize,
+            (predelay_samples + delay_spread_samples) as usize,
+            1.0, // exponential curve
+            channels,
         );
-        let delay_lines = delays
+        let decay_coeffs = delay_samples
+            .iter()
+            .map(|&d| 0.001_f32.powf(d as f32 / sample_rate / rt60))
+            .collect::<Vec<_>>();
+        let delay_lines = delay_samples
             .iter()
             .map(|&d| DelayLine::new(d))
             .collect::<Vec<_>>();
+
+        let mut allpass_filters = Vec::with_capacity(channels);
+        for _channel in 0..channels {
+            allpass_filters.push(SchroederMultiStageAllpass::new(0.9, 40, diffusion_steps));
+        }
         Self {
-            rt60: 0.0,
-            mix: 0.5,
-            feedback: [0.0; NUM_LINES],
-            decay_coeffs: [0.8; NUM_LINES],
-            delay_outputs: [0.0; NUM_LINES],
+            wet_mix,
+            feedback: vec![0.0; channels],
+            feedback_mix_buffer: vec![0.0; channels],
+            decay_coeffs,
+            delay_outputs: vec![0.0; channels],
+            allpass_filters,
+            channels,
             sample_rate,
             delay_lines,
         }
@@ -168,25 +279,27 @@ impl FDN {
     }
     fn process(&mut self, input: &mut f32) {
         let mut wet = 0.0;
-        let mut feedback_mix_buffer = [0.0f32; NUM_LINES]; // This will be modified in-place by FWHT
-        for (i, f) in self.feedback.iter().enumerate() {
+        self.feedback_mix_buffer.fill(0.0);
+        for i in 0..self.channels {
             // retrieve feedback and push mixed input into delay line
-            self.delay_outputs[i] = self.delay_lines[i].push_pop(*f + *input / NUM_LINES as f32);
-            wet += self.delay_outputs[i];
-            feedback_mix_buffer[i] = self.delay_outputs[i] * self.decay_coeffs[i];
+            self.delay_outputs[i] =
+                self.delay_lines[i].push_pop(self.feedback[i] + *input / self.channels as f32);
+            let filtered_output = self.allpass_filters[i].process(self.delay_outputs[i]);
+            wet += filtered_output;
+            self.feedback_mix_buffer[i] = filtered_output * self.decay_coeffs[i];
         }
 
         // Perform Fast Walsh-Hadamard Transform (in-place on feedback_mix_buffer)
         let mut h = 1;
-        while h < NUM_LINES {
+        while h < self.channels {
             // For N=8, h will be 1, 2, 4
             let mut i = 0;
-            while i < NUM_LINES {
+            while i < self.channels {
                 for j in i..(i + h) {
-                    let x = feedback_mix_buffer[j];
-                    let y = feedback_mix_buffer[j + h];
-                    feedback_mix_buffer[j] = x + y;
-                    feedback_mix_buffer[j + h] = x - y;
+                    let x = self.feedback_mix_buffer[j];
+                    let y = self.feedback_mix_buffer[j + h];
+                    self.feedback_mix_buffer[j] = x + y;
+                    self.feedback_mix_buffer[j + h] = x - y;
                 }
                 i += h * 2;
             }
@@ -194,19 +307,19 @@ impl FDN {
         }
 
         // Apply normalization for energy preservation
-        let norm_factor = 1.0 / (NUM_LINES as f32).sqrt();
+        let norm_factor = 1.0 / (self.channels as f32).sqrt();
 
-        for i in 0..NUM_LINES {
-            self.feedback[i] = feedback_mix_buffer[i] * norm_factor;
+        for i in 0..self.channels {
+            self.feedback[i] = self.feedback_mix_buffer[i] * norm_factor;
         }
-        *input = *input * (1.0 - self.mix) + self.mix * wet;
+        *input = *input * (1.0 - self.wet_mix) + self.wet_mix * wet;
     }
 }
 
 // --- Top-level Reverb Enum (Wrapper) ---
 #[derive(Clone, Debug)]
 pub enum Reverb {
-    FDN(FDN),
+    FDN(Fdn),
 }
 
 impl Reverb {
@@ -241,8 +354,23 @@ impl Reverb {
         }
     }
 
-    pub fn new_fdn(delay_time_seconds: f32) -> Self {
+    pub fn new_fdn(
+        predelay_ms: f32,
+        spread_ms: f32,
+        decay_ms: f32,
+        wet_mix: f32,
+        channels: usize,
+        diffusion_steps: usize, // number of allpass stages before mixing
+    ) -> Self {
         // Removed RNG argument
-        Reverb::FDN(FDN::new(delay_time_seconds, 44_100.0))
+        Reverb::FDN(Fdn::new(
+            predelay_ms,
+            spread_ms,
+            decay_ms,
+            channels,
+            diffusion_steps,
+            wet_mix,
+            44_100.0,
+        ))
     }
 }

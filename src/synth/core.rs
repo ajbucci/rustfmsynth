@@ -250,14 +250,8 @@ impl Default for Synth {
             .collect();
 
         // Carrier A
-        let num_internal_channels = 8; // Power of 2
-        let diffusion_steps = 4;
-        let room_size_ms = 110.0;
-        let rt60_seconds = 2.4; // Test short RT60 where decay was problematic
-        let dry_wet_mix = 0.35; // Full wet to clearly see decay
-
         // --- Create and Configure ---
-        let mut reverb = Reverb::new_fdn(0.05);
+        let mut reverb = Reverb::new_fdn(5.0, 1500.0, 2000.0, 0.8, 32, 10);
         let effect = Some(Effect::new(EffectType::Reverb(reverb)));
         operators[0].set_waveform(Waveform::Sine);
         // operators[0].set_envelope(0.01, 1.0, 0.7, 0.5);
