@@ -178,12 +178,12 @@ impl Synth {
     }
 
     pub fn process(&mut self, output: &mut [f32], sample_rate: f32) {
-        if self.sample_rate != sample_rate {
-            self.sample_rate = sample_rate;
-            if let Some(effect) = self.effect.as_mut() {
-                effect.configure(sample_rate);
-            }
-        }
+        // if self.sample_rate != sample_rate {
+        //     self.sample_rate = sample_rate;
+        //     if let Some(effect) = self.effect.as_mut() {
+        //         effect.configure(sample_rate);
+        //     }
+        // }
         output.fill(0.0); // Clear output buffer before mixing
         let mut temp_buffer = vec![0.0; output.len()];
         let voice_scaling_factor = self.get_voice_scaling_factor();
@@ -257,14 +257,7 @@ impl Default for Synth {
         let dry_wet_mix = 0.35; // Full wet to clearly see decay
 
         // --- Create and Configure ---
-        let mut reverb = Reverb::new_signalsmith(
-            num_internal_channels,
-            diffusion_steps,
-            room_size_ms,
-            rt60_seconds,
-            dry_wet_mix,
-        );
-        reverb.configure(44100.0);
+        let mut reverb = Reverb::new_fdn(0.05);
         let effect = Some(Effect::new(EffectType::Reverb(reverb)));
         operators[0].set_waveform(Waveform::Sine);
         // operators[0].set_envelope(0.01, 1.0, 0.7, 0.5);

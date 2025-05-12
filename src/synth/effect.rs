@@ -21,7 +21,11 @@ impl Effect {
 
     pub fn apply(&mut self, input: &mut [f32]) {
         match &mut self.effect {
-            EffectType::Reverb(reverb) => reverb.process(input),
+            EffectType::Reverb(reverb) => {
+                for i in input {
+                    reverb.process(i)
+                }
+            }
         }
     }
     pub fn configure(&mut self, sample_rate: f32) {
