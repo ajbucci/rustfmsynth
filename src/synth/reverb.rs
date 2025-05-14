@@ -8,7 +8,7 @@ use std::vec::Vec;
 pub enum ReverbType {
     FDN,
 }
-const MIN_CHANNELS: usize = 4;
+const MIN_CHANNELS: usize = 2;
 const MAX_CHANNELS: usize = 128;
 #[derive(Debug, Clone)]
 pub struct SchroederMultiStageAllpass {
@@ -88,6 +88,9 @@ fn get_channels_pow2(channels: usize) -> usize {
 // a short delay amount and a long delay amount,
 // then rounded to the nearest distinct integer prime
 pub fn get_delay_samples_by_spacing(sample_delay_spacing: usize, num_delays: usize) -> Vec<usize> {
+    if num_delays == 1 {
+        return vec![sample_delay_spacing; 1];
+    }
     get_delay_samples(
         sample_delay_spacing,
         sample_delay_spacing * (num_delays + 1),
@@ -213,7 +216,9 @@ struct Fdn {
     feedback_mix_buffer: Vec<f32>,
     channels: usize,
     delay_outputs: Vec<f32>,
-    allpass_filters: Vec<SchroederMultiStageAllpass>,
+    allpass_filters: Option<Vec<SchroederMultiStageAllpass>>,
+    // TODO: implement LPF
+    // lowpass_filters: Option<Vec<LowPassFilter>>,
     sample_rate: f32,
 }
 const SPEED_OF_SOUND: f32 = 343.0; // m/s
@@ -252,9 +257,13 @@ impl Fdn {
             .map(|&d| DelayLine::new(d))
             .collect::<Vec<_>>();
 
-        let mut allpass_filters = Vec::with_capacity(channels);
-        for _channel in 0..channels {
-            allpass_filters.push(SchroederMultiStageAllpass::new(0.9, 40, diffusion_steps));
+        let mut allpass_filters: Option<Vec<SchroederMultiStageAllpass>> = None;
+        if diffusion_steps > 0 {
+            let mut temp_ap_vec = Vec::with_capacity(channels);
+            for _channel in 0..channels {
+                temp_ap_vec.push(SchroederMultiStageAllpass::new(0.9, 40, diffusion_steps));
+            }
+            allpass_filters = Some(temp_ap_vec)
         }
         Self {
             wet_mix,
@@ -282,9 +291,11 @@ impl Fdn {
         self.feedback_mix_buffer.fill(0.0);
         for i in 0..self.channels {
             // retrieve feedback and push mixed input into delay line
-            self.delay_outputs[i] =
-                self.delay_lines[i].push_pop(self.feedback[i] + *input / self.channels as f32);
-            let filtered_output = self.allpass_filters[i].process(self.delay_outputs[i]);
+            self.delay_outputs[i] = self.delay_lines[i].push_pop(self.feedback[i] + *input);
+            let mut filtered_output = self.delay_outputs[i];
+            if let Some(ap) = self.allpass_filters.as_mut() {
+                filtered_output = ap[i].process(self.delay_outputs[i]);
+            }
             wet += filtered_output;
             self.feedback_mix_buffer[i] = filtered_output * self.decay_coeffs[i];
         }
@@ -312,7 +323,7 @@ impl Fdn {
         for i in 0..self.channels {
             self.feedback[i] = self.feedback_mix_buffer[i] * norm_factor;
         }
-        *input = *input * (1.0 - self.wet_mix) + self.wet_mix * wet;
+        *input = *input * (1.0 - self.wet_mix) + self.wet_mix * wet * norm_factor;
     }
 }
 

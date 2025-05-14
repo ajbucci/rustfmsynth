@@ -19,10 +19,17 @@ pub struct Synth {
     operators: Vec<Operator>,      // The set of operators shared by all voices
     master_volume: f32,
     buffer_size: usize,
-    effect: Option<Effect>,
+    effect_1: Option<Effect>,
+    effect_2: Option<Effect>,
+    effect_3: Option<Effect>,
     sample_rate: f32,
 }
 
+pub enum EffectSlot {
+    One,
+    Two,
+    Three,
+}
 const MAX_MODULATION_INDEX: f32 = 10.0;
 pub const MODULATION_INDEX_GAIN_OFFSET: f32 = 1.0 / MAX_MODULATION_INDEX;
 
@@ -68,6 +75,34 @@ impl Synth {
             self.update_voice_algorithm();
             println!("Synth: Algorithm updated successfully.");
             // self.algorithm.print_structure(); // Optional debug print
+        }
+    }
+    pub fn set_effect_reverb(
+        &mut self,
+        predelay_ms: f32,
+        spread_ms: f32,
+        decay_ms: f32,
+        wet_mix: f32,
+        channels: usize,
+        diffusion_steps: usize,
+        effect_slot: EffectSlot,
+    ) {
+        let mut reverb = Reverb::new_fdn(
+            predelay_ms,
+            spread_ms,
+            decay_ms,
+            wet_mix,
+            channels,
+            diffusion_steps,
+        );
+        let mut effect = Effect::new(EffectType::Reverb(reverb));
+        self.set_effect(effect_slot, Some(effect));
+    }
+    pub fn set_effect(&mut self, effect_slot: EffectSlot, effect: Option<Effect>) {
+        match effect_slot {
+            EffectSlot::One => self.effect_1 = effect,
+            EffectSlot::Two => self.effect_2 = effect,
+            EffectSlot::Three => self.effect_3 = effect,
         }
     }
 
@@ -141,9 +176,6 @@ impl Synth {
             eprintln!("Operator index out of bounds");
         }
     }
-    pub fn set_effect(&mut self, effect: Effect) {
-        self.effect = Some(effect);
-    }
     // TODO: Implement a better voice stealing strategy (e.g., oldest note, quietest voice)
     fn steal_voice(&mut self) -> &mut Voice {
         // Simple strategy: steal the first voice. Replace with a better heuristic.
@@ -206,8 +238,14 @@ impl Synth {
             // back out that gain increase here
             *sample *= self.master_volume * MODULATION_INDEX_GAIN_OFFSET;
         }
-        if let Some(effect) = self.effect.as_mut() {
-            effect.apply(output);
+        if let Some(effect_1) = self.effect_1.as_mut() {
+            effect_1.apply(output);
+        }
+        if let Some(effect_2) = self.effect_2.as_mut() {
+            effect_2.apply(output);
+        }
+        if let Some(effect_3) = self.effect_3.as_mut() {
+            effect_3.apply(output);
         }
     }
     fn get_voice_scaling_factor(&self) -> f32 {
@@ -251,8 +289,6 @@ impl Default for Synth {
 
         // Carrier A
         // --- Create and Configure ---
-        let mut reverb = Reverb::new_fdn(5.0, 1500.0, 2000.0, 0.8, 32, 10);
-        let effect = Some(Effect::new(EffectType::Reverb(reverb)));
         operators[0].set_waveform(Waveform::Sine);
         // operators[0].set_envelope(0.01, 1.0, 0.7, 0.5);
         // operators[0].set_gain(0.5);
@@ -296,7 +332,7 @@ impl Default for Synth {
             voice.update_algorithm(&default_algorithm);
         }
 
-        Self {
+        let mut synth = Self {
             voices,
             config,
             voice_config: VoiceConfig::default(), // Default voice config
@@ -304,8 +340,12 @@ impl Default for Synth {
             operators, // Store the operators
             master_volume: 0.8,
             buffer_size: 1024, // Default, can be updated by set_buffer_size
-            effect: effect,
+            effect_1: None,
+            effect_2: None,
+            effect_3: None,
             sample_rate: 44100.0,
-        }
+        };
+        synth.set_effect_reverb(20.0, 70.0, 1000.0, 0.5, 2, 2, EffectSlot::One);
+        synth
     }
 }
