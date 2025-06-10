@@ -74,7 +74,7 @@ const App: Component = () => {
         numberOfOutputs: 1,
       });
 
-      // 5. Set up Message Listener (Only for 'initialized' in this minimal setup)
+      // 5. Set up Message Listener 
       processorNode.port.onmessage = (event) => {
         if (event.data?.type === 'initialized') {
           console.log("App: Received 'initialized' confirmation from worklet.");
