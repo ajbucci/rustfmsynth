@@ -1,7 +1,7 @@
 import { Component, onMount, onCleanup, createEffect, createSignal, For, on } from 'solid-js';
 import { createStore, unwrap, SetStoreFunction } from 'solid-js/store';
 
-import { AppState, AlgorithmSetterArg, MASTER_VOLUME_MIN, MASTER_VOLUME_MAX } from './state';
+import { Note, AppState, AlgorithmSetterArg, MASTER_VOLUME_MIN, MASTER_VOLUME_MAX } from './state';
 import { NUM_OPERATORS } from './config';
 
 import {
@@ -18,6 +18,7 @@ import KeyboardUI from './components/KeyboardUI';
 import AlgorithmMatrix from './components/AlgorithmMatrix';
 import OperatorControl from './components/OperatorControl';
 import PatchManager from './components/PatchManager';
+import Oscilloscope from './components/Oscilloscope';
 
 import './style.css';
 import { createDefaultAppState } from './defaults';
@@ -41,6 +42,9 @@ const App: Component = () => {
 
   const [isSynthReady, setIsSynthReady] = createSignal(false);
   const [masterVolume, setMasterVolume] = createSignal(appStore.masterVolume);
+  const [audioData, setAudioData] = createSignal<Float32Array | null>(null);
+  const [activeNotes, setActiveNotes] = createSignal<Note[]>([]);
+  const [sampleRate, setSampleRate] = createSignal<number>(44100); // Default sample rate
 
   createEffect(() => {
     setMasterVolume(appStore.masterVolume);
@@ -81,6 +85,9 @@ const App: Component = () => {
           // Handle critical init error - maybe display UI message
         } else if (event.data?.type === 'processing_error') {
           console.warn("App: Received processing error from worklet:", event.data.error, "for message:", event.data.messageType);
+        } else if (event.data?.type === 'output') {
+          // Send output to oscilloscope
+          setAudioData(event.data.data);
         } else {
           console.log("App: Received message from worklet:", event.data);
         }
@@ -100,7 +107,7 @@ const App: Component = () => {
         sampleRate: audioContext.sampleRate,
         wasmBinary: wasmBinary
       }, [wasmBinary]); // Mark wasmBinary as transferable
-
+      setSampleRate(audioContext.sampleRate); // Store sample rate in signal
       // 8. Connect Node to Destination
       processorNode.connect(audioContext.destination);
       console.log("App: Processor node connected to destination.");
@@ -235,7 +242,8 @@ const App: Component = () => {
           </div>
 
         </div>
-        <KeyboardUI initialStartNote={48} />
+        <Oscilloscope id="oscilloscope" value={audioData} notes={activeNotes} sampleRate={sampleRate} />
+        <KeyboardUI initialStartNote={48} activeNotes={activeNotes} setActiveNotes={setActiveNotes} />
       </div>
     </div >
   );

@@ -1,4 +1,4 @@
-import { Component, createSignal, createMemo, untrack, createEffect, For, onMount, onCleanup, JSX } from 'solid-js';
+import { Component, createSignal, createMemo, Accessor, untrack, createEffect, For, onMount, onCleanup, JSX } from 'solid-js';
 import { KeyData, KeyboardLayout, getKeyboardLayoutData } from '../keyboardUtils';
 import * as SynthInputHandler from '../synthInputHandler';
 import { Note } from '../state';
@@ -7,12 +7,16 @@ import '../style.css'; // Ensure path is correct
 
 interface KeyboardUIProps {
   initialStartNote?: number;
+  activeNotes: Accessor<Note[]>;
+  setActiveNotes: (notes: Note[] | ((prev: Note[]) => Note[])) => void;
 }
 
 
 // --- Component ---
 const KeyboardUI: Component<KeyboardUIProps> = (props) => {
-  const [activeNotes, setActiveNotes] = createSignal<Note[]>([]);
+  // const [activeNotes, setActiveNotes] = createSignal<Note[]>([]);
+  const activeNotes = props.activeNotes; // Use passed accessor
+  const setActiveNotes = props.setActiveNotes; // Use passed setter
   const [startNote, setStartNote] = createSignal<number>(props.initialStartNote ?? 48);
   // Layout now includes the actualStartNote used for generation
   const [layoutData, setLayoutData] = createSignal<KeyboardLayout>({ keys: [], actualStartNote: props.initialStartNote ?? 48 });
@@ -93,7 +97,7 @@ const KeyboardUI: Component<KeyboardUIProps> = (props) => {
     const source: Note['source'] = 'pointer';
     if (isNoteActive(note, source)) {
       const newNote: Note = { noteNumber: note, velocity: 0, source: source };
-      setActiveNotes(prev => prev.filter(n => !(n.noteNumber === note && n.source === source)));
+      setActiveNotes((prev: Note[]) => prev.filter((n: Note) => !(n.noteNumber === note && n.source === source)));
       SynthInputHandler.noteOff(newNote);
     }
   };

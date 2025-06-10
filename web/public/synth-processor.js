@@ -3,10 +3,11 @@ import init, { WasmSynth } from "./pkg/rustfmsynth.js";
 let synth = null;
 let ready = false;
 let sampleRate = 44100;
-
+const SCOPE_DATA_CHUNK_SIZE = 4096;
 class SynthProcessor extends AudioWorkletProcessor {
   constructor() {
     super();
+    this._scope_accumulator = new Float32Array(0);
     this.port.onmessage = async (event) => {
       const data = event.data;
 
@@ -100,6 +101,15 @@ class SynthProcessor extends AudioWorkletProcessor {
     const rendered = synth.render(bufferLength, sampleRate);
 
     outputChannel.set(rendered);
+
+    const newAccumulator = new Float32Array(this._scope_accumulator.length + rendered.length);
+    newAccumulator.set(this._scope_accumulator, 0);
+    newAccumulator.set(rendered, this._scope_accumulator.length);
+    this._scope_accumulator = newAccumulator;
+    if (this._scope_accumulator.length >= SCOPE_DATA_CHUNK_SIZE) {
+      this.port.postMessage({ type: 'output', data: this._scope_accumulator });
+      this._scope_accumulator = new Float32Array(0);
+    }
 
     return true;
   }
