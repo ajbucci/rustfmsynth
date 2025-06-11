@@ -191,6 +191,13 @@ export function setSynthState(appState: AppState): void {
   // 1. Set Algorithm
   setAlgorithm(appState.algorithm);
 
+  // Set Effects
+  appState.effects.forEach((effect, index) => {
+    if (effect.type === "Reverb") {
+      setEffectReverb(effect.params, index as EffectSlot);
+    };
+  });
+
   // 2. Set Operator States
   appState.operators.forEach((opState, index) => {
     console.log(`SynthInputHandler: Setting state for Operator ${index}`);
@@ -205,6 +212,9 @@ export function setSynthState(appState: AppState): void {
 
     // Set envelope
     setOperatorEnvelope(index, opState.envelope.attack, opState.envelope.decay, opState.envelope.sustain, opState.envelope.release); // Use the state object directly
+
+    // Set detune
+    setOperatorDetune(index, opState.detune);
 
     // --- Filter Synchronization ---
     // a) Remove all known filter types for this operator first

@@ -10,64 +10,6 @@ pub enum ReverbType {
 }
 const MIN_CHANNELS: usize = 2;
 const MAX_CHANNELS: usize = 128;
-#[derive(Debug, Clone)]
-pub struct SchroederMultiStageAllpass {
-    coeff: f32,
-    stages: Vec<SchroederSingleStageState>,
-}
-
-#[derive(Debug, Clone)]
-struct SchroederSingleStageState {
-    delay_m: usize,   // M for this stage
-    buffer: Vec<f32>, // Single buffer for this stage's state s[k]
-    write_pos: usize, // Write position for this stage's buffer
-}
-
-impl SchroederMultiStageAllpass {
-    pub fn new(coeff: f32, stage_delay_sample_spacing: usize, num_stages: usize) -> Self {
-        let mut stages_vec = Vec::with_capacity(num_stages);
-
-        let delay_spacings = get_delay_samples_by_spacing(stage_delay_sample_spacing, num_stages);
-        for stage in 0..num_stages {
-            stages_vec.push(SchroederSingleStageState {
-                delay_m: delay_spacings[stage],
-                buffer: vec![0.0; delay_spacings[stage]],
-                write_pos: 0,
-            });
-        }
-
-        Self {
-            coeff: coeff.clamp(-0.99, 0.99),
-            stages: stages_vec,
-        }
-    }
-
-    #[inline]
-    pub fn process(&mut self, input: f32) -> f32 {
-        let mut current_signal = input;
-
-        for stage_state in self.stages.iter_mut() {
-            let delayed_state_val = stage_state.buffer[stage_state.write_pos];
-            let stage_output = self.coeff * current_signal + delayed_state_val;
-            let new_state_val_to_store = current_signal - self.coeff * stage_output;
-            stage_state.buffer[stage_state.write_pos] = new_state_val_to_store;
-            stage_state.write_pos = (stage_state.write_pos + 1) % stage_state.delay_m;
-            current_signal = stage_output;
-        }
-        current_signal // Final output after all stages
-    }
-
-    pub fn reset(&mut self) {
-        for stage_state in self.stages.iter_mut() {
-            stage_state.buffer.fill(0.0);
-            stage_state.write_pos = 0;
-        }
-    }
-
-    pub fn set_coeff(&mut self, coeff: f32) {
-        self.coeff = coeff.clamp(-0.99, 0.99);
-    }
-}
 
 pub const MULTIPLIER_1: u64 = 69069; // A common odd multiplier from LCGs
 pub const MULTIPLIER_2: u64 = 1664525; // Another common odd LCG multiplier
