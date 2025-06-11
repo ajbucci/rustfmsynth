@@ -6,7 +6,8 @@ import {
   PitchedCombFilterParams,
   FILTERS,
   FilterConfig,
-  FilterParamInfo
+  FilterParamInfo,
+  FilterParamsUnion
 } from '../state';
 import { appStore, setAppStore } from '../App'; // Import the app store and setter
 import { objToJsonBytes, stringToBytes } from '../utils';
@@ -14,8 +15,6 @@ import * as SynthInputHandler from '../synthInputHandler';
 import NumericParameterInput from './NumericParameterInput';
 // Import the child component
 import ActiveFilterDisplay from './ActiveFilterDisplay';
-
-type FilterParamsUnion = LowPassFilterParams | CombFilterParams | PitchedCombFilterParams;
 
 interface FilterManagerProps {
   operatorIndex: number;

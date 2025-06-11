@@ -56,6 +56,7 @@ export function createDefaultAppState(): AppState {
     algorithm: createDefaultAlgorithmMatrixState(),
     operators: Array(NUM_OPERATORS).fill(null).map(() => createDefaultOperatorState()),
     masterVolume: 80.00,
+    effects: [],
   };
 }
 
@@ -66,6 +67,7 @@ export function fillMissingAppState(partial: Partial<AppState>): AppState {
     algorithm: fillMatrix(partial.algorithm, defaultState.algorithm),
     operators: fillOperators(partial.operators, defaultState.operators),
     masterVolume: partial.masterVolume ?? defaultState.masterVolume,
+    effects: [],
   };
 }
 

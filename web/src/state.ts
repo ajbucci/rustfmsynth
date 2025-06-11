@@ -1,8 +1,133 @@
+/**
+ * A unified, generic structure for parameter information.
+ * Used to describe a single parameter for any kind of generic item (Filter, Effect, etc.).
+ * Note: We are standardizing on 'id' for the parameter's key and 'name' for its UI label.
+ */
+export type GenericParamInfo = {
+  key: string;        // Key in the params object (e.g., "cutoff", "wetMix")
+  label: string;      // UI Label (e.g., "Cutoff", "Wet Mix")
+  default: number;   // Default numeric value
+  min: number;       // Min value for input
+  max: number;       // Max value for input
+  step?: number;     // Input step suggestion
+  unit?: string;     // UI Unit display (e.g., "Hz", "ms")
+};
+
+/**
+ * A unified, generic structure for the configuration of an item.
+ * Used to describe a type of Filter, Effect, etc.
+ */
+export type GenericConfig = {
+  type: string;                 // Unique identifier string (e.g., "LowPass", "Reverb")
+  name: string;                 // Human-readable name for UI (e.g., "Low Pass", "Reverb")
+  params: ReadonlyArray<GenericParamInfo>; // Array defining the parameters
+};
 export interface EnvelopeState {
   attack: number;
   decay: number;
   sustain: number;
   release: number;
+}
+export interface ReverbParams {
+  predelayMs: number;
+  spreadMs: number;
+  decayMs: number;
+  wetMix: number;
+  channels: number;
+  diffusionSteps: number;
+}
+
+export type ReverbParamInfo = {
+  key: keyof ReverbParams;
+  label: string;
+  min: number;
+  max: number;
+  default: number;
+  unit?: string;
+  step: number;
+  minDecimals: number;
+}
+export const reverbParamsInfo: ReadonlyArray<ReverbParamInfo> = [
+  {
+    key: 'predelayMs',
+    label: 'Predelay (ms)',
+    min: 0,
+    max: 250,     // Max predelay of 250ms is quite long, good for special effects. 100ms is often plenty.
+    default: 10,
+    step: 1,
+    minDecimals: 0, // Display as whole milliseconds
+  },
+  {
+    key: 'spreadMs',
+    label: 'Spread (ms)',
+    min: 5,       // Minimum spread to ensure some variation
+    max: 1000,    // Large spread allows for very long individual delay lines
+    default: 500,
+    step: 5,
+    minDecimals: 0,
+  },
+  {
+    key: 'decayMs',
+    label: 'Decay (ms)',
+    min: 100,     // Very short decay
+    max: 10000,   // 10 seconds is a very long reverb
+    default: 2000, // Default to 2 seconds, a common reverb length
+    step: 50,
+    minDecimals: 0,
+  },
+  {
+    key: 'wetMix',
+    label: 'Mix',
+    min: 0.0,
+    max: 1.0,
+    default: 0.5, // Default to 50% wet mix
+    step: 0.01,
+    minDecimals: 2, // For displaying 0.00 to 1.00
+  },
+  {
+    key: 'channels',
+    label: 'Density',
+    min: 4,       // Your MIN_CHANNELS
+    max: 32,      // MAX_CHANNELS (could be 128, but 32 is often a practical CPU limit for many users)
+    default: 16,   // Default to 8 channels, a good balance for most reverbs
+    step: 1,      // User can input any integer, your code handles power-of-two rounding
+    minDecimals: 0,
+  },
+  {
+    key: 'diffusionSteps',
+    label: 'Diffusion',
+    min: 0,       // 0 stages means no allpass filtering (passthrough)
+    max: 16,      // 16 stages is a lot of diffusion, good upper limit for UI
+    default: 4,   // Default to 4 stages, a common choice for dense reverb
+    step: 1,
+    minDecimals: 0,
+  },
+]
+
+export type EffectParamInfo =
+  | ReverbParamInfo;
+
+export type EffectParamsUnion =
+  | ReverbParams;
+
+export type EffectConfig = {
+  name: string;       // Human-readable name for UI (e.g., dropdown)
+  type: EffectState['type'];    // Unique identifier string matching FilterState['typeTag'] (e.g., "LowPass", "Comb")
+  value: number | string; // A simple value potentially used for select dropdowns or simple backend messages (optional).
+  params: ReadonlyArray<EffectParamInfo>; // Array defining the parameters for this filter type
+};
+export const EFFECTS: ReadonlyArray<EffectConfig> = [
+  {
+    name: "Reverb",
+    type: "Reverb", // Matches LowPassFilterState['typeTag']
+    value: 0,
+    params: reverbParamsInfo
+  },
+]
+export enum EffectSlot {
+  One = 1,
+  Two,
+  Three,
 }
 export interface LowPassFilterParams {
   cutoff: number;
@@ -15,6 +140,7 @@ export interface CombFilterParams {
 export interface PitchedCombFilterParams {
   alpha: number;
 }
+export type FilterParamsUnion = LowPassFilterParams | CombFilterParams | PitchedCombFilterParams;
 export interface LowPassFilterState {
   type: "LowPass"; // The discriminator
   params: LowPassFilterParams;
@@ -27,6 +153,12 @@ export interface PitchedCombFilterState {
   type: "PitchedComb";
   params: PitchedCombFilterParams;
 }
+export interface ReverbState {
+  type: "Reverb";
+  params: ReverbParams;
+}
+export type EffectState =
+  | ReverbState;
 export type FilterState =
   | LowPassFilterState
   | CombFilterState
@@ -45,10 +177,16 @@ export interface Note {
   velocity: number;
   source: 'keyboard' | 'pointer' | 'midi' | string;
 }
+export type EffectSlots =
+  | []
+  | [EffectState]
+  | [EffectState, EffectState]
+  | [EffectState, EffectState, EffectState];
 export interface AppState {
   algorithm: number[][];
   operators: OperatorState[];
   masterVolume: number;
+  effects: EffectSlots;
 }
 export const MASTER_VOLUME_MAX = 100;
 export const MASTER_VOLUME_MIN = 0;
@@ -117,7 +255,8 @@ export const FILTERS: ReadonlyArray<FilterConfig> = [
   {
     name: "Low Pass",
     type: "LowPass", // Matches LowPassFilterState['typeTag']
-    value: 0, params: [
+    value: 0,
+    params: [
       { name: "Cutoff", id: "cutoff", default: 20000.0, min: 20.0, max: 20000.0, step: 1.0, unit: "Hz" },
       { name: "Q", id: "q", default: 0.707, min: 0.1, max: 10.0, step: 0.01, unit: "" }
     ]

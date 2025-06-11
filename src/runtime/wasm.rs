@@ -1,3 +1,4 @@
+use crate::synth::core::EffectSlot;
 use crate::synth::filter::{Filter, FilterType};
 use crate::synth::note::{NoteEvent, NoteSource};
 use crate::synth::waveform::Waveform;
@@ -24,6 +25,17 @@ pub struct CombParams {
 pub struct PitchedCombParams {
     alpha: f32,
 }
+#[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ReverbParams {
+    predelay_ms: f32,
+    spread_ms: f32,
+    decay_ms: f32,
+    wet_mix: f32,
+    channels: usize,
+    diffusion_steps: usize,
+}
+
 #[derive(Deserialize, Debug, Clone)]
 #[serde(tag = "type", content = "params")]
 pub enum FilterParams {
@@ -105,6 +117,32 @@ impl WasmSynth {
         };
 
         self.synth.set_operator_filter(operator_index, filter);
+    }
+    #[wasm_bindgen]
+    pub fn set_effect_reverb(&mut self, params_bytes: &[u8], effect_slot: usize) {
+        let reverb_params: ReverbParams = serde_json::from_slice(params_bytes)
+            .expect("PANIC: Tagged JSON deserialize ReverbParams failed");
+        let ReverbParams {
+            predelay_ms,
+            spread_ms,
+            decay_ms,
+            wet_mix,
+            channels,
+            diffusion_steps,
+        } = reverb_params;
+        self.synth.set_effect_reverb(
+            predelay_ms,
+            spread_ms,
+            decay_ms,
+            wet_mix,
+            channels,
+            diffusion_steps,
+            match effect_slot {
+                2 => EffectSlot::Two,
+                3 => EffectSlot::Three,
+                _ => EffectSlot::One,
+            },
+        )
     }
     #[wasm_bindgen]
     pub fn remove_operator_filter(&mut self, operator_index: usize, filter_type_bytes: &[u8]) {

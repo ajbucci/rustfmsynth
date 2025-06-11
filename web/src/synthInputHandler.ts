@@ -1,5 +1,5 @@
 import { resumeAudioContext } from './audio'; // We'll put resumeAudioContext in App.tsx initially
-import { Note, WaveformId, AppState, FILTERS } from './state';
+import { Note, WaveformId, AppState, FILTERS, ReverbParams, EffectSlot } from './state';
 import { objToJsonBytes, stringToBytes } from './utils';
 import { fillMissingAppState } from './defaults';
 
@@ -51,6 +51,18 @@ export function setAlgorithm(matrix: number[][]): void {
     processorPort.postMessage({ type: 'set_algorithm', matrix });
   } catch (e) {
     console.error("SynthInputHandler: Error setting algorithm:", e);
+  }
+}
+export function setEffectReverb(reverbParams: ReverbParams, effectSlot: EffectSlot): void {
+  if (!processorPort) {
+    console.warn("SynthInputHandler: Port not connected, cannot set reverb.");
+    return;
+  }
+  try {
+    let encodedParams = objToJsonBytes(reverbParams);
+    processorPort.postMessage({ type: 'set_effect_reverb', reverbParams: encodedParams, effectSlot: effectSlot });
+  } catch (e) {
+    console.error("SynthInputHandler: Error setting reverb:", e);
   }
 }
 

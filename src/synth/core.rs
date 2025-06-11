@@ -345,7 +345,7 @@ impl Default for Synth {
             effect_3: None,
             sample_rate: 44100.0,
         };
-        synth.set_effect_reverb(20.0, 70.0, 1000.0, 0.5, 2, 2, EffectSlot::One);
+        // synth.set_effect_reverb(20.0, 70.0, 1000.0, 0.5, 2, 2, EffectSlot::One);
         synth
     }
 }

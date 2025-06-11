@@ -24,6 +24,7 @@ import './style.css';
 import { createDefaultAppState } from './defaults';
 import { deserializeState } from './urlState';
 import Dial from './components/Dial';
+import EffectsManager from './components/EffectsManager';
 
 export const [appStore, setAppStore] = createStore<AppState>(createDefaultAppState());
 // export const setAppStore = createUrlStatePersistence(
@@ -244,6 +245,7 @@ const App: Component = () => {
         </div>
         <Oscilloscope id="oscilloscope" value={audioData} notes={activeNotes} sampleRate={sampleRate} />
         <KeyboardUI initialStartNote={48} activeNotes={activeNotes} setActiveNotes={setActiveNotes} />
+        <EffectsManager />
       </div>
     </div >
   );

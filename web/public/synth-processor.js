@@ -50,6 +50,9 @@ class SynthProcessor extends AudioWorkletProcessor {
           case "set_master_volume":
             synth.set_master_volume(data.volume);
             break;
+          case "set_effect_reverb":
+            synth.set_effect_reverb(data.reverbParams, data.effectSlot);
+            break;
           case "set_operator_ratio":
             synth.set_operator_ratio(data.operatorIndex, data.ratio);
             break;

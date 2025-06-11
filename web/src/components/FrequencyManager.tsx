@@ -1,14 +1,12 @@
-// FrequencyManager.tsx
 import { Component, createSignal, createEffect, Show, Accessor, untrack } from 'solid-js';
-import Dial from './Dial'; // Assuming Dial.tsx is in the same folder
-import '../style.css'; // Or FrequencyManager.css / shared styles
+import Dial from './Dial';
+import '../style.css';
 import NumericParameterInput from './NumericParameterInput';
 
 export type FrequencyMode = 'ratio' | 'fixedFrequency';
 
 // --- Props for FrequencyManager ---
 interface FrequencyManagerProps {
-  // Identification
   id?: string;
 
   // Configuration & State for Ratio Mode Dial

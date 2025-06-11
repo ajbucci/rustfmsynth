@@ -1,5 +1,3 @@
-use core::fmt;
-use rand::prelude::*; // Import Rng and thread_rng
 use std::f32; // Use f32
 use std::vec::Vec;
 
@@ -98,52 +96,34 @@ pub fn get_delay_samples_by_spacing(sample_delay_spacing: usize, num_delays: usi
         num_delays,
     )
 }
-pub fn get_delay_samples(
-    mut min_delay_samples: usize,
-    mut max_delay_samples: usize,
-    curve: f32, // shape from linear (0) to exponential (1)
-    num_delays: usize,
-) -> Vec<usize> {
-    if num_delays < MIN_CHANNELS || num_delays > MAX_CHANNELS {
-        return Vec::new();
-    }
 
-    const PRACTICAL_MAX_INPUT_DELAY: usize = 2_000_000;
-    min_delay_samples = min_delay_samples.max(2).min(PRACTICAL_MAX_INPUT_DELAY);
-    max_delay_samples = max_delay_samples
-        .max(min_delay_samples)
-        .min(PRACTICAL_MAX_INPUT_DELAY);
-
+const PRACTICAL_MAX_INPUT_DELAY: usize = 2_000_000;
+pub fn find_prime_delays_from_deltas(deltas: &[usize]) -> Vec<usize> {
+    let num_delays = deltas.len();
     let mut result_primes = Vec::with_capacity(num_delays);
     let mut last_prime_found: usize = 0;
+    let max_delay_samples: usize = deltas.iter().sum();
 
-    let mut current_target_f = min_delay_samples as f32;
-    let ratio =
-        (max_delay_samples as f32 / min_delay_samples as f32).powf(1.0 / (num_delays - 1) as f32);
+    let sieve_limit: usize =
+        (max_delay_samples * 2 + (num_delays * 100)).min(PRACTICAL_MAX_INPUT_DELAY * 2); // Heuristic
 
-    let increment = (max_delay_samples - min_delay_samples) as f32 / num_delays as f32;
-    let increment = increment as usize;
-    // Determine Sieve limit: needs to cover max_delay_samples, and potentially a bit more
-    // if last_prime_found pushes targets higher. For num_delays=16, this won't be excessive.
-    let sieve_limit =
-        (max_delay_samples * 2 + (num_delays as usize * 100)).min(PRACTICAL_MAX_INPUT_DELAY + 2000); // Heuristic
-
-    let mut is_composite = vec![false; sieve_limit as usize + 1];
+    let mut is_composite = vec![false; sieve_limit + 1];
+    let mut current_target_idx = 0;
 
     // Pre-Sieve up to sieve_limit
     for i in 2..=(sieve_limit as f64).sqrt() as usize {
-        if !is_composite[i as usize] {
+        if !is_composite[i] {
             if i <= 65535 {
                 // Ensure i*i doesn't overflow for starting multiple
-                for multiple in ((i * i)..=sieve_limit).step_by(i as usize) {
-                    is_composite[multiple as usize] = true;
+                for multiple in ((i * i)..=sieve_limit).step_by(i) {
+                    is_composite[multiple] = true;
                 }
             } else {
                 // For i > 65535, i*i overflows. Start marking from 2*i if needed.
                 // However, such large i would mean its multiples are huge and likely
                 // already marked or beyond typical sieve_limit.
-                for multiple in ((i * i)..=sieve_limit).step_by(i as usize) {
-                    is_composite[multiple as usize] = true;
+                for multiple in ((i * i)..=sieve_limit).step_by(i) {
+                    is_composite[multiple] = true;
                 }
             }
         }
@@ -151,34 +131,78 @@ pub fn get_delay_samples(
 
     let mut p: usize = 2;
     while result_primes.len() < num_delays {
-        if !is_composite[p as usize] {
-            let search_val = (current_target_f as usize).max(last_prime_found + 1);
+        if !is_composite[p] {
+            let search_val =
+                (last_prime_found + deltas[current_target_idx]).max(last_prime_found + 1);
             if p >= search_val {
                 result_primes.push(p);
                 last_prime_found = p;
                 if result_primes.len() < num_delays {
-                    // current_target_f *= ratio;
-                    // if current_target_f <= last_prime_found as f32 {
-                    //     current_target_f = (last_prime_found + 1) as f32;
-                    // }
-                    let linear_target = (last_prime_found + increment) as f32;
-                    let exponential_target = last_prime_found as f32 * ratio;
-
-                    let blended_target = (1.0 - curve) * linear_target + curve * exponential_target;
-
-                    current_target_f = blended_target.max((last_prime_found + 1) as f32);
+                    current_target_idx += 1;
                 }
             }
         }
 
         if p == usize::MAX {
             // If p reaches MAX, something is wrong or num_delays is too high for u32 primes
-            eprintln!("Warning: p reached u32::MAX while searching for primes. Returning {} of {} requested.", result_primes.len(), num_delays);
+            eprintln!(
+                "Warning: p reached u32::MAX while searching for primes. Returning {} of {} requested.",
+                result_primes.len(),
+                num_delays
+            );
             break;
         }
         p += 1;
     }
     result_primes
+}
+
+pub fn get_delay_samples(
+    min_delay_samples: usize,
+    max_delay_samples: usize,
+    curve: f32, // shape from linear (0) to exponential (1)
+    num_delays: usize,
+) -> Vec<usize> {
+    let delay_target_deltas =
+        get_delay_target_deltas(min_delay_samples, max_delay_samples, curve, num_delays);
+    find_prime_delays_from_deltas(&delay_target_deltas)
+}
+pub fn get_delay_target_deltas(
+    mut min_delay_samples: usize,
+    mut max_delay_samples: usize,
+    curve: f32, // shape from linear (0) to exponential (1)
+    num_delays: usize,
+) -> Vec<usize> {
+    if (MIN_CHANNELS..MAX_CHANNELS).contains(&num_delays) {
+        return Vec::new();
+    }
+
+    min_delay_samples = min_delay_samples.clamp(2, PRACTICAL_MAX_INPUT_DELAY);
+    max_delay_samples = max_delay_samples
+        .max(min_delay_samples)
+        .min(PRACTICAL_MAX_INPUT_DELAY);
+
+    let mut deltas = vec![0; num_delays];
+
+    deltas[0] = min_delay_samples;
+    let mut deltas_idx = 1;
+
+    let ratio =
+        (max_delay_samples as f32 / min_delay_samples as f32).powf(1.0 / (num_delays - 1) as f32);
+
+    let increment = (max_delay_samples - min_delay_samples) as f32 / (num_delays - 1) as f32;
+
+    let mut last_exponential_target = deltas[0] as f32;
+    while deltas_idx < deltas.len() {
+        let next_exponential_target = last_exponential_target * ratio;
+        let exponential_delta = next_exponential_target - last_exponential_target;
+        last_exponential_target = next_exponential_target;
+
+        deltas[deltas_idx] =
+            ((1.0 - curve) * increment + curve * exponential_delta).round() as usize;
+        deltas_idx += 1;
+    }
+    deltas
 }
 #[derive(Clone, Debug)]
 struct DelayLine {
@@ -225,15 +249,11 @@ const SPEED_OF_SOUND: f32 = 343.0; // m/s
 const GOLDEN_RATIO: f32 = 1.6180339887;
 
 impl Fdn {
-    fn new(
-        predelay_ms: f32,
-        spread_ms: f32,
-        decay_ms: f32,
-        channels: usize,
-        diffusion_steps: usize, // number of allpass stages before mixing
-        wet_mix: f32,
-        sample_rate: f32,
-    ) -> Self {
+    fn new(predelay_ms: f32, decay_ms: f32, wet_mix: f32, sample_rate: f32) -> Self {
+        let spread_ms: f32 = 500.0;
+        let channels: usize = 16;
+        let diffusion_steps: usize = 4;
+
         let predelay = predelay_ms / 1000.0;
         let spread = spread_ms / 1000.0;
         let rt60 = decay_ms / 1000.0;
