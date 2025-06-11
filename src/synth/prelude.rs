@@ -34,3 +34,18 @@ pub fn random_range(min: f32, max: f32) -> f32 {
     let mut rng = rand::rng();
     rng.random_range(min..max)
 }
+
+#[cfg(target_arch = "wasm32")]
+pub use wasm_bindgen::prelude::*;
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
+}
+#[cfg(target_arch = "wasm32")]
+macro_rules! console_log {
+    // Note that this is using the `log` function imported above during
+    // `bare_bones`
+    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
+}

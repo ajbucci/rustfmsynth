@@ -8,7 +8,9 @@ edition = "2021"
 cpal = { version = "0.15.3", optional = true }
 midir = { version = "0.10.0", optional = true }
 device_query = { version = "3.0.1", optional = true }
-rand = { version = "0.9", optional = true }
+rand = { version = "0.9", optional = true, default-features = false, features = [
+  "small_rng",
+] }
 
 # --- WebAssembly only ---
 wasm-bindgen = { version = "0.2", features = [
@@ -36,6 +38,7 @@ wasm = [
   "serde",
   "serde-wasm-bindgen",
   "web-sys",
+  "rand",
 ]
 
 [lib]

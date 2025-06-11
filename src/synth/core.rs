@@ -89,11 +89,11 @@ impl Synth {
     ) {
         let mut reverb = Reverb::new_fdn(
             predelay_ms,
-            spread_ms,
             decay_ms,
             wet_mix,
-            channels,
-            diffusion_steps,
+            self.sample_rate,
+            // channels,
+            // diffusion_steps,
         );
         let mut effect = Effect::new(EffectType::Reverb(reverb));
         self.set_effect(effect_slot, Some(effect));
