@@ -38,11 +38,8 @@ pub struct PitchedCombParams {
 #[serde(rename_all = "camelCase")]
 pub struct ReverbParams {
     predelay_ms: f32,
-    spread_ms: f32,
     decay_ms: f32,
     wet_mix: f32,
-    channels: usize,
-    diffusion_steps: usize,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -133,19 +130,13 @@ impl WasmSynth {
             .expect("PANIC: Tagged JSON deserialize ReverbParams failed");
         let ReverbParams {
             predelay_ms,
-            spread_ms,
             decay_ms,
             wet_mix,
-            channels,
-            diffusion_steps,
         } = reverb_params;
         self.synth.set_effect_reverb(
             predelay_ms,
-            spread_ms,
             decay_ms,
             wet_mix,
-            channels,
-            diffusion_steps,
             match effect_slot {
                 2 => EffectSlot::Two,
                 3 => EffectSlot::Three,

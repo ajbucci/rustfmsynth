@@ -30,11 +30,8 @@ export interface EnvelopeState {
 }
 export interface ReverbParams {
   predelayMs: number;
-  spreadMs: number;
   decayMs: number;
   wetMix: number;
-  channels: number;
-  diffusionSteps: number;
 }
 
 export type ReverbParamInfo = {
@@ -58,15 +55,6 @@ export const reverbParamsInfo: ReadonlyArray<ReverbParamInfo> = [
     minDecimals: 0, // Display as whole milliseconds
   },
   {
-    key: 'spreadMs',
-    label: 'Spread (ms)',
-    min: 5,       // Minimum spread to ensure some variation
-    max: 1000,    // Large spread allows for very long individual delay lines
-    default: 500,
-    step: 5,
-    minDecimals: 0,
-  },
-  {
     key: 'decayMs',
     label: 'Decay (ms)',
     min: 100,     // Very short decay
@@ -83,24 +71,6 @@ export const reverbParamsInfo: ReadonlyArray<ReverbParamInfo> = [
     default: 0.5, // Default to 50% wet mix
     step: 0.01,
     minDecimals: 2, // For displaying 0.00 to 1.00
-  },
-  {
-    key: 'channels',
-    label: 'Density',
-    min: 4,       // Your MIN_CHANNELS
-    max: 32,      // MAX_CHANNELS (could be 128, but 32 is often a practical CPU limit for many users)
-    default: 16,   // Default to 8 channels, a good balance for most reverbs
-    step: 1,      // User can input any integer, your code handles power-of-two rounding
-    minDecimals: 0,
-  },
-  {
-    key: 'diffusionSteps',
-    label: 'Diffusion',
-    min: 0,       // 0 stages means no allpass filtering (passthrough)
-    max: 16,      // 16 stages is a lot of diffusion, good upper limit for UI
-    default: 4,   // Default to 4 stages, a common choice for dense reverb
-    step: 1,
-    minDecimals: 0,
   },
 ]
 

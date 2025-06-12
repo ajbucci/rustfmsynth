@@ -80,22 +80,12 @@ impl Synth {
     pub fn set_effect_reverb(
         &mut self,
         predelay_ms: f32,
-        spread_ms: f32,
         decay_ms: f32,
         wet_mix: f32,
-        channels: usize,
-        diffusion_steps: usize,
         effect_slot: EffectSlot,
     ) {
-        let mut reverb = Reverb::new_fdn(
-            predelay_ms,
-            decay_ms,
-            wet_mix,
-            self.sample_rate,
-            // channels,
-            // diffusion_steps,
-        );
-        let mut effect = Effect::new(EffectType::Reverb(reverb));
+        let reverb = Reverb::new_fdn(predelay_ms, decay_ms, wet_mix, self.sample_rate);
+        let effect = Effect::new(EffectType::Reverb(reverb));
         self.set_effect(effect_slot, Some(effect));
     }
     pub fn set_effect(&mut self, effect_slot: EffectSlot, effect: Option<Effect>) {
