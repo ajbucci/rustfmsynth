@@ -206,7 +206,10 @@ export function setSynthState(appState: AppState): void {
   appState.effects.forEach((effect, index) => {
     if (effect.type === "Reverb") {
       setEffectReverb(effect.params, index as EffectSlot);
-    };
+    }
+    if (effect.type === "Empty") {
+      removeEffect(index as EffectSlot);
+    }
   });
 
   // 2. Set Operator States

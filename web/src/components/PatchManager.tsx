@@ -163,8 +163,8 @@ const PatchManager: Component = () => {
       setSelectedPatchId(patch.id);
       setIsSavingAsNew(false); // Close save as new if open
       setEditName(null); // Close name editing if open
+      SynthInputHandler.setSynthState(unwrap(filledAppState)); // Update synth state
     });
-    SynthInputHandler.setSynthState(unwrap(patch.state)); // Update synth state
   };
 
   const handleSaveCurrent = () => {
