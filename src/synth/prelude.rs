@@ -29,9 +29,11 @@ pub fn random_range(min: f32, max: f32) -> f32 {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+use rand::prelude::*;
+
+#[cfg(not(target_arch = "wasm32"))]
 pub fn random_range(min: f32, max: f32) -> f32 {
-    use rand::Rng;
-    let mut rng = rand::rng();
+    let mut rng = SmallRng::seed_from_u64(42);
     rng.random_range(min..max)
 }
 

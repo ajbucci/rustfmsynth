@@ -35,6 +35,7 @@ impl Default for ConnectionParams {
 
 // --- Algorithm ---
 
+#[derive(Debug)]
 pub struct Algorithm {
     matrix: Vec<Vec<Option<ConnectionParams>>>, // Adjacency matrix
     carriers: Vec<usize>,                       // Carrier operator indices
@@ -90,7 +91,20 @@ impl Algorithm {
         self.rebuild_unrolled_graph();
     }
     pub fn finished(&self, nodes: &[OperatorState]) -> bool {
-        self.carriers.iter().all(|&carrier| nodes[carrier].finished)
+        let unrolled_carrier_indices = self.find_unrolled_carrier_indices();
+        unrolled_carrier_indices
+            .iter()
+            .all(|&carrier| nodes[carrier].finished)
+    }
+    fn find_unrolled_carrier_indices(&self) -> Vec<usize> {
+        // Return mapping indices of unrolled nodes that correspond to carriers
+        let mut carrier_indices = Vec::new();
+        for (i, node) in self.unrolled_nodes.iter().enumerate() {
+            if self.carriers.contains(&node.original_op_index) {
+                carrier_indices.push(i);
+            }
+        }
+        carrier_indices
     }
     /// Expects `combined_matrix_from_ui` where:
     /// - `[source_index][target_index]` (for `target_index < ui_op_count`) indicates
@@ -98,6 +112,10 @@ impl Algorithm {
     /// - `[source_index][ui_op_count]` indicates if Source operator is a carrier/output
     ///   (value >= 1 means it is).
     pub fn set_matrix(&mut self, combined_matrix_from_ui: &[Vec<u32>]) -> Result<(), String> {
+        assert_eq!(
+            combined_matrix_from_ui.len(),
+            combined_matrix_from_ui[0].len() - 1,
+        );
         let ui_op_count = combined_matrix_from_ui.len();
         let synth_op_count = self.matrix.len();
 
@@ -107,6 +125,8 @@ impl Algorithm {
 
         // --- Determine New Carriers from UI Matrix *before* modifying state ---
         let mut new_carriers: Vec<usize> = Vec::new();
+        println!("{:?}", combined_matrix_from_ui);
+        println!("\nNext matrix\n");
         for i in 0..ui_op_count {
             // Bounds check UI matrix's last column
             if i >= combined_matrix_from_ui.len() || ui_op_count >= combined_matrix_from_ui[i].len()
@@ -116,12 +136,14 @@ impl Algorithm {
 
             if combined_matrix_from_ui[i][ui_op_count] >= 1 {
                 // Check the last column
+                println!("Adding new carrier: {}", i);
                 new_carriers.push(i);
             }
         }
 
         // --- Update Internal Connection Matrix ---
         // ... (existing logic to update self.matrix based on UI matrix and zero out others) ...
+        // TODO: debug this logic if carrier is not operator 1
         for i in 0..synth_op_count {
             for j in 0..synth_op_count {
                 if i >= self.matrix.len() || j >= self.matrix[i].len() {
@@ -708,6 +730,42 @@ impl Algorithm {
 mod tests {
     use super::*;
 
+    #[test]
+    fn test_all_operators_as_carrier() {
+        // test 6 operators, all as carriers
+        let num_ops = 6;
+        let num_cols = num_ops + 1; // +1 for the last column indicating carrier status
+        let mut carrier_row: Vec<u32> = vec![0; num_cols];
+        carrier_row[num_cols - 1] = 1; // Set the last column to indicate carrier
+        let empty_row: Vec<u32> = vec![0; num_cols];
+        let mut algorithm =
+            Algorithm::default_simple(num_ops).expect("Failed to create simple algorithm");
+        let mut ui_matrix = Vec::with_capacity(num_ops);
+        for carrier_idx in 0..num_ops {
+            for op_idx in 0..num_ops {
+                if op_idx == carrier_idx {
+                    // Carrier row
+                    ui_matrix.push(carrier_row.clone());
+                } else {
+                    // Non-carrier row
+                    ui_matrix.push(empty_row.clone());
+                }
+            }
+
+            algorithm
+                .set_matrix(&ui_matrix)
+                .expect("Failed to set matrix");
+            // assert that there is at least one non-None value in algorithm.matrix
+            algorithm.print_structure();
+            assert!(
+                algorithm.carriers.contains(&carrier_idx),
+                "Expected carrier index {} to be set as a carrier.",
+                carrier_idx
+            );
+            // clear the matrix for the next iteration
+            ui_matrix.clear();
+        }
+    }
     #[test]
     fn test_simple_self_feedback() {
         println!("\n--- Running test_simple_self_feedback (in-module) ---");

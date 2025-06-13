@@ -40,6 +40,7 @@ impl Default for OperatorState {
     }
 }
 
+#[derive(Debug)]
 pub struct Operator {
     pub waveform_generator: WaveformGenerator,
     frequency_ratio: f32,         // Ratio relative to the voice's base frequency
