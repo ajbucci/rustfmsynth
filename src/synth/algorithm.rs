@@ -762,6 +762,11 @@ mod tests {
                 "Expected carrier index {} to be set as a carrier.",
                 carrier_idx
             );
+            assert!(
+                algorithm.find_unrolled_carrier_indices().contains(&0),
+                "Single carrier should always have an unrolled node index of 0, but got {:?}",
+                algorithm.find_unrolled_carrier_indices(),
+            );
             // clear the matrix for the next iteration
             ui_matrix.clear();
         }
