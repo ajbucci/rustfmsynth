@@ -204,11 +204,12 @@ export function setSynthState(appState: AppState): void {
 
   // Set Effects
   appState.effects.forEach((effect, index) => {
+    let effectSlot = index + 1 as EffectSlot;
     if (effect.type === "Reverb") {
-      setEffectReverb(effect.params, index as EffectSlot);
+      setEffectReverb(effect.params, effectSlot);
     }
     if (effect.type === "Empty") {
-      removeEffect(index as EffectSlot);
+      removeEffect(effectSlot);
     }
   });
 
