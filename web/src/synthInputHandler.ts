@@ -65,6 +65,17 @@ export function setEffectReverb(reverbParams: ReverbParams, effectSlot: EffectSl
     console.error("SynthInputHandler: Error setting reverb:", e);
   }
 }
+export function removeEffect(effectSlot: EffectSlot): void {
+  if (!processorPort) {
+    console.warn("SynthInputHandler: Port not connected, cannot remove effect.");
+    return;
+  }
+  try {
+    processorPort.postMessage({ type: 'remove_effect', effectSlot });
+  } catch (e) {
+    console.error("SynthInputHandler: Error removing effect:", e);
+  }
+}
 
 export function setOperatorRatio(operatorIndex: number, ratio: number): void {
   if (!processorPort) {

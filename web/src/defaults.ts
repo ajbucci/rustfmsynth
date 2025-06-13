@@ -1,4 +1,4 @@
-import { AppState, EnvelopeState, OperatorState } from './state';
+import { AppState, EmptyEffectState, EffectState, EnvelopeState, OperatorState, createEmptyEffect } from './state';
 import { NUM_OPERATORS } from './config';
 
 export const DEFAULT_ENVELOPE_STATE: EnvelopeState = {
@@ -56,7 +56,7 @@ export function createDefaultAppState(): AppState {
     algorithm: createDefaultAlgorithmMatrixState(),
     operators: Array(NUM_OPERATORS).fill(null).map(() => createDefaultOperatorState()),
     masterVolume: 80.00,
-    effects: [],
+    effects: [createEmptyEffect(), createEmptyEffect(), createEmptyEffect()], // Start with an empty effect state
   };
 }
 
@@ -67,10 +67,26 @@ export function fillMissingAppState(partial: Partial<AppState>): AppState {
     algorithm: fillMatrix(partial.algorithm, defaultState.algorithm),
     operators: fillOperators(partial.operators, defaultState.operators),
     masterVolume: partial.masterVolume ?? defaultState.masterVolume,
-    effects: [],
+    effects: fillMissingEffects(partial.effects, defaultState.effects),
   };
 }
+// TODO: may want to extend this to fill partial effects based on their type and defaults as well
+function fillMissingEffects(
+  partialEffects: EffectState[] | undefined,
+  defaultEffects: EffectState[]
+): EffectState[] {
+  if (!Array.isArray(partialEffects)) return defaultEffects;
 
+  let effects: EffectState[] = [];
+  for (let i = 0; i < defaultEffects.length; i++) {
+    if (i < partialEffects.length && partialEffects[i]) {
+      effects.push(partialEffects[i]);
+    } else {
+      effects.push(defaultEffects[i] || createEmptyEffect());
+    }
+  }
+  return effects;
+}
 function fillMatrix(
   partialMatrix: number[][] | undefined,
   defaultMatrix: number[][]

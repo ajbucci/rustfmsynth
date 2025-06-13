@@ -10,11 +10,11 @@ interface ActiveGenericDisplayProps<T extends { params: object }> {
   config: GenericConfig;
   uniqueIdPrefix: string;
   onParamCommit: (itemIndex: number, paramId: string, newValue: number) => Promise<void>;
-  onRemove: (itemType: string) => Promise<void>;
+  onRemove: (itemIndex: number) => Promise<void>;
 }
 
 const ActiveGenericDisplay = <T extends { params: object }>(props: ActiveGenericDisplayProps<T>) => {
-  const handleRemoveClick = () => { props.onRemove((props.itemState as any).type); };
+  const handleRemoveClick = () => { props.onRemove(props.itemIndex); };
   const handleParamCommit = (paramId: string, newValue: number) => { props.onParamCommit(props.itemIndex, paramId, newValue); };
 
   return (

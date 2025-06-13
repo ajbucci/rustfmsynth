@@ -15,7 +15,7 @@ interface GenericManagerProps<T extends { type: string; params: object }> {
   maxItems?: number;
   onAdd: (newItem: T) => Promise<void>;
   onUpdate: (itemIndex: number, paramId: string, newValue: number) => Promise<void>;
-  onRemove: (itemType: string) => Promise<void>;
+  onRemove: (itemIndex: number) => Promise<void>;
 }
 
 const GenericManager = <T extends { type: string; params: object }>(props: GenericManagerProps<T>) => {
@@ -25,14 +25,21 @@ const GenericManager = <T extends { type: string; params: object }>(props: Gener
   const activeItems = createMemo(() => props.activeItemsAccessor());
   const activeTypeTags = createMemo(() => new Set(activeItems().map(item => item.type)));
 
+  const itemsToRender = createMemo(() => {
+    return activeItems().filter(item => item.type !== "Empty");
+  });
+
   const selectedAdderConfig = createMemo(() => {
     const type = adderSelectedType();
     return type ? props.configArray.find(c => c.type === type) : null;
   });
 
   const canAddItem = createMemo(() => {
+    // If maxItems is not defined, we can always add.
     if (props.maxItems === undefined) return true;
-    return activeItems().length < props.maxItems;
+
+    // Otherwise, check if there is at least one slot of type "Empty".
+    return activeItems().some(item => item.type === "Empty");
   });
 
   const handleAdderSelectChange = (e: Event) => {
@@ -124,18 +131,22 @@ const GenericManager = <T extends { type: string; params: object }>(props: Gener
           </button>
         </Show>
       </div>
-      <Show when={activeItems()?.length > 0}>
+      <Show when={itemsToRender()?.length > 0}>
         <div class="parameter-container">
           <label class="parameter-title">Active {props.itemNounPlural}</label>
           <div class="active-items-display">
-            <For each={activeItems()}>
-              {(itemState, index) => {
+            <For each={itemsToRender()}>
+              {(itemState, _index) => {
+                // Find the REAL index of the current item from the original, unfiltered array.
+                const originalIndex = activeItems().findIndex(item => item === itemState);
+                if (originalIndex === -1) return null;
+
                 const itemConfig = props.configArray.find(c => c.type === itemState.type);
                 if (!itemConfig) return null;
                 return (
                   <ActiveGenericDisplay<T>
                     itemState={itemState}
-                    itemIndex={index()}
+                    itemIndex={originalIndex}
                     config={itemConfig}
                     onParamCommit={props.onUpdate}
                     onRemove={props.onRemove}

@@ -95,6 +95,13 @@ impl Synth {
             EffectSlot::Three => self.effect_3 = effect,
         }
     }
+    pub fn remove_effect(&mut self, effect_slot: EffectSlot) {
+        match effect_slot {
+            EffectSlot::One => self.effect_1 = None,
+            EffectSlot::Two => self.effect_2 = None,
+            EffectSlot::Three => self.effect_3 = None,
+        }
+    }
 
     /// Find an available voice (one that is completely finished)
     fn find_free_voice(&mut self) -> Option<&mut Voice> {

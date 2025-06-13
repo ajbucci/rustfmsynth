@@ -145,6 +145,14 @@ impl WasmSynth {
         )
     }
     #[wasm_bindgen]
+    pub fn remove_effect(&mut self, effect_slot: usize) {
+        self.synth.remove_effect(match effect_slot {
+            2 => EffectSlot::Two,
+            3 => EffectSlot::Three,
+            _ => EffectSlot::One,
+        });
+    }
+    #[wasm_bindgen]
     pub fn remove_operator_filter(&mut self, operator_index: usize, filter_type_bytes: &[u8]) {
         let filter_type_str = str::from_utf8(filter_type_bytes);
         let filter_type = match filter_type_str {

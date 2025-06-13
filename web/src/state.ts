@@ -93,6 +93,12 @@ export const EFFECTS: ReadonlyArray<EffectConfig> = [
     value: 0,
     params: reverbParamsInfo
   },
+  {
+    name: "Empty",
+    type: "Empty", // Matches EmptyEffectState['typeTag']
+    value: 1,
+    params: []
+  },
 ]
 export enum EffectSlot {
   One = 1,
@@ -127,8 +133,17 @@ export interface ReverbState {
   type: "Reverb";
   params: ReverbParams;
 }
+export interface EmptyEffectState {
+  type: "Empty";
+  params: {};
+}
+export const createEmptyEffect = (): EffectState => ({
+  type: "Empty",
+  params: {}
+});
 export type EffectState =
-  | ReverbState;
+  | ReverbState
+  | EmptyEffectState;
 export type FilterState =
   | LowPassFilterState
   | CombFilterState
@@ -147,16 +162,12 @@ export interface Note {
   velocity: number;
   source: 'keyboard' | 'pointer' | 'midi' | string;
 }
-export type EffectSlots =
-  | []
-  | [EffectState]
-  | [EffectState, EffectState]
-  | [EffectState, EffectState, EffectState];
+
 export interface AppState {
   algorithm: number[][];
   operators: OperatorState[];
   masterVolume: number;
-  effects: EffectSlots;
+  effects: EffectState[];
 }
 export const MASTER_VOLUME_MAX = 100;
 export const MASTER_VOLUME_MIN = 0;
