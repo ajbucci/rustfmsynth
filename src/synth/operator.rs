@@ -250,12 +250,8 @@ impl Operator {
 
     pub fn set_modulation_index(&mut self, modulation_index: f32) {
         println!("Operator modulation index set to: {}", modulation_index);
-        if modulation_index < 0.0 {
-            eprintln!("Modulation index must be non-negative. Modulation index clamped to 0.0");
-            self.modulation_index = 0.0;
-        } else {
-            self.modulation_index = modulation_index;
-        }
+        // NOTE: allow negative modulation index
+        self.modulation_index = modulation_index;
     }
     pub fn get_modulation_index(&self) -> f32 {
         self.modulation_index
