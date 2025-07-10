@@ -245,7 +245,7 @@ const App: Component = () => {
         </div>
         <div class="d-flex flex-row">
 
-          <EffectsManager />
+          {/* <EffectsManager /> */}
         </div>
         <Oscilloscope id="oscilloscope" value={audioData} notes={activeNotes} sampleRate={sampleRate} />
         <KeyboardUI initialStartNote={48} activeNotes={activeNotes} setActiveNotes={setActiveNotes} />
