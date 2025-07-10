@@ -1,3 +1,4 @@
+// import "./TextEncoder.js";
 import init, { WasmSynth } from "./pkg/rustfmsynth.js";
 
 let synth = null;
