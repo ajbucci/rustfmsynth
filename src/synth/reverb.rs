@@ -169,7 +169,7 @@ pub fn get_delay_target_deltas(
 }
 // Input -> delay lines -> output AND delay filters (if I implement) -> feedback matrix -> mix w/ input ->
 // repeat
-struct Fdn {
+pub struct Fdn {
     wet_mix: f32,
     delay_lines: Vec<ModulatedDelayLine>,
     permute_buffer: Vec<f32>,
@@ -183,7 +183,7 @@ struct Fdn {
     p_out: Vec<usize>,
     diffusers: Vec<MultiChannelDiffuser>,
     diffusion_steps: usize,
-    diffusion_channels: usize,
+    // diffusion_channels: usize,
     // TODO: implement LPF
     // lowpass_filters: Option<Vec<LowPassFilter>>,
     sample_rate: f32,
@@ -252,7 +252,7 @@ impl Fdn {
             p_out,
             diffusers,
             diffusion_steps,
-            diffusion_channels: channels,
+            // diffusion_channels: channels,
             channels,
             sample_rate,
             delay_lines,
@@ -315,7 +315,7 @@ impl Fdn {
             self.feedback[self.p_out[i]] = self.permute_buffer[i];
         }
         let wet_main_reverb = wet * norm_factor;
-        let mut filtered_output = wet_main_reverb;
+        let filtered_output = wet_main_reverb;
 
         let combined_wet = filtered_output;
         *input = *input * (1.0 - self.wet_mix) + self.wet_mix * combined_wet;
@@ -342,16 +342,16 @@ impl Reverb {
             Reverb::FDN(s) => s.process(buffer),
         }
     }
-    pub fn set_decay_control(&mut self, rt60_seconds: f32) {
-        // match self {
-        //     Reverb::FDN(s) => s.set_decay_control(rt60_seconds),
-        // }
-    }
-    pub fn set_dry_wet(&mut self, mix: f32) {
-        // match self {
-        //     Reverb::FDN(s) => s.set_dry_wet(mix),
-        // }
-    }
+    // pub fn set_decay_control(&mut self, rt60_seconds: f32) {
+    // match self {
+    //     Reverb::FDN(s) => s.set_decay_control(rt60_seconds),
+    // }
+    // }
+    // pub fn set_dry_wet(&mut self, mix: f32) {
+    // match self {
+    //     Reverb::FDN(s) => s.set_dry_wet(mix),
+    // }
+    // }
     pub fn configure(&mut self, sample_rate: f32) {
         // Removed RNG argument
         match self {

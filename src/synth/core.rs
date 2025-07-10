@@ -329,7 +329,7 @@ impl Default for Synth {
             voice.update_algorithm(&default_algorithm);
         }
 
-        let mut synth = Self {
+        let synth = Self {
             voices,
             config,
             voice_config: VoiceConfig::default(), // Default voice config
@@ -343,6 +343,7 @@ impl Default for Synth {
             sample_rate: 44100.0,
         };
         // synth.set_effect_reverb(20.0, 70.0, 1000.0, 0.5, 2, 2, EffectSlot::One);
+        #[allow(clippy::let_and_return)]
         synth
     }
 }
