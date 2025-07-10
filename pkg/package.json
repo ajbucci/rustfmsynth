@@ -1,0 +1,15 @@
+{
+  "name": "rustfmsynth",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "rustfmsynth_bg.wasm",
+    "rustfmsynth.js",
+    "rustfmsynth.d.ts"
+  ],
+  "main": "rustfmsynth.js",
+  "types": "rustfmsynth.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
